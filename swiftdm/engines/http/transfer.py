@@ -272,6 +272,8 @@ class _Transfer:
         t.start()
 
     def _try_split(self):
+        if not self.job.accept_ranges:
+            return   # without byte ranges a new segment would receive the file from byte 0
         with self.lock:
             candidates = [s for s in self.segs.values() if s.thread and s.thread.is_alive() and s.end >= 0
                           and not s.done]
@@ -351,6 +353,8 @@ class _Transfer:
         first = True
         ranged = bool(self.job.accept_ranges)
         url = self.job.final_url or self.job.spec.url
+        if not ranged and s.seg.start != 0:
+            raise SdmError(ErrorCode.INTERNAL, "Internal error: a non-ranged stream must start at byte 0.")
         try:
             while not self.stop.is_set():
                 with self.lock:

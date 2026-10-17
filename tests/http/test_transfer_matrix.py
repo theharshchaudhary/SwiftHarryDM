@@ -296,3 +296,13 @@ def test_disk_full_during_write_pauses_then_resumes(server, tmp_path):
         assert snap.state == S.COMPLETED and sha_file(snap.final_path) == p.sha256()
     finally:
         env.m.shutdown(3)
+
+
+def test_no_range_server_with_stalls_is_never_split(server, henv):
+    """Regression (randomized run 14): a non-ranged stream with a known length was
+    dynamically split; the new segment received the file from byte 0 at the wrong offset."""
+    p = Payload("run14", 9 * MiB + 12345)
+    stall = Fault(800 * 1024, kind="stall", stall_seconds=3, times=3, when=lambda n, r: r != "bytes=0-0")
+    ok(henv.run(server.add("/nr14.bin", Resource(p, ranges=False, throttle_bps=8 * MiB, faults=[stall])),
+                timeout=120), p)
+    assert all(r in (None, "bytes=0-0") for _, _, r, _ in server.requests_for("/nr14.bin"))
