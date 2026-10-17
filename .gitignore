@@ -8,3 +8,19 @@ dist/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# local environments and build output
+.venv/
+.pytest_cache/
+.hypothesis/
+packaging/tools/
+packaging/build/
+packaging/dist/
+
+# signing material must never be committed
+*.pfx
+*.p12
+*.pvk
+*.key
+*.pem
+*.spc

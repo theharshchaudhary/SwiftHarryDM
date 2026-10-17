@@ -1,5 +1,7 @@
-requests
-tqdm
-youtube-dl
-yt-dlp
-flask
+# Pinned runtime dependencies. For reproducible installs with hash checking use:
+#   pip install --require-hashes -r requirements.lock
+# (youtube-dl was removed: it was never imported.)
+yt-dlp==2026.8.19
+Flask==3.1.3
+requests==2.34.2
+tqdm==4.70.1

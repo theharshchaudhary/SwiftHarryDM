@@ -1,8 +1,19 @@
+import sys
+
+# Must run before anything prints: redirected stdout under cp1252 crashed every
+# download on emoji output (audit T0).
+from swiftdm.compat import harden_stdio
+harden_stdio()
+
+# Packaged builds launch themselves as the yt-dlp subprocess used by the v2 media engine.
+if len(sys.argv) > 1 and sys.argv[1] == "--yt-dlp-shim":
+    import yt_dlp
+    sys.exit(yt_dlp.main(sys.argv[2:]))
+
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, filedialog
 import threading
 import os
-import sys
 import tarfile
 import zipfile
 from tqdm import tqdm
@@ -22,6 +33,7 @@ from utils import convert_to_mp3, format_mapping
 from yt_dlp import YoutubeDL
 from flask import Flask, request, jsonify
 from download_window import show_download_window, close_download_window, active_download_windows
+from swiftdm.logging_setup import redact_url
 
 
 # ------------------ Globals ------------------
@@ -271,7 +283,7 @@ def get_machine_id():
             machine_guid, _ = winreg.QueryValueEx(key, "MachineGuid")
             winreg.CloseKey(key)
             base_id = f"WIN_GUID_{machine_guid}"
-            print(f"🔧 Using Windows Machine GUID: {machine_guid}")
+            print("🔧 Using Windows Machine GUID")
         except Exception as e:
             print(f"❌ Failed to get MachineGuid: {e}")
             base_id = None
@@ -413,13 +425,18 @@ def load_local_token():
 #--------------------Enhanced Extension Integration------------------------
 app = Flask(__name__)
 
-# Enable CORS properly
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
+# No CORS headers: the extension's host_permissions already allow its requests, and
+# a wildcard Access-Control-Allow-Origin let any website queue downloads (audit).
+_ALLOWED_HOSTS = {f"{h}:{p}" for h in ("127.0.0.1", "localhost") for p in (5001, 5002)}
+
+@app.before_request
+def reject_untrusted_callers():
+    # Host check blocks DNS-rebinding; Origin check blocks web pages.
+    if request.host not in _ALLOWED_HOSTS:
+        return jsonify({"success": False, "error": "forbidden host"}), 403
+    origin = request.headers.get("Origin")
+    if origin and not origin.startswith("chrome-extension://"):
+        return jsonify({"success": False, "error": "forbidden origin"}), 403
 
 @app.route("/health", methods=["GET", "OPTIONS"])
 def health_check():
@@ -440,7 +457,7 @@ def handle_download():
     try:
         data = request.get_json()
         print(f"📥 [EXTENSION] Download request received")
-        print(f"   URL: {data.get('url', 'N/A')}")
+        print(f"   URL: {redact_url(str(data.get('url', 'N/A')))}")
         print(f"   Title: {data.get('title', 'N/A')}")
         print(f"   Format: {data.get('format', 'N/A')}")
         
@@ -585,7 +602,7 @@ threading.Thread(target=run_flask, daemon=True).start()
 # ------------------ License & Trial ------------------
 def start_trial(machine_id):
     try:
-        print(f"🔄 Starting trial for machine: {machine_id}")
+        print(f"🔄 Starting trial for machine: {machine_id[:8]}...")
         resp = requests.post(f"{LICENSE_SERVER}/trial", json={"machine_id": machine_id}, timeout=10)
         resp.raise_for_status()
         data = resp.json()
@@ -622,7 +639,7 @@ def start_trial(machine_id):
 
 def verify_license_online(license_key, machine_id):
     try:
-        print(f"🔐 Verifying license: {license_key} for machine: {machine_id}")
+        print(f"🔐 Verifying license for machine: {machine_id[:8]}...")
         clean_license = license_key.strip().replace(" ", "").replace("-", "").upper()
         if len(clean_license) != 24:
             return False, "invalid_format"
@@ -1073,7 +1090,7 @@ class UniversalDownloader:
                 "skip_unavailable_fragments": True,
                 "noplaylist": True,
                 "format": format_selector,
-                "nocheckcertificate": True,
+                "nocheckcertificate": False,
                 "no_warnings": False,
                 "quiet": True,
                 "extract_flat": False,
