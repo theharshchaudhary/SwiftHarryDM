@@ -24,3 +24,10 @@ packaging/dist/
 *.key
 *.pem
 *.spc
+
+# Rust / Node build output
+target/
+node_modules/
+ui/dist/
+src-tauri/gen/
+src-tauri/binaries/

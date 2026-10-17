@@ -1,0 +1,41 @@
+[workspace]
+resolver = "2"
+members = ["crates/swiftdm-core", "crates/swiftdm-testkit"]
+
+[workspace.package]
+version = "3.0.0"
+edition = "2021"
+license = "MIT"
+authors = ["Harsh Chaudhary"]
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+futures-util = "0.3"
+bytes = "1"
+reqwest = { version = "0.12", default-features = false, features = ["stream", "rustls-tls-native-roots", "http2", "gzip"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+thiserror = "2"
+async-trait = "0.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+url = "2"
+percent-encoding = "2"
+sha2 = "0.10"
+hex = "0.4"
+rand = "0.8"
+regex = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+dirs = "5"
+unicode-normalization = "0.1"
+axum = "0.8"
+windows = { version = "0.58", features = ["Win32_Foundation", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_Security", "Win32_Security_Cryptography", "Win32_Storage_FileSystem", "Win32_System_Registry", "Win32_System_Power"] }
+tempfile = "3"
+proptest = "1"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"

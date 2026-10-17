@@ -1,0 +1,236 @@
+//! Versioned user settings (JSON, atomic writes, validated on load).
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
+
+use crate::categories::{self, Category};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProxyMode {
+    System,
+    None,
+    Manual,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SiteLogin {
+    /// Host or "*.example.com" pattern.
+    pub host: String,
+    pub username: String,
+    /// DPAPI-protected (hex); never stored in plain text.
+    pub password_enc: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Settings {
+    pub version: u32,
+    pub download_dir: String,
+    pub use_categories: bool,
+    pub categories: Vec<Category>,
+    pub ask_save_location: bool,
+    pub show_download_info_dialog: bool,
+    pub show_progress_window: bool,
+    pub show_complete_dialog: bool,
+    pub max_concurrent: u32,
+    pub max_segments: u32,
+    pub collision_policy: String, // rename | overwrite
+    pub auto_resume: bool,
+    pub retries: u32,
+    pub speed_limit: u64, // bytes/s, 0 = unlimited
+    pub proxy_mode: ProxyMode,
+    pub proxy_url: String,
+    pub user_agent: String,
+    pub site_logins: Vec<SiteLogin>,
+    pub clipboard_monitor: bool,
+    pub capture_extensions: Vec<String>,
+    pub capture_min_size_kb: u64,
+    pub trust_extension: bool,
+    pub minimize_to_tray: bool,
+    pub start_with_windows: bool,
+    pub start_minimized: bool,
+    pub av_scan_enabled: bool,
+    pub av_scan_command: String,
+    pub sound_on_complete: bool,
+    pub theme: String, // system | light | dark
+    pub api_port: u16,
+}
+
+pub const DEFAULT_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) \
+Chrome/130.0 Safari/537.36 SwiftHarryDM/3";
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            version: 3,
+            download_dir: crate::appdata::default_download_dir().to_string_lossy().into_owned(),
+            use_categories: true,
+            categories: categories::defaults(),
+            ask_save_location: false,
+            show_download_info_dialog: true,
+            show_progress_window: true,
+            show_complete_dialog: true,
+            max_concurrent: 4,
+            max_segments: 8,
+            collision_policy: "rename".into(),
+            auto_resume: false,
+            retries: 3,
+            speed_limit: 0,
+            proxy_mode: ProxyMode::System,
+            proxy_url: String::new(),
+            user_agent: DEFAULT_UA.into(),
+            site_logins: vec![],
+            clipboard_monitor: true,
+            capture_extensions: "3gp 7z aac ace apk arj asf avi bin bz2 deb dmg exe flac flv gz img iso jar m4a m4v \
+                mkv mov mp3 mp4 mpeg mpg msi msix ogg pdf rar rpm tar tgz wav webm wma wmv xz zip"
+                .split_whitespace()
+                .map(str::to_string)
+                .collect(),
+            capture_min_size_kb: 0,
+            trust_extension: false,
+            minimize_to_tray: true,
+            start_with_windows: false,
+            start_minimized: false,
+            av_scan_enabled: false,
+            av_scan_command: r#""C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "{file}" -DisableRemediation"#
+                .into(),
+            sound_on_complete: true,
+            theme: "system".into(),
+            api_port: 5001,
+        }
+    }
+}
+
+impl Settings {
+    pub fn normalized(mut self) -> Self {
+        self.version = 3;
+        if self.download_dir.trim().is_empty() {
+            self.download_dir = Settings::default().download_dir;
+        }
+        self.download_dir = self.download_dir.replace('/', "\\");
+        self.max_concurrent = self.max_concurrent.clamp(1, 16);
+        self.max_segments = self.max_segments.clamp(1, 32);
+        self.retries = self.retries.min(20);
+        if self.collision_policy != "overwrite" {
+            self.collision_policy = "rename".into();
+        }
+        if !matches!(self.api_port, 5001 | 5002) {
+            self.api_port = 5001;
+        }
+        if !matches!(self.theme.as_str(), "system" | "light" | "dark") {
+            self.theme = "system".into();
+        }
+        if self.user_agent.trim().is_empty() {
+            self.user_agent = DEFAULT_UA.into();
+        }
+        for e in self.capture_extensions.iter_mut() {
+            *e = e.trim().trim_start_matches('.').to_lowercase();
+        }
+        self.capture_extensions.retain(|e| !e.is_empty());
+        self
+    }
+
+    /// Destination folder for a file name, honouring categories.
+    pub fn folder_for(&self, file_name: &str) -> (PathBuf, Option<String>) {
+        let base = Path::new(&self.download_dir);
+        if !self.use_categories {
+            return (base.to_path_buf(), None);
+        }
+        let cat = categories::categorize(&self.categories, file_name);
+        (categories::folder_for(base, cat), cat.map(|c| c.name.clone()))
+    }
+
+    pub fn login_for(&self, host: &str) -> Option<(String, String)> {
+        let host = host.to_lowercase();
+        self.site_logins.iter().find_map(|l| {
+            let pat = l.host.to_lowercase();
+            let ok = if let Some(suffix) = pat.strip_prefix("*.") {
+                host == suffix || host.ends_with(&format!(".{suffix}"))
+            } else {
+                host == pat
+            };
+            ok.then(|| crate::secrets::unprotect_str(&l.password_enc).map(|p| (l.username.clone(), p)))
+                .flatten()
+        })
+    }
+}
+
+#[derive(Clone)]
+pub struct SettingsStore {
+    path: PathBuf,
+    inner: Arc<RwLock<Settings>>,
+}
+
+impl SettingsStore {
+    pub fn open(path: impl Into<PathBuf>) -> Self {
+        let path = path.into();
+        let s = std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|t| serde_json::from_str::<Settings>(&t).ok())
+            .unwrap_or_default()
+            .normalized();
+        SettingsStore { path, inner: Arc::new(RwLock::new(s)) }
+    }
+    pub fn in_memory(s: Settings) -> Self {
+        SettingsStore { path: PathBuf::new(), inner: Arc::new(RwLock::new(s.normalized())) }
+    }
+    pub fn get(&self) -> Settings {
+        self.inner.read().unwrap().clone()
+    }
+    pub fn set(&self, s: Settings) -> std::io::Result<Settings> {
+        let s = s.normalized();
+        if !self.path.as_os_str().is_empty() {
+            let tmp = self.path.with_extension("json.tmp");
+            std::fs::write(&tmp, serde_json::to_vec_pretty(&s).unwrap())?;
+            std::fs::rename(&tmp, &self.path)?;
+        }
+        *self.inner.write().unwrap() = s.clone();
+        Ok(s)
+    }
+    pub fn update(&self, f: impl FnOnce(&mut Settings)) -> std::io::Result<Settings> {
+        let mut s = self.get();
+        f(&mut s);
+        self.set(s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn roundtrip_validation_and_corrupt_file() {
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("s.json");
+        let st = SettingsStore::open(&p);
+        let s = st
+            .update(|s| {
+                s.max_concurrent = 99;
+                s.max_segments = 0;
+                s.collision_policy = "bogus".into();
+                s.capture_extensions = vec![".ZIP".into(), " ".into()];
+            })
+            .unwrap();
+        assert_eq!((s.max_concurrent, s.max_segments, s.collision_policy.as_str()), (16, 1, "rename"));
+        assert_eq!(s.capture_extensions, vec!["zip".to_string()]);
+        assert_eq!(SettingsStore::open(&p).get().max_concurrent, 16);
+        std::fs::write(&p, "{not json").unwrap();
+        assert_eq!(SettingsStore::open(&p).get().max_concurrent, Settings::default().max_concurrent);
+        std::fs::write(&p, r#"{"max_segments": 4, "evil": 1}"#).unwrap();
+        assert_eq!(SettingsStore::open(&p).get().max_segments, 4);
+    }
+
+    #[test]
+    fn categories_and_logins() {
+        let mut s = Settings { download_dir: "C:\\D".into(), ..Settings::default() };
+        assert_eq!(s.folder_for("a.zip"), (PathBuf::from("C:\\D\\Compressed"), Some("Compressed".into())));
+        assert_eq!(s.folder_for("a.xyz"), (PathBuf::from("C:\\D"), None));
+        s.site_logins.push(SiteLogin {
+            host: "*.example.com".into(),
+            username: "u".into(),
+            password_enc: crate::secrets::protect_str("p").unwrap(),
+        });
+        assert_eq!(s.login_for("files.example.com"), Some(("u".into(), "p".into())));
+        assert_eq!(s.login_for("evil-example.com"), None);
+    }
+}
