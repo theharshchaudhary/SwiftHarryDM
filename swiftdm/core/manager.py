@@ -356,10 +356,14 @@ class JobManager:
             self._on_remove(job.id, self._pending_remove.pop(job.id))
 
     def _on_all(self, action):
+        # Legacy semantics: "Start All" starts jobs added with "Add to Queue";
+        # "Resume All" resumes paused/interrupted ones.
         for job in list(self._jobs.values()):
             if action == "pause" and job.state in (S.QUEUED, S.RETRY_WAIT, S.STARTING, S.DOWNLOADING, S.POSTPROCESSING):
                 self._on_pause(job.id)
-            elif action in ("resume", "start") and job.state == S.PAUSED:
+            elif action == "start" and job.state == S.PAUSED and job.reason == "not started":
+                self._on_resume(job.id)
+            elif action == "resume" and job.state == S.PAUSED and job.reason != "not started":
                 self._on_resume(job.id)
 
     def _on_shutdown(self, timeout):

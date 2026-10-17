@@ -10,6 +10,15 @@ if len(sys.argv) > 1 and sys.argv[1] == "--yt-dlp-shim":
     import yt_dlp
     sys.exit(yt_dlp.main(sys.argv[2:]))
 
+# Engine switch (--engine flag > SWIFTDM_ENGINE > settings). The legacy engine below
+# stays available for rollback until the documented removal criteria are met.
+if __name__ == "__main__":
+    import os as _os
+    from swiftdm.config.settings import SettingsStore as _SettingsStore, resolve_engine as _resolve_engine
+    if _resolve_engine(sys.argv, _os.environ, _SettingsStore().get()) == "v2":
+        from swiftdm.app import run as _run_v2
+        sys.exit(_run_v2(sys.argv))
+
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, filedialog
 import threading
