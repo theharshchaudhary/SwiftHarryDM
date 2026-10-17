@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "SwiftHarryDM Downloader",
-  "version": "2.0.0",
-  "description": "Download videos and audio with SwiftHarryDM",
+  "version": "3.0.0",
+  "description": "Send videos, audio and files to the SwiftHarryDM desktop app (paired, local only).",
   "permissions": [
     "activeTab",
     "storage",
@@ -10,9 +10,8 @@
     "notifications"
   ],
   "host_permissions": [
-    "http://localhost:5001/*",
-    "https://*/*",
-    "http://*/*"
+    "http://127.0.0.1/*",
+    "http://localhost/*"
   ],
   "background": {
     "service_worker": "background.js"

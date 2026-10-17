@@ -111,6 +111,10 @@
             display: none;
         }
 
+        .pair { margin-bottom: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; font-size: 13px; }
+        .pair input { width: 100%; box-sizing: border-box; padding: 8px; font-size: 18px; letter-spacing: 4px; text-align: center; border-radius: 6px; border: none; margin: 8px 0; }
+        .link { background: none; border: none; color: #e5e7eb; text-decoration: underline; cursor: pointer; font-size: 11px; margin-top: 10px; }
+
         .icon {
             width: 16px;
             height: 16px;
@@ -126,6 +130,15 @@
 
         <div id="status" class="status">
             Checking app status...
+        </div>
+
+        <div id="pairBox" class="pair hidden">
+            <div>Connect this browser to the SwiftHarryDM app. The app will show a 6-digit code.</div>
+            <button id="pairStartBtn" class="btn btn-primary" style="width:100%;margin-top:8px">Connect to app</button>
+            <div id="pairStep2" class="hidden">
+                <input id="pairCode" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000">
+                <button id="pairConfirmBtn" class="btn btn-primary" style="width:100%">Confirm code</button>
+            </div>
         </div>
 
         <div class="actions">
@@ -149,19 +162,13 @@
                 </svg>
                 Download All Media
             </button>
-
-            <button id="openAppBtn" class="btn btn-warning">
-                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-                </svg>
-                Open SwiftHarryDM App
-            </button>
         </div>
 
         <div id="pendingDownloads" class="pending-downloads hidden">
-            <h3>Pending Downloads</h3>
+            <h3>Recent downloads</h3>
             <div id="downloadsList"></div>
         </div>
+        <button id="unpairBtn" class="link">Disconnect this browser</button>
     </div>
 
     <script src="popup.js"></script>

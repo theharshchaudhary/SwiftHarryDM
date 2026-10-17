@@ -20,7 +20,10 @@ class MediaDetector {
         
         // Clear previous
         this.mediaElements.clear();
-        this.downloadButtons.forEach(btn => btn.remove());
+        this.downloadButtons.forEach(btn => {
+            if (btn.dataset.intervalId) clearInterval(Number(btn.dataset.intervalId));
+            btn.remove();
+        });
         this.downloadButtons.clear();
 
         // Detect ALL videos and audios (no filters)
@@ -246,8 +249,7 @@ class MediaDetector {
                 button.style.top = (rect.top + scrollY + 10) + 'px';
                 button.style.left = (rect.left + scrollX + rect.width - 120) + 'px';
                 button.style.display = 'block';
-                
-                console.log(`📍 Button positioned at: ${button.style.top}, ${button.style.left}`);
+
             } else {
                 button.style.display = 'none';
             }
@@ -322,7 +324,7 @@ class MediaDetector {
             </div>
             <div class="popup-content" style="padding: 20px;">
                 <div class="media-info" style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
-                    <strong style="display: block; margin-bottom: 5px; color: #333;">${media.title}</strong>
+                    <strong class="swiftharry-title" style="display: block; margin-bottom: 5px; color: #333;"></strong>
                     ${media.duration ? `<div style="color: #666;">Duration: ${this.formatDuration(media.duration)}</div>` : ''}
                     <div style="color: #666; font-size: 12px; margin-top: 5px;">Source: ${media.sources?.[0]?.url ? 'Direct' : 'Page URL'}</div>
                 </div>
@@ -332,7 +334,9 @@ class MediaDetector {
                         <option value="best">Best Quality</option>
                         <option value="1080">1080p</option>
                         <option value="720">720p</option>
+                        <option value="480">480p</option>
                         <option value="mp3">MP3 Audio</option>
+                        <option value="m4a">M4A Audio</option>
                     </select>
                 </div>
                 <button class="download-now-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 8px; transition: all 0.3s;">
@@ -344,6 +348,7 @@ class MediaDetector {
             </div>
         `;
 
+        popup.querySelector('.swiftharry-title').textContent = media.title || document.title;
         popup.querySelector('.close-btn').addEventListener('click', () => popup.remove());
         
         popup.querySelector('.download-now-btn').addEventListener('click', () => {
@@ -406,7 +411,7 @@ class MediaDetector {
         console.log('📥 Extension response:', response);
         
         if (response && response.success) {
-            this.showSuccessNotification(media.title, response.queuePosition);
+            this.showNotification('✅ Sent to SwiftHarryDM', `"${media.title || downloadUrl}" - ${response.message}`, '#10b981');
         } else {
             this.showErrorNotification(response?.error || 'Download failed');
         }
@@ -511,10 +516,13 @@ cleanVideoUrl(url) {
             document.head.appendChild(style);
         }
         
-        notification.innerHTML = `
-            <div style="font-weight: 600; margin-bottom: 5px;">${title}</div>
-            <div style="font-size: 14px;">${message}</div>
-        `;
+        const head = document.createElement('div');
+        head.style.cssText = 'font-weight: 600; margin-bottom: 5px;';
+        head.textContent = title;
+        const body = document.createElement('div');
+        body.style.cssText = 'font-size: 14px;';
+        body.textContent = message;
+        notification.append(head, body);
         
         document.body.appendChild(notification);
         
@@ -636,7 +644,7 @@ cleanVideoUrl(url) {
             }
         });
         
-        this.showSuccessNotification(`Queued ${count} downloads`, 'Check the SwiftHarryDM app');
+        this.showNotification('✅ Sent to SwiftHarryDM', `${count} downloads sent - check the app`, '#10b981');
     }
 
     showDetectionResults() {
