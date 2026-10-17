@@ -1,97 +1,80 @@
 # SwiftHarryDM
-*Open-Source Advanced Download Manager for Windows*
 
----
+A download manager for Windows: segmented, resumable HTTP/HTTPS downloads, video and audio
+from supported sites, and a paired browser extension.
 
-## Project Overview
-**SwiftHarryDM** is a Windows-only, open-source download manager designed to provide a fast, reliable, and intelligent downloading experience. Inspired by IDM, SwiftHarryDM combines simplicity, speed, and advanced features for users who want complete control over their downloads.
+## What it does
 
-💡 *Note*: SwiftHarryDM is now fully open-source under the **MIT License**, allowing anyone to freely use, modify, and distribute the software.
+- **Native segmented downloads.** Up to 16 connections per file, with dynamic splitting of
+  slow segments. Every partial response is validated (`Content-Range`, `If-Range` with ETag
+  or Last-Modified). Data is fsync'ed before a checkpoint is recorded.
+- **Resume that survives restarts.** Pause and resume, network drops, app restarts and
+  crashes. If the file on the server changed, the download restarts instead of being
+  stitched from two different files.
+- **Honest completion.** A download is only marked *Completed* after the final file exists
+  with the expected size. Media files must also pass an `ffprobe` check. Failures are shown
+  with actionable messages.
+- **No overwrites by default.** Name collisions become `name (1).ext`. Server-supplied file
+  names are reduced to a safe basename.
+- **Video and audio.** Uses yt-dlp, run as a separate process that can be stopped, plus
+  FFmpeg: Best, 2160p down to 360p, MP4, MKV, MP3, M4A. The chosen formats are pinned, so a
+  resumed download never switches quality. Playlists, live streams and DRM-protected media
+  are not supported, and nothing bypasses access controls.
+- **Browser extension.** Chrome and Edge (Manifest V3). It pairs with the app using a
+  one-time code, and downloads it sends are confirmed in the app by default.
 
----
+## Install and run (from source)
 
-## Core Features
+Requirements: Windows 10/11 x64 and Python 3.11.
 
-1. **Intelligent Dynamic File Segmentation**  
-   - Automatically splits files into multiple segments to accelerate download speed.  
-   - Optimizes segment size based on network conditions for maximum efficiency.
+```powershell
+python -m venv .venv
+.venv\Scripts\python -m pip install --require-hashes -r requirements.lock
+.venv\Scripts\python packaging\fetch_tools.py      # pinned, checksum-verified FFmpeg (LGPL)
+.venv\Scripts\python main.py
+```
 
-2. **Resume Capability**  
-   - Pause and resume downloads anytime without losing progress.  
-   - Supports interrupted downloads due to network failure or system shutdown.
+Optional: install [Node.js](https://nodejs.org) or Deno. yt-dlp uses a JavaScript runtime
+for the best YouTube support.
 
-3. **Clean UI/UX**  
-   - Windows-style interface for intuitive navigation.  
-   - Download lists, progress bars, and detailed info displayed cleanly.
+### Engine selection
 
-4. **Browser Integration**  
-   - Seamless integration with Chrome and Firefox.  
-   - Auto-capture downloadable links from clipboard or browser.
+v2 is the default. The legacy engine is kept for rollback until the removal criteria in
+`docs/MIGRATION.md` are met:
 
-5. **Download Any File Types from Any Sites**  
-   - Supports all common file formats (documents, videos, images, software).  
-   - Handles direct downloads from most websites.
+```powershell
+python main.py --engine legacy        # or: set SWIFTDM_ENGINE=legacy, or Settings > Download engine
+```
 
-6. **Batch Downloads**  
-   - Queue multiple downloads at once.  
-   - Option to prioritize certain downloads or pause/resume selectively.
+## Browser extension
 
-7. **YouTube Download at Any Format**  
-   - Download videos in 720p, 1080p, 2K, 4K, or audio (MP3) formats.  
-   - Extract audio/video separately or combine.
+1. Open `chrome://extensions` (or `edge://extensions`), enable Developer mode, then
+   "Load unpacked" and select the `extension` folder. Packaged builds include it under
+   `_internal\extension`.
+2. Click the SwiftHarryDM toolbar icon, then **Connect to app**. The app shows a 6-digit
+   code; type it into the popup.
+3. Downloads sent from the browser show a confirmation in the app. You can turn that off
+   in Settings.
 
-8. **Accelerate Download Speed**  
-   - Uses multi-threading and intelligent segmentation for faster downloads.  
-   - Optimizes bandwidth usage dynamically.
+## Build a release
 
-9. **Auto-Updater**  
-   - Automatically checks for updates.  
-   - Downloads and installs the latest version seamlessly.  
-   - Ensures users always have the newest features and bug fixes.
+See `docs/BUILD.md`. In short: `python packaging\build.py --zip` (add `--installer` when
+Inno Setup 6 is installed).
 
----
+## Tests
 
-## Tech Stack
+```powershell
+.venv\Scripts\python -m pip install --require-hashes -r requirements-dev.lock
+.venv\Scripts\python -m pytest -m "not live"      # PR gate
+.venv\Scripts\python -m pytest                    # everything, incl. live CC-media tests
+```
 
-- **Backend / Core**: Python (requests, aiohttp, pycurl)  
-- **GUI**: PyQt (Windows-native look)  
-- **Browser Integration**: Chrome/Firefox Extensions (JavaScript)  
-- **Video Download Support**: youtube-dl / yt-dlp Python library  
-- **Auto-Updater**: Python + GitHub Releases / custom server
+## Data locations
 
----
-
-## Roadmap / Milestones
-
-### Phase 1 – MVP (Python CLI + Core Engine)
-- Basic downloader with pause/resume  
-- Multi-threaded downloads  
-- Batch downloads  
-- Simple progress display
-
-### Phase 2 – GUI Version (PyQt)
-- Windows-style UI/UX  
-- Download list management  
-- File categorization
-
-### Phase 3 – Advanced Features
-- Browser integration & auto-capture links  
-- YouTube downloader (all formats)  
-- Advanced download speed optimization  
-- **Auto-Updater**
-
-### Phase 4 – Optional C++ Version (Future)
-- Ultra-fast core engine  
-- Low-level system integration (Windows hooks)  
-- Lightweight standalone executable
-
----
+- Settings, job database and logs: `%LOCALAPPDATA%\SwiftHarryDM`. Logs redact URL query
+  strings and tokens.
+- Downloads: the folder you choose (default `Desktop\SwiftHarryDM Downloads`).
 
 ## License
 
-This project is licensed under the **MIT License** – see the [LICENSE](LICENSE) file for details.  
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]  
-
-- Anyone is free to **use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies** of SwiftHarryDM.  
-- The software is provided “**as is**”, without warranty of any kind.
+MIT, see `LICENSE.txt`. Third-party components are listed in `THIRD_PARTY_NOTICES.md`.

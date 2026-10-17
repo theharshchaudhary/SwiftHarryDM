@@ -174,3 +174,12 @@ def test_merge_without_ffmpeg_is_refused_not_downgraded(tmp_path, app_home, monk
         assert snap.state == S.FAILED and snap.error.code == ErrorCode.TOOL_MISSING
     finally:
         env.m.shutdown(3)
+
+
+def test_router_audio_preset_on_direct_link_uses_media_engine():
+    from swiftdm.core.models import JobSpec, MediaOptions
+    from swiftdm.engines.router import Router
+    r = Router()
+    assert r(JobSpec(url="https://cdn.example/v.mp4", dest_dir="x", media=MediaOptions("mp3"))) == "media"
+    assert r(JobSpec(url="https://cdn.example/v.mp4", dest_dir="x", media=MediaOptions("720"))) == "http"
+    assert r(JobSpec(url="https://cdn.example/setup.exe", dest_dir="x")) == "http"

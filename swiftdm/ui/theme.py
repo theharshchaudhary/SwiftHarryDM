@@ -39,8 +39,8 @@ def configure_styles(root=None):
                     darkcolor=COLORS["progress_fg"])
     style.configure("IDM.Treeview", background=COLORS["dark_surface"], foreground=COLORS["dark_text"],
                     fieldbackground=COLORS["dark_surface"], borderwidth=0, rowheight=24)
-    style.configure("IDM.Treeview.Heading", background=COLORS["primary_dark"], foreground=COLORS["dark_text"],
-                    relief="flat", borderwidth=0, font=("Arial", 10, "bold"))
+    # The native Windows theme ignores heading backgrounds, so keep heading text dark to stay readable.
+    style.configure("IDM.Treeview.Heading", foreground=COLORS["header_bg"], font=("Arial", 10, "bold"))
     style.configure("IDM.Vertical.TScrollbar", background=COLORS["primary_dark"], troughcolor=COLORS["dark_bg"],
                     borderwidth=0, arrowsize=12)
     return style

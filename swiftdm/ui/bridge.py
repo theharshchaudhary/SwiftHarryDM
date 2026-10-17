@@ -50,7 +50,9 @@ class TkBridge:
         self.root.after(TICK_MS, self._tick)
 
     def drain(self):
-        while True:
+        # A callback may open a modal dialog (nested event loop) during which the app can
+        # be closed; stop as soon as that happens instead of touching destroyed widgets.
+        while not self._stopped:
             try:
                 fn, args = self.calls.get_nowait()
             except queue.Empty:
@@ -76,6 +78,8 @@ class TkBridge:
                 progress.pop(ev.job_id, None)
             elif isinstance(ev, JobLog):
                 logs.append(ev)
+        if self._stopped:
+            return
         for snap in changed.values():
             self.handler.on_changed(snap)
         for p in progress.values():

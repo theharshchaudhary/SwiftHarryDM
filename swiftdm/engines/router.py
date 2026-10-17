@@ -32,6 +32,11 @@ class Router:
     def __call__(self, spec: JobSpec) -> str:
         if spec.kind in ("http", "media"):
             return spec.kind
-        if self.media_available and self.is_media_url(spec.url):
+        if not self.media_available:
+            return "http"
+        # An audio preset means "convert this media", even for a direct video link (legacy behaviour).
+        if spec.media is not None and spec.media.preset in ("mp3", "m4a"):
+            return "media"
+        if self.is_media_url(spec.url):
             return "media"
         return "http"

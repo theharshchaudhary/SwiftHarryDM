@@ -23,7 +23,7 @@ def default_download_dir() -> str:
 @dataclass
 class Settings:
     version: int = SETTINGS_VERSION
-    engine: str = "legacy"  # flips to "v2" at the P8 beta gate
+    engine: str = "v2"      # P8 beta gate: v2 is the default; "legacy" stays selectable for rollback
     download_dir: str = ""
     ask_save_location: bool = True
     max_concurrent: int = 3
@@ -40,6 +40,7 @@ class Settings:
             s.engine = Settings.engine
         if not s.download_dir:
             s.download_dir = default_download_dir()
+        s.download_dir = os.path.normpath(s.download_dir)
         s.max_concurrent = min(max(int(s.max_concurrent), 1), 10)
         s.max_segments = min(max(int(s.max_segments), 1), 16)
         if s.collision_policy not in COLLISION_POLICIES:

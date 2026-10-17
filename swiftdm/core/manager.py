@@ -15,6 +15,7 @@ import threading
 import time
 import traceback
 import uuid
+from dataclasses import replace
 from typing import Callable, Optional
 from urllib.parse import urlsplit
 
@@ -26,7 +27,7 @@ from . import states
 from .cancel import CancelToken, StopReason, StopRequested
 from .errors import ErrorCode, ErrorInfo, SdmError, from_os_error
 from .events import EventHub, JobChanged, JobLog, JobProgress, JobRemoved
-from .models import (ACTIVE_STATES, RUNNING_STATES, TERMINAL_STATES, Job, JobSnapshot, JobSpec, JobState,
+from .models import (RUNNING_STATES, TERMINAL_STATES, Job, JobSnapshot, JobSpec, JobState,
                      ProgressSnapshot)
 
 log = get_logger("manager")
@@ -84,6 +85,8 @@ class JobManager:
         validate_url(spec.url)
         if not spec.dest_dir:
             raise ValueError("No download folder selected.")
+        if os.path.normpath(spec.dest_dir) != spec.dest_dir:
+            spec = replace(spec, dest_dir=os.path.normpath(spec.dest_dir))
         job = Job(id=new_job_id(), spec=spec)
         self._post(("submit", job, start))
         return job.id

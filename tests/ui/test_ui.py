@@ -255,3 +255,20 @@ def test_app_launches_and_exits_cleanly(tmp_path):
     assert r.returncode == 0, r.stderr[-2000:]
     assert "API_PORT 5051" in r.stdout and "TITLE SwiftHarryDM v2.0.0" in r.stdout
     assert (tmp_path / "home" / "state.db").exists() and (tmp_path / "home" / "logs" / "swiftdm.log").exists()
+
+
+def test_bridge_stops_mid_batch_when_app_closes(tmp_path):
+    """Regression: closing the app while a modal dialog ran inside drain() made later
+    queued callbacks touch destroyed widgets (TclError in the packaged-app smoke test)."""
+    u = UI(tmp_path)
+    try:
+        calls = []
+        u.bridge.call_soon(lambda: (calls.append("first"), u.bridge.stop()))
+        u.bridge.call_soon(lambda: calls.append("second"))
+        u.bridge.drain()
+        assert calls == ["first"]
+    finally:
+        u.bridge._stopped = True
+        u.manager.shutdown(3)
+        u.root.destroy()
+        u.store.close()

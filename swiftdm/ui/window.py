@@ -338,7 +338,7 @@ class MainWindow:
         except ValueError as e:
             messagebox.showerror("Invalid address", str(e), parent=self.root)
             return
-        dest = self._destination()
+        dest = os.path.normpath(self._destination())
         try:
             os.makedirs(dest, exist_ok=True)
         except OSError as e:
