@@ -131,7 +131,6 @@ fn log_event(hub: &EventHub, job_id: &str, level: &str, message: &str) {
 }
 
 pub struct ManagerConfig {
-    pub max_attempts: u32,
     pub retry_base: Duration,
     pub autostart: bool,
     /// Run the internal scheduler ticker (disabled in tests that drive ticks manually).
@@ -140,7 +139,7 @@ pub struct ManagerConfig {
 
 impl Default for ManagerConfig {
     fn default() -> Self {
-        ManagerConfig { max_attempts: 3, retry_base: Duration::from_secs(5), autostart: true, scheduler_ticker: true }
+        ManagerConfig { retry_base: Duration::from_secs(5), autostart: true, scheduler_ticker: true }
     }
 }
 
@@ -386,7 +385,7 @@ pub struct Actor {
     res: Reservations,
     pub jobs: HashMap<String, Job>,
     pub workers: HashMap<String, (tokio::task::JoinHandle<()>, CancelToken)>,
-    via_queue: HashMap<String, String>,
+    pub via_queue: HashMap<String, String>,
     requeue_on_stop: HashSet<String>,
     pending_remove: HashMap<String, bool>,
     pub queues: Vec<Queue>,
@@ -806,9 +805,13 @@ impl Actor {
                 let st = self.jobs.get(&id).map(|j| j.state);
                 match st {
                     Some(S::Starting | S::Downloading | S::Postprocessing) => {
+                        // Keep the queue marker until the worker has really stopped, so the
+                        // winding-down download still counts against this queue's limit.
                         self.requeue_on_stop.insert(id.clone());
                         self.on_pause(&id);
+                        continue;
                     }
+                    Some(S::Pausing | S::Cancelling) => continue,
                     Some(S::Queued | S::RetryWait) => self.with_job(&id, |me, j| {
                         me.set_state(j, S::Paused, Some(QUEUED_REASON), None, true);
                     }),
@@ -936,6 +939,9 @@ impl Actor {
                 }
                 Outcome::Failed(err) => me.on_failed(j, err),
             }
+            if !matches!(j.state, S::Queued | S::RetryWait) {
+                me.via_queue.remove(&j.id);
+            }
         });
         self.maybe_remove(id);
     }
@@ -956,7 +962,7 @@ impl Actor {
             return;
         }
         j.attempts += 1;
-        let max_attempts = self.config.max_attempts.max(self.settings.get().retries.min(self.config.max_attempts));
+        let max_attempts = self.settings.get().retries.max(1);
         if err.retryable && j.attempts < max_attempts && self.stopping.is_none() {
             let delay = err
                 .retry_after
