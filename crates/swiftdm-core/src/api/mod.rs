@@ -47,13 +47,15 @@ pub struct DownloadRequest {
     pub file_size: Option<u64>,
     /// "video" / "audio" for media found on a page; None for plain files.
     pub media_type: Option<String>,
+    /// Exact yt-dlp format chosen in the page's format list.
+    pub format_id: Option<String>,
     /// Browser cookies for the download's site. Never shown or logged.
     #[serde(skip)]
     pub cookies: Option<String>,
 }
 
-const ALLOWED_FIELDS: [&str; 13] = [
-    "url", "title", "format", "mode", "pageUrl", "type", "thumbnail", "duration", "instantDownload", "fileName", "fileSize", "cookies", "referrer",
+const ALLOWED_FIELDS: [&str; 14] = [
+    "url", "title", "format", "mode", "pageUrl", "type", "thumbnail", "duration", "instantDownload", "fileName", "fileSize", "cookies", "referrer", "formatId",
 ];
 
 fn opt_str(v: &Value, k: &str, max: usize) -> Result<Option<String>, String> {
@@ -92,9 +94,22 @@ pub fn parse_download_request(v: &Value) -> Result<DownloadRequest, String> {
         None | Some(Value::Null) => None,
         Some(n) => Some(n.as_u64().ok_or("fileSize must be a non-negative number")?),
     };
-    let media_type = opt_str(v, "type", 16)?.filter(|t| t == "video" || t == "audio");
+    // The page script reports kinds like "video", "video_page" or "audio_link".
+    let media_type = opt_str(v, "type", 32)?.and_then(|t| {
+        if t.starts_with("video") {
+            Some("video".to_string())
+        } else if t.starts_with("audio") {
+            Some("audio".to_string())
+        } else {
+            None
+        }
+    });
+    let format_id = opt_str(v, "formatId", 64)?;
+    if format_id.as_deref().is_some_and(|f| !f.chars().all(|c| c.is_ascii_alphanumeric() || "-_+.".contains(c))) {
+        return Err("formatId has unexpected characters".into());
+    }
     let cookies = opt_str(v, "cookies", 16 * 1024)?;
-    Ok(DownloadRequest { url, title, format, mode, page_url, file_name, file_size, media_type, cookies })
+    Ok(DownloadRequest { url, title, format, mode, page_url, file_name, file_size, media_type, format_id, cookies })
 }
 
 /// Edits made in the app's confirmation dialog.
@@ -134,6 +149,7 @@ struct Inner {
     pairings: PairingStore,
     pending: PairingRequests,
     hooks: Arc<dyn ApiHooks>,
+    media: Option<Arc<crate::media::MediaEngine>>,
     port: u16,
     confirmations: Mutex<HashMap<String, Confirmation>>,
     lim_download: RateLimiter,
@@ -207,8 +223,11 @@ impl Inner {
         spec.description = o.description.clone().or_else(|| (!req.title.is_empty()).then(|| req.title.clone()));
         spec.cookies = req.cookies.clone();
         spec.format_label = req.format.clone();
-        if req.media_type.is_some() {
-            spec.media = Some(MediaOptions::preset(&req.format));
+        if req.media_type.is_some() || req.format_id.is_some() || crate::router::is_media_url(&req.url) {
+            let mut m = MediaOptions::preset(&req.format);
+            m.format_id = req.format_id.clone();
+            spec.media = Some(m);
+            spec.kind = "media".into();
         }
         let later = o.mode.as_deref().map(|m| m == "later").unwrap_or(req.mode == "queue");
         if later {
@@ -413,12 +432,37 @@ async fn jobs(State(st): State<Arc<Inner>>, h: HeaderMap) -> Response {
     Json(json!({ "success": true, "jobs": out })).into_response()
 }
 
+/// Title and real formats of a video page, for the quality list in the page's download panel.
+async fn media_info(State(st): State<Arc<Inner>>, h: HeaderMap, body: Bytes) -> Response {
+    if !st.lim_download.allow() {
+        return err(StatusCode::TOO_MANY_REQUESTS, "rate limited");
+    }
+    if st.authed(&h).is_none() {
+        return err(StatusCode::UNAUTHORIZED, "not paired");
+    }
+    let Some(engine) = st.media.clone() else { return err(StatusCode::SERVICE_UNAVAILABLE, "video downloads are not available") };
+    let Some(url) = parse_json(&body).and_then(|v| v.get("url").and_then(Value::as_str).map(str::to_string)) else {
+        return err(StatusCode::BAD_REQUEST, "url required");
+    };
+    let Ok(url) = validate_url(&url) else { return err(StatusCode::BAD_REQUEST, "not a web address") };
+    match engine.inspect(&url).await {
+        Ok(info) => Json(json!({ "success": true, "info": info })).into_response(),
+        Err(e) => err(StatusCode::UNPROCESSABLE_ENTITY, &e),
+    }
+}
+
 async fn fallback() -> Response {
     err(StatusCode::NOT_FOUND, "not found")
 }
 
 /// Bind to the first free port (preferred first) and serve until the runtime stops.
-pub async fn start(mgr: Manager, pairings: PairingStore, hooks: Arc<dyn ApiHooks>, preferred: u16) -> Result<ApiHandle, String> {
+pub async fn start(
+    mgr: Manager,
+    pairings: PairingStore,
+    hooks: Arc<dyn ApiHooks>,
+    media: Option<Arc<crate::media::MediaEngine>>,
+    preferred: u16,
+) -> Result<ApiHandle, String> {
     // Port 0 (tests) binds any free port; otherwise try the preferred one, then the others.
     let mut ports = vec![preferred];
     if preferred != 0 {
@@ -438,6 +482,7 @@ pub async fn start(mgr: Manager, pairings: PairingStore, hooks: Arc<dyn ApiHooks
         pairings,
         pending: PairingRequests::default(),
         hooks,
+        media,
         port,
         confirmations: Mutex::new(HashMap::new()),
         lim_download: RateLimiter::new(60),
@@ -453,6 +498,7 @@ pub async fn start(mgr: Manager, pairings: PairingStore, hooks: Arc<dyn ApiHooks
         .route("/api/capture/check", post(capture_check))
         .route("/api/links", post(links))
         .route("/api/jobs", get(jobs))
+        .route("/api/media/info", post(media_info))
         .fallback(fallback)
         .layer(middleware::from_fn_with_state(inner.clone(), guard))
         .layer(DefaultBodyLimit::max(MAX_BODY))

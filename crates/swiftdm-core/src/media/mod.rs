@@ -156,7 +156,9 @@ impl MediaEngine {
             .map(|a| {
                 a.iter()
                     .filter(|f| f["has_drm"].as_bool() != Some(true))
-                    .filter(|f| nonempty_codec(&f["vcodec"]).is_some() || nonempty_codec(&f["acodec"]).is_some())
+                    // Drop only formats that are explicitly neither video nor audio (storyboard
+                    // images); direct links report unknown (null) codecs and are kept.
+                    .filter(|f| !(f["vcodec"].as_str() == Some("none") && f["acodec"].as_str() == Some("none")))
                     .map(|f| FormatInfo {
                         id: f["format_id"].as_str().unwrap_or("").into(),
                         ext: f["ext"].as_str().unwrap_or("").into(),
@@ -187,6 +189,17 @@ impl MediaEngine {
 
     fn options(job: &Job) -> MediaOptions {
         job.spec.media.clone().unwrap_or_else(|| MediaOptions::preset(&job.spec.format_label))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn keeps_unknown_codecs_and_drops_storyboards() {
+        let f = |v: serde_json::Value| !(v["vcodec"].as_str() == Some("none") && v["acodec"].as_str() == Some("none"));
+        assert!(f(serde_json::json!({ "vcodec": null })));
+        assert!(f(serde_json::json!({ "vcodec": "none", "acodec": "opus" })));
+        assert!(!f(serde_json::json!({ "vcodec": "none", "acodec": "none" })));
     }
 }
 

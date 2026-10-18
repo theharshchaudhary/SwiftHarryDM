@@ -65,6 +65,13 @@ async fn main() {
         b = srv.base
     );
     add("/p/links.html", Resource::new(Body::raw(page.into_bytes())).content_type("text/html; charset=utf-8"), None);
+    // A page with a video element (the "video" is test bytes served as video/mp4).
+    add("/v/clip.mp4", Resource::new(Body::gen("clip", 3 * MIB)).content_type("video/mp4"), None);
+    let video_page = format!(
+        "<!doctype html><html><head><meta charset=utf-8><title>Video page</title></head><body>         <h1>A video</h1><video id=v src=\"{b}/v/clip.mp4\" width=480 height=270 controls></video></body></html>",
+        b = srv.base
+    );
+    add("/p/video.html", Resource::new(Body::raw(video_page.into_bytes())).content_type("text/html; charset=utf-8"), None);
     std::fs::write(out.join("expected.json"), serde_json::to_string_pretty(&expected).unwrap()).unwrap();
     println!("ready {}", srv.base);
     loop {

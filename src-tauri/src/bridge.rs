@@ -73,7 +73,7 @@ pub async fn start(app: AppHandle) {
     let preferred = state.mgr.settings().get().api_port;
     let pairings = PairingStore::open(swiftdm_core::appdata::pairings_path());
     let hooks: Arc<dyn ApiHooks> = Arc::new(Hooks { app: app.clone() });
-    match api::start(state.mgr.clone(), pairings, hooks, preferred).await {
+    match api::start(state.mgr.clone(), pairings, hooks, Some(state.media.clone()), preferred).await {
         Ok(h) => *state.api.lock().unwrap() = Ok(h),
         Err(e) => {
             tracing::error!("{e}");

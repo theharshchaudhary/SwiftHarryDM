@@ -53,7 +53,11 @@ async fn env(trust: bool) -> Env {
     let s = SettingsStore::in_memory(Settings { download_dir: dir.path().join("dl").to_string_lossy().into_owned(), trust_extension: trust, ..Settings::default() });
     let mgr = common::manager(store, Arc::new(common::FakeEngine::default()), s);
     let hooks = Arc::new(Hooks::default());
-    let api = api::start(mgr.clone(), PairingStore::open(dir.path().join("pairings.json")), hooks.clone(), 0).await.unwrap();
+    let media = swiftdm_core::media::MediaEngine::new(swiftdm_core::media::Tools {
+        ytdlp: Some(env!("CARGO_BIN_EXE_sdm-fake-ytdlp").into()),
+        ..Default::default()
+    });
+    let api = api::start(mgr.clone(), PairingStore::open(dir.path().join("pairings.json")), hooks.clone(), Some(Arc::new(media)), 0).await.unwrap();
     let base = format!("http://127.0.0.1:{}", api.port());
     Env { _dir: dir, mgr, api, hooks, http: reqwest::Client::new(), base }
 }
@@ -185,4 +189,25 @@ async fn capture_decisions_and_link_lists() {
     let (s, v) = e.call("POST", "/api/links", Some(EXT), Some(&t), Some(json!({ "urls": ["https://a.com/1.zip", "javascript:x", "https://a.com/2.zip", "https://a.com/1.zip"] }))).await;
     assert_eq!((s, v["count"].as_u64()), (202, Some(2)));
     assert_eq!(e.hooks.links.lock().unwrap()[0], vec!["https://a.com/1.zip".to_string(), "https://a.com/2.zip".to_string()]);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn video_formats_and_exact_format_downloads() {
+    let e = env(true).await;
+    let t = e.pair().await;
+    let (s, v) = e.call("POST", "/api/media/info", Some(EXT), Some(&t), Some(json!({ "url": "https://fake.test/ok" }))).await;
+    assert_eq!(s, 200, "{v}");
+    assert_eq!(v["info"]["title"].as_str(), Some("Fake Video"));
+    assert_eq!(v["info"]["formats"].as_array().unwrap().len(), 3);
+    let (s, _) = e.call("POST", "/api/media/info", Some(EXT), Some(&t), Some(json!({ "url": "https://fake.test/private" }))).await;
+    assert_eq!(s, 422);
+    let (s, _) = e.call("POST", "/api/media/info", Some(EXT), None, Some(json!({ "url": "https://fake.test/ok" }))).await;
+    assert_eq!(s, 401);
+    let (s, v) = e.call("POST", "/api/download", Some(EXT), Some(&t), Some(json!({ "url": "https://www.youtube.com/watch?v=x", "formatId": "18", "type": "video_page", "mode": "queue" }))).await;
+    assert_eq!(s, 200, "{v}");
+    e.mgr.sync().await;
+    let job = e.mgr.get(v["job_id"].as_str().unwrap()).unwrap();
+    assert_eq!((job.source.as_str(), job.queue_id.as_deref()), ("extension", Some("main")));
+    let (s, _) = e.call("POST", "/api/download", Some(EXT), Some(&t), Some(json!({ "url": "https://a.com/v", "formatId": "18;rm -rf" }))).await;
+    assert_eq!(s, 400, "format ids are validated");
 }

@@ -350,6 +350,7 @@ class MediaDetector {
 
         popup.querySelector('.swiftharry-title').textContent = media.title || document.title;
         popup.querySelector('.close-btn').addEventListener('click', () => popup.remove());
+        this.fillFormats(popup.querySelector('.format-select'), media);
         
         popup.querySelector('.download-now-btn').addEventListener('click', () => {
             this.startDownload(media, popup.querySelector('.format-select').value, true);
@@ -382,6 +383,36 @@ class MediaDetector {
         return popup;
     }
 
+    // Ask the app for the video's real formats and add them under the presets. Everything
+    // from the page or the server is set as text, never parsed as HTML.
+    async fillFormats(select, media) {
+        const url = this.cleanVideoUrl(media.sources?.[0]?.url || media.url || window.location.href);
+        const loading = document.createElement('option');
+        loading.disabled = true;
+        loading.textContent = 'Loading the formats from SwiftHarryDM…';
+        select.append(loading);
+        let r;
+        try {
+            r = await chrome.runtime.sendMessage({ action: 'mediaInfo', url });
+        } catch (e) {
+            r = null;
+        }
+        loading.remove();
+        const formats = r && r.success && r.info ? r.info.formats : [];
+        if (!formats.length) return;
+        const size = (n) => (n ? (n >= 1 << 30 ? `${(n / (1 << 30)).toFixed(2)} GB` : `${Math.round(n / (1 << 20))} MB`) : '');
+        const group = document.createElement('optgroup');
+        group.label = 'Exact formats';
+        for (const f of formats.slice(0, 60)) {
+            const o = document.createElement('option');
+            o.value = `f:${f.id}`;
+            const kind = f.vcodec && !f.acodec ? 'video only, best audio added' : !f.vcodec ? 'audio' : '';
+            o.textContent = [f.height ? `${f.height}p` : 'audio', f.ext, kind, size(f.size), f.note].filter(Boolean).join(' · ');
+            group.append(o);
+        }
+        select.append(group);
+    }
+
     async startDownload(media, format, instant = false) {
         // Use the first source URL or fallback to page URL
         let downloadUrl = media.sources?.[0]?.url || media.url || window.location.href;
@@ -389,10 +420,16 @@ class MediaDetector {
         // CRITICAL FIX: Clean YouTube URLs to remove playlist parameters
         downloadUrl = this.cleanVideoUrl(downloadUrl);
     
+        let formatId = null;
+        if (typeof format === 'string' && format.startsWith('f:')) {
+            formatId = format.slice(2);
+            format = 'best';
+        }
         const downloadData = {
             url: downloadUrl,
             title: media.title,
             format: format,
+            formatId,
             type: media.type,
             thumbnail: media.thumbnail,
             duration: media.duration,

@@ -111,6 +111,18 @@ async function addThroughUi(app, main, url) {
   return info;
 }
 
+/** The "Download complete" window for one file (a previous one may still be closing). */
+async function completeFor(app, name, timeout = 90000) {
+  return until(async () => {
+    for (const t of (await app.targets()).filter((x) => x.title === "Download complete")) {
+      const w = await app.window((x) => x.id === t.id, 3000).catch(() => null);
+      if (w && (await w.text().catch(() => "")).includes(name)) return w;
+      w?.close();
+    }
+    return null;
+  }, timeout, 300, `the complete window for ${name}`);
+}
+
 async function apiBase() {
   for (const p of [5001, 5002]) {
     try {
@@ -133,8 +145,7 @@ const scenarios = {
     assert((await info.eval("document.querySelector('select').value")) === "Documents", "a PDF goes to Documents");
     await info.shot(join(SHOTS, "info.png"));
     await info.click("Start download");
-    const done = await app.window("Download complete", 30000);
-    assert((await done.text()).includes("report 2026.pdf"), "the name comes from Content-Disposition");
+    const done = await completeFor(app, "report 2026.pdf", 30000);
     await done.shot(join(SHOTS, "complete.png"));
     await done.click("Close");
     await assertSha("report 2026.pdf", "/s6/get");
@@ -155,7 +166,7 @@ const scenarios = {
     await until(async () => (await prog.text()).includes("Resume"), 15000, 200, "pause");
     await prog.click("Resume");
     await main.invoke("save_settings", { settings: { ...(await main.invoke("get_state")).settings, speed_limit: 0 } });
-    const done = await app.window("Download complete", 90000);
+    const done = await completeFor(app, "stall.bin");
     await done.click("Close");
     await assertSha("stall.bin", "/s4/stall.bin");
   },
@@ -202,7 +213,7 @@ const scenarios = {
     await until(async () => !(await info.text()).includes("Checking the address"), 30000);
     assert((await info.text()).includes("Sent from your browser"), "the info window says where it came from");
     await info.click("Start download");
-    const done = await app.window("Download complete", 60000);
+    const done = await completeFor(app, "flaky.bin");
     await done.click("Close");
     await assertSha("flaky.bin", "/s7/flaky.bin");
   },
@@ -234,7 +245,7 @@ const scenarios = {
       await info.shot(join(SHOTS, "chrome-capture.png"));
       await until(async () => !(await info.text()).includes("Checking the address"), 30000);
       await info.click("Start download");
-      const done = await app.window("Download complete", 30000);
+      const done = await completeFor(app, "report 2026", 30000);
       await done.click("Close");
       const left = await chrome.worker("chrome.downloads.search({}).then(l => l.map(d => d.state + ':' + d.filename))");
       assert(left.length === 0, `the browser's own download was cancelled and removed (${left})`);
@@ -245,6 +256,21 @@ const scenarios = {
       await chrome.evalIn(tab, "document.getElementById('alt').click()");
       await until(() => existsSync(join(chromeDl, "alt.pdf")), 20000, 250, "Chrome to save alt.pdf itself");
       assert(!(await app.hasWindow("Download file info")), "an Alt-clicked download is not taken over");
+
+      // The page's video panel lists the app's formats and sends the chosen one.
+      const vtab = await chrome.tab(URL_("/p/video.html"));
+      await until(() => chrome.evalIn(vtab, "!!document.querySelector('.swiftharry-download-btn')"), 15000, 250, "the video download button");
+      await chrome.evalIn(vtab, "document.querySelector('.swiftharry-download-btn').click()");
+      const nFormats = await until(
+        () => chrome.evalIn(vtab, "document.querySelectorAll('.swiftharry-download-popup optgroup[label=\"Exact formats\"] option').length"),
+        120000, 500, "the app's format list in the page panel");
+      assert(nFormats >= 1, `the panel lists the video's formats (${nFormats})`);
+      await chrome.evalIn(vtab, `(() => { const s = document.querySelector('.swiftharry-download-popup .format-select');
+        s.value = s.querySelector('optgroup[label="Exact formats"] option').value; })()`);
+      await chrome.evalIn(vtab, "document.querySelector('.swiftharry-download-popup .download-now-btn').click()");
+      const vinfo = await app.window("Download file info", 20000);
+      assert((await vinfo.text()).includes("Sent from your browser"), "the chosen video format reaches the app");
+      await vinfo.click("Cancel");
 
       // "Download all links": the app shows the link chooser.
       // Like the context menu: the extension has no "tabs" permission, so tab URLs are hidden;

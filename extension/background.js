@@ -183,6 +183,13 @@ class BackgroundManager {
         return { success: true, count: r.data.count };
     }
 
+    /** Title and real formats of a video, from the app (API 3). */
+    async mediaInfo(url) {
+        if (!(await this.findAppPort()) || this.apiVersion < 3) return { success: false };
+        const r = await this.request('/api/media/info', { method: 'POST', body: { url }, timeoutMs: 120000 });
+        return r.ok ? { success: true, info: r.data.info } : { success: false, error: r.data.error };
+    }
+
     async jobs() {
         const r = await this.request('/api/jobs');
         return r.ok ? { success: true, jobs: r.data.jobs } : { success: false, status: r.status, error: r.data.error };
@@ -196,6 +203,8 @@ class BackgroundManager {
             mode: d.instantDownload ? 'now' : 'queue',
         };
         if (d.pageUrl) body.pageUrl = d.pageUrl;
+        if (d.type) body.type = String(d.type).slice(0, 32);
+        if (d.formatId) body.formatId = d.formatId;
         const r = await this.request('/api/download', { method: 'POST', body });
         if (r.status === 401) {
             this.notify('Pair SwiftHarryDM first', 'Click the SwiftHarryDM toolbar icon and connect to the app.');
@@ -241,6 +250,7 @@ class BackgroundManager {
                 unpair: () => this.unpair(),
                 listJobs: () => this.jobs(),
                 sendLinks: () => this.sendLinks(req.urls || [], req.pageUrl),
+                mediaInfo: () => this.mediaInfo(req.url),
                 bypassNext: async () => {
                     if (req.url) this.bypass.set(req.url, Date.now());
                     return { success: true };
