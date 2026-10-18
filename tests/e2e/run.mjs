@@ -227,15 +227,14 @@ const scenarios = {
     mkdirSync(chromeDl, { recursive: true });
     const chrome = await new Chrome(CHROME, join(ROOT, "extension"), join(work, "chrome-profile"), chromeDl).start();
     try {
-      // Pair from the extension, reading the code from the app's window.
-      const st = await chrome.worker("backgroundManager.status()");
-      assert(st.connected, `the extension finds the app (${JSON.stringify(st)})`);
-      const start = await chrome.worker("backgroundManager.pairStart()");
-      assert(start.success, `pairing starts (${JSON.stringify(start)})`);
-      const pw = await app.window("Connect browser extension");
-      const code = (await pw.eval("document.querySelector('.countdown').innerText")).replace(/\s/g, "");
-      const ok = await chrome.worker(`backgroundManager.pairConfirm(${JSON.stringify(start.pairingId)}, ${JSON.stringify(code)})`);
-      assert(ok.success, `pairing completes (${JSON.stringify(ok)})`);
+      // The extension connects by itself through the app's native messaging host: no code.
+      assert(chrome.extensionId === "eogdkmmfefponkkkcfgdlgnngmdjckhe", `the extension ID is fixed (${chrome.extensionId})`);
+      const st = await until(async () => {
+        const s = await chrome.worker("backgroundManager.status()");
+        return s.connected && s.paired ? s : null;
+      }, 20000, 500, "the extension to connect by itself");
+      assert(st.paired, "connected without a pairing code");
+      assert(!(await app.hasWindow("Connect browser extension")), "no pairing code was needed");
 
       // A normal click on a PDF link: the app takes it over.
       const tab = await chrome.tab(URL_("/p/links.html"));

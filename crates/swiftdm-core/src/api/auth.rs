@@ -71,35 +71,58 @@ impl PairingStore {
         }
     }
 
+    /// Latest file contents (another process may have written), else what is in memory.
+    fn reload(&self, d: &mut PairFile) {
+        if let Some(fresh) = std::fs::read_to_string(&self.path).ok().and_then(|t| serde_json::from_str::<PairFile>(&t).ok()) {
+            *d = fresh;
+        }
+    }
+
     pub fn issue(&self, extension_id: &str) -> String {
         let token = random_hex(32);
         let mut d = self.data.lock().unwrap();
+        self.reload(&mut d);
         d.extensions.retain(|e| e.id != extension_id);
         d.extensions.push(Paired { id: extension_id.into(), token_sha256: sha256_hex(&token), created: crate::now() });
         self.save(&d);
         token
     }
 
-    /// The extension id owning `token`, or None.
+    /// The extension id owning `token`, or None. Tokens issued by another process (the
+    /// native messaging host) are picked up by re-reading the file once on a miss.
     pub fn verify(&self, token: &str) -> Option<String> {
         let h = sha256_hex(token);
-        let d = self.data.lock().unwrap();
-        let mut owner = None;
-        for e in &d.extensions {
-            if ct_eq(e.token_sha256.as_bytes(), h.as_bytes()) {
-                owner = Some(e.id.clone());
+        let find = |d: &PairFile| {
+            let mut owner = None;
+            for e in &d.extensions {
+                if ct_eq(e.token_sha256.as_bytes(), h.as_bytes()) {
+                    owner = Some(e.id.clone());
+                }
             }
+            owner
+        };
+        let mut d = self.data.lock().unwrap();
+        if let Some(o) = find(&d) {
+            return Some(o);
         }
-        owner
+        if self.path.as_os_str().is_empty() {
+            return None;
+        }
+        let fresh: PairFile = std::fs::read_to_string(&self.path).ok().and_then(|t| serde_json::from_str(&t).ok())?;
+        *d = fresh;
+        find(&d)
     }
 
     pub fn paired(&self) -> Vec<String> {
-        self.data.lock().unwrap().extensions.iter().map(|e| e.id.clone()).collect()
+        let mut d = self.data.lock().unwrap();
+        self.reload(&mut d);
+        d.extensions.iter().map(|e| e.id.clone()).collect()
     }
 
     /// Forget one extension, or all of them (None).
     pub fn revoke(&self, extension_id: Option<&str>) {
         let mut d = self.data.lock().unwrap();
+        self.reload(&mut d);
         d.extensions.retain(|e| extension_id.is_some_and(|id| e.id != id));
         self.save(&d);
     }
@@ -221,6 +244,9 @@ mod tests {
         assert_eq!(s.verify(&t).as_deref(), Some("ext"));
         assert!(s.verify("nope").is_none());
         assert_eq!(PairingStore::open(d.path().join("p.json")).verify(&t).as_deref(), Some("ext"));
+        // A token issued by another process (the native messaging host) is accepted.
+        let other = PairingStore::open(d.path().join("p.json")).issue("ext2");
+        assert_eq!(s.verify(&other).as_deref(), Some("ext2"));
         s.revoke(None);
         assert!(s.verify(&t).is_none());
 

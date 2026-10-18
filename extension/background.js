@@ -4,6 +4,9 @@
 // API 3 adds taking over browser downloads (the app decides which ones by file type,
 // size and exception lists) and sending all or selected links of a page.
 const PORTS = [5001, 5002];
+// The app registers itself as this native messaging host; the browser only lets this
+// extension (by its ID) talk to it, so connecting needs no code.
+const NATIVE_HOST = 'np.com.harshchaudhary.swiftharrydm';
 // Hold Alt while clicking a link to leave that download to the browser.
 const BYPASS_MS = 4000;
 
@@ -17,6 +20,23 @@ class BackgroundManager {
         this.createContextMenu();
         this.setupMessageListener();
         this.setupCapture();
+        this.autoPair();
+    }
+
+    /** Connect without a code through the app's native messaging host (if installed). */
+    async autoPair(force = false) {
+        if (!force && (await this.token())) return true;
+        try {
+            const r = await chrome.runtime.sendNativeMessage(NATIVE_HOST, { type: 'hello' });
+            if (r && r.success && r.token) {
+                await chrome.storage.local.set({ swiftdmToken: r.token });
+                this.appPort = null;
+                return true;
+            }
+        } catch (e) {
+            // App not installed (or an older version): the popup offers pairing with a code.
+        }
+        return false;
     }
 
     async token() {
@@ -75,7 +95,8 @@ class BackgroundManager {
     }
 
     async status() {
-        const r = await this.request('/health');
+        let r = await this.request('/health');
+        if (r.status !== 0 && !r.data.paired && (await this.autoPair(true))) r = await this.request('/health');
         if (r.status === 0) return { connected: false, paired: false, error: r.data.error };
         return { connected: r.ok, paired: !!r.data.paired, version: r.data.version, api: r.data.api };
     }

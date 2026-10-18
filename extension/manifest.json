@@ -8,7 +8,8 @@
     "storage",
     "contextMenus",
     "notifications",
-    "downloads"
+    "downloads",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "http://127.0.0.1/*",
@@ -59,5 +60,6 @@
   ],
   "optional_host_permissions": [
     "<all_urls>"
-  ]
+  ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtudxrU8690vehE4SKaUMiDJ3o/2n45r7G2RbMwD0jRLJDiKbzyQfIPEY9Ni0JQvhH9cV8G9nJHSgCVmpU4jdykj80SUtmAoN1RYp2aKQtHLkmvKQgECIMRjAMc8eej2jKQ4GUWPODroVZcV3/oM2KR7pOKfs8Z+JaDhYb2u0K9jN9NYSSXOI8gflPxf17I3Blegksa0SQHTBDWlJVA7h9EQEYdZJW0NFHS9qTGE+6deGeenDZL8qa/oiFNUO7QbCKKdGn5+nvFOCrTFJHDmGhO9Gf78WCv7D4tD9cjzBAHY+9rYTGSbVAxnFp+DrgxrTsCz/bQiAw3sUMXICJm8pPwIDAQAB"
 }

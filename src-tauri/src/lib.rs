@@ -1,6 +1,9 @@
 //! SwiftHarryDM desktop shell: hosts the core download manager, forwards its events to the
 //! windows, and adds what only a desktop app can do (tray, clipboard, notifications, power).
 mod bridge;
+mod browser;
+
+pub use browser::native_host;
 mod commands;
 mod system;
 mod windows;
@@ -269,6 +272,7 @@ pub fn run() {
                 media,
             });
             build_tray(app.handle())?;
+            browser::register();
             let h = app.handle().clone();
             tauri::async_runtime::spawn(pump_events(h.clone()));
             tauri::async_runtime::spawn(pump_quota(h.clone()));
