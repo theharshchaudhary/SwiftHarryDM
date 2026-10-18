@@ -63,6 +63,12 @@ pub fn exit_gracefully(app: &AppHandle) {
     });
 }
 
+fn open_logged(app: &AppHandle, kind: &str, params: &[(String, String)]) {
+    if let Err(e) = windows::open(app, kind, params) {
+        tracing::error!("could not open the {kind} window: {e}");
+    }
+}
+
 fn notify(app: &AppHandle, title: &str, body: &str) {
     let _ = app.notification().builder().title(title).body(body).show();
 }
@@ -87,7 +93,7 @@ async fn pump_events(app: AppHandle) {
                 let prev = state.seen.lock().unwrap().insert(s.id.clone(), s.state);
                 if s.state == JobState::Downloading && prev != Some(JobState::Downloading) && state.watch_progress.lock().unwrap().remove(&s.id) {
                     if settings.show_progress_window {
-                        let _ = windows::open(&app, "progress", &[("id".into(), s.id.clone())]);
+                        open_logged(&app, "progress", &[("id".into(), s.id.clone())]);
                     }
                 }
                 let changed = prev.is_some() && prev != Some(s.state);
@@ -97,12 +103,12 @@ async fn pump_events(app: AppHandle) {
                         system::beep();
                     }
                     if settings.show_complete_dialog && s.queue_id.is_none() {
-                        let _ = windows::open(&app, "complete", &[("id".into(), s.id.clone())]);
+                        open_logged(&app, "complete", &[("id".into(), s.id.clone())]);
                     }
                     let after = state.after.lock().unwrap().remove(&s.id).unwrap_or_default();
                     if after != AfterAction::None {
                         let what = format!("“{}” has finished downloading.", file_label(s));
-                        let _ = windows::open(&app, "countdown", &[("action".into(), after.as_str().into()), ("what".into(), what)]);
+                        open_logged(&app, "countdown", &[("action".into(), after.as_str().into()), ("what".into(), what)]);
                     }
                 }
                 if s.state == JobState::Failed && changed && s.queue_id.is_none() {
@@ -125,7 +131,7 @@ async fn pump_events(app: AppHandle) {
                 notify(&app, "Queue finished", &format!("All downloads in “{name}” are done."));
                 if action != "none" {
                     let what = format!("The queue “{name}” has finished.");
-                    let _ = windows::open(&app, "countdown", &[("action".into(), action.clone()), ("what".into(), what)]);
+                    open_logged(&app, "countdown", &[("action".into(), action.clone()), ("what".into(), what)]);
                 }
             }
             Event::QuotaExceeded { used, limit, resume_in_secs } => {
@@ -177,7 +183,7 @@ async fn watch_clipboard(app: AppHandle) {
         let Ok(url) = swiftdm_core::manager::validate_url(t) else { continue };
         let c = swiftdm_core::capture::Candidate { url: &url, file_name: None, size: None, forced: false };
         if swiftdm_core::capture::decide(&settings, &c) == swiftdm_core::capture::Decision::Capture {
-            let _ = windows::open(&app, "info", &[("url".into(), url), ("source".into(), "clipboard".into())]);
+            open_logged(&app, "info", &[("url".into(), url), ("source".into(), "clipboard".into())]);
         }
     }
 }
@@ -199,11 +205,11 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         .on_menu_event(|app, e| match e.id.as_ref() {
             "open" => windows::show_main(app),
             "add" => {
-                let _ = windows::open(app, "add", &[]);
+                open_logged(app, "add", &[]);
             }
             "stop_all" => app.state::<AppState>().mgr.pause_all(),
             "scheduler" => {
-                let _ = windows::open(app, "scheduler", &[]);
+                open_logged(app, "scheduler", &[]);
             }
             "exit" => exit_gracefully(app),
             _ => {}
@@ -222,7 +228,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 fn handle_args(app: &AppHandle, args: &[String]) {
     for a in args.iter().skip(1) {
         if let Ok(url) = swiftdm_core::manager::validate_url(a) {
-            let _ = windows::open(app, "info", &[("url".into(), url), ("source".into(), "ui".into())]);
+            open_logged(app, "info", &[("url".into(), url), ("source".into(), "ui".into())]);
         }
     }
 }

@@ -30,7 +30,24 @@ const WINDOWS: Record<string, () => JSX.Element | null> = {
   countdown: Countdown,
 };
 
-const View = WINDOWS[windowParams().get("w") ?? "main"] ?? Unknown;
+const TITLES: Record<string, string> = {
+  main: "SwiftHarryDM",
+  add: "Add download",
+  info: "Download file info",
+  progress: "Download progress",
+  complete: "Download complete",
+  options: "Options",
+  scheduler: "Scheduler",
+  batch: "Batch download",
+  links: "Choose files to download",
+  properties: "Properties",
+  about: "About SwiftHarryDM",
+  countdown: "SwiftHarryDM",
+};
+
+const kind = windowParams().get("w") ?? "main";
+document.title = TITLES[kind] ?? "SwiftHarryDM";
+const View = WINDOWS[kind] ?? Unknown;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

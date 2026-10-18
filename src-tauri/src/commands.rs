@@ -336,8 +336,9 @@ pub async fn import_list(app: AppHandle) -> R<Vec<String>> {
     Ok(urls)
 }
 
+/// Async on purpose: creating a webview from a synchronous command deadlocks WebView2.
 #[tauri::command]
-pub fn open_window(app: AppHandle, kind: String, params: HashMap<String, String>) -> R<()> {
+pub async fn open_window(app: AppHandle, kind: String, params: HashMap<String, String>) -> R<()> {
     let p: Vec<(String, String)> = params.into_iter().collect();
     windows::open(&app, &kind, &p)
 }

@@ -1,7 +1,7 @@
 import { api, windowParams } from "../api";
 import * as F from "../format";
 import { Check, Dialog, Loading } from "../components/Dialog";
-import { Icon, categoryIcon } from "../icons";
+import { Icon, fileIcon } from "../icons";
 import { useLive, useTheme } from "../store";
 
 /** "Download complete": open the file or its folder. */
@@ -30,7 +30,7 @@ export default function Complete() {
     >
       <div className="row" style={{ alignItems: "flex-start", gap: 14 }}>
         <div style={{ color: "var(--ok)" }}>
-          <Icon name={categoryIcon(j.category)} size={40} />
+          <Icon name={fileIcon(j.category)} size={40} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }} className="kv">
           <span>File</span>

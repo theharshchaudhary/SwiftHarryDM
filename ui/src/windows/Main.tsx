@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Job, type Progress, type Queue } from "../api";
 import * as F from "../format";
-import { Icon, categoryIcon } from "../icons";
+import { Icon, categoryIcon, fileIcon } from "../icons";
 import { ContextMenu, MenuBar, type MenuEntry, type MenuRoot } from "../components/Menu";
 import { Check } from "../components/Dialog";
 import { useLive, useTheme, type Live } from "../store";
@@ -48,7 +48,7 @@ const COLUMNS: Column[] = [
     width: 300,
     render: (r) => (
       <div className="namecell">
-        <Icon className="ico" name={categoryIcon(r.j.category)} size={16} />
+        <Icon className="ico" name={fileIcon(r.j.category)} size={16} />
         <span title={F.fileName(r.j)}>{F.fileName(r.j)}</span>
       </div>
     ),

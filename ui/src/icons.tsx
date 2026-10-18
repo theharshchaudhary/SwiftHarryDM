@@ -181,6 +181,12 @@ const CATEGORY_ICON: Record<string, string> = {
   Video: "video",
 };
 
+/** Icon for a category in the tree ("General" and custom categories get a folder). */
 export function categoryIcon(name: string | null | undefined): string {
   return (name && CATEGORY_ICON[name]) || "folder";
+}
+
+/** Icon for a file in the list: its category's icon, or a plain file. */
+export function fileIcon(category: string | null | undefined): string {
+  return (category && CATEGORY_ICON[category]) || "file";
 }

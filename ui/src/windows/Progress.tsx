@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { api, windowParams, type AfterAction, type Job, type Progress as P } from "../api";
 import * as F from "../format";
 import { Check, Num, Tabs } from "../components/Dialog";
@@ -116,10 +116,10 @@ function Segments({ p, total }: { p?: P; total: number | null }) {
     <>
       <div className="segmap" title="Each block is one connection's part of the file">
         {segs.map((s) => (
-          <div key={s.idx}>
+          <Fragment key={s.idx}>
             <div className={`seg${s.active ? " active" : ""}`} style={{ left: `${(s.start / total) * 100}%`, width: `${(s.downloaded / total) * 100}%` }} />
             {s.start > 0 && <div className="tick" style={{ left: `${(s.start / total) * 100}%` }} />}
-          </div>
+          </Fragment>
         ))}
       </div>
       <div className="tbl" style={{ maxHeight: 150 }}>
