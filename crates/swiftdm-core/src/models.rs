@@ -350,7 +350,14 @@ pub struct JobSnapshot {
     pub category: Option<String>,
     pub queue_id: Option<String>,
     pub description: Option<String>,
+    /// Where the download was started from (IDM: "parent web page" / referer).
+    pub referer: Option<String>,
+    /// URL after redirects.
+    pub final_url: Option<String>,
     pub resumable: Option<bool>,
+    /// Per-download speed limit in bytes/s.
+    pub speed_limit: Option<u64>,
+    pub priority: i32,
     pub created_at: f64,
     pub completed_at: Option<f64>,
     pub last_try: Option<f64>,
@@ -389,7 +396,11 @@ impl JobSnapshot {
             category: job.spec.category.clone(),
             queue_id: job.spec.queue_id.clone(),
             description: job.spec.description.clone(),
+            referer: job.spec.referer.clone(),
+            final_url: job.final_url.clone(),
             resumable: job.accept_ranges,
+            speed_limit: job.spec.speed_limit,
+            priority: job.spec.priority,
             created_at: job.created_at,
             completed_at: job.completed_at,
             last_try: job.last_try,

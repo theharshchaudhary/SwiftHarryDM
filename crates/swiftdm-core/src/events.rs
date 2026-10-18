@@ -15,6 +15,9 @@ pub enum Event {
     QueueChanged { queue_id: String, running: bool },
     /// A queue finished; the app performs the configured action (shutdown, sleep, exit...).
     QueueFinished { queue_id: String, action: String },
+    /// The download quota was reached; downloads stopped and resume automatically later.
+    QuotaExceeded { used: u64, limit: u64, resume_in_secs: f64 },
+    QuotaReleased,
 }
 
 #[derive(Clone)]

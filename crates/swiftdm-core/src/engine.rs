@@ -51,6 +51,8 @@ pub struct RunCtx {
     pub reporter: Arc<dyn Reporter>,
     pub settings: SettingsStore,
     pub limiter: Arc<Limiter>,
+    /// This download's own limit (rate 0 = unlimited); the manager can change it while it runs.
+    pub job_limiter: Arc<Limiter>,
 }
 
 impl RunCtx {

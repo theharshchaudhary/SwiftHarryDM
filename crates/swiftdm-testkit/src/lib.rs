@@ -143,6 +143,9 @@ pub struct Resource {
     pub redirect_status: u16,
     pub require_cookie: Option<String>,
     pub require_basic: Option<String>,
+    /// Served instead of `body` to range requests that do not start at byte 0, like a load
+    /// balancer whose mirrors hold different files under the same name.
+    pub mirror_body: Option<Body>,
 }
 
 impl Resource {
@@ -167,6 +170,7 @@ impl Resource {
             redirect_status: 302,
             require_cookie: None,
             require_basic: None,
+            mirror_body: None,
         }
     }
     pub fn etag(mut self, e: &str) -> Self {
@@ -201,6 +205,10 @@ impl Resource {
         self.statuses = s.to_vec();
         self
     }
+    pub fn mirror(mut self, other: Body) -> Self {
+        self.mirror_body = Some(other);
+        self
+    }
     pub fn redirect(to: &str, status: u16) -> Self {
         let mut r = Resource::new(Body::raw(vec![]));
         r.redirect_to = Some(to.into());
@@ -215,8 +223,12 @@ struct Route {
     bytes_sent: AtomicU64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize)]
 pub struct LogEntry {
+    pub conn: u64,
+    pub at_ms: u128,
+    pub user_agent: Option<String>,
+    pub header_names: Vec<String>,
     pub method: String,
     pub path: String,
     pub range: Option<String>,
@@ -227,6 +239,8 @@ pub struct LogEntry {
 
 #[derive(Default)]
 struct State {
+    conns: AtomicU64,
+    started: std::sync::OnceLock<Instant>,
     routes: Mutex<HashMap<String, Arc<Route>>>,
     log: Mutex<Vec<LogEntry>>,
     total_sent: AtomicU64,
@@ -240,7 +254,11 @@ pub struct TestServer {
 
 impl TestServer {
     pub async fn start() -> TestServer {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        Self::start_on(0).await
+    }
+
+    pub async fn start_on(port: u16) -> TestServer {
+        let listener = TcpListener::bind(("127.0.0.1", port)).await.unwrap();
         let base = format!("http://{}", listener.local_addr().unwrap());
         let state = Arc::new(State::default());
         let st = state.clone();
@@ -248,8 +266,9 @@ impl TestServer {
             loop {
                 let Ok((sock, _)) = listener.accept().await else { break };
                 let st = st.clone();
+                let conn = st.conns.fetch_add(1, Ordering::SeqCst) + 1;
                 tokio::spawn(async move {
-                    let _ = handle_conn(sock, st).await;
+                    let _ = handle_conn(sock, st, conn).await;
                 });
             }
         });
@@ -272,6 +291,14 @@ impl TestServer {
         self.state.routes.lock().unwrap().get(path).map(|r| r.bytes_sent.load(Ordering::SeqCst)).unwrap_or(0)
     }
 
+    pub fn connections(&self) -> u64 {
+        self.state.conns.load(Ordering::SeqCst)
+    }
+
+    pub fn all_requests(&self) -> Vec<LogEntry> {
+        self.state.log.lock().unwrap().clone()
+    }
+
     pub fn total_sent(&self) -> u64 {
         self.state.total_sent.load(Ordering::SeqCst)
     }
@@ -281,6 +308,31 @@ impl Drop for TestServer {
     fn drop(&mut self) {
         self.task.abort();
     }
+}
+
+fn reason(code: u16) -> &'static str {
+    match code {
+        200 => "OK",
+        206 => "Partial Content",
+        301 => "Moved Permanently",
+        302 => "Found",
+        307 => "Temporary Redirect",
+        308 => "Permanent Redirect",
+        401 => "Unauthorized",
+        403 => "Forbidden",
+        404 => "Not Found",
+        416 => "Range Not Satisfiable",
+        429 => "Too Many Requests",
+        502 => "Bad Gateway",
+        503 => "Service Unavailable",
+        _ => "Status",
+    }
+}
+
+fn date_header() -> String {
+    "Date: Sun, 18 Oct 2026 00:00:00 GMT
+Server: sdm-testkit
+".into()
 }
 
 async fn read_head(sock: &mut TcpStream, buf: &mut Vec<u8>) -> std::io::Result<Option<String>> {
@@ -300,7 +352,12 @@ async fn read_head(sock: &mut TcpStream, buf: &mut Vec<u8>) -> std::io::Result<O
 }
 
 async fn simple(sock: &mut TcpStream, code: u16, body: &[u8], extra: &[(&str, String)]) -> std::io::Result<()> {
-    let mut h = format!("HTTP/1.1 {code} X\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n", body.len());
+    let mut h = format!(
+        "HTTP/1.1 {code} {}\r\n{}Content-Type: text/plain\r\nContent-Length: {}\r\n",
+        reason(code),
+        date_header(),
+        body.len()
+    );
     for (k, v) in extra {
         h.push_str(&format!("{k}: {v}\r\n"));
     }
@@ -309,7 +366,7 @@ async fn simple(sock: &mut TcpStream, code: u16, body: &[u8], extra: &[(&str, St
     sock.write_all(body).await
 }
 
-async fn handle_conn(mut sock: TcpStream, st: Arc<State>) -> std::io::Result<()> {
+async fn handle_conn(mut sock: TcpStream, st: Arc<State>, conn: u64) -> std::io::Result<()> {
     let mut buf = Vec::new();
     loop {
         let Some(head) = read_head(&mut sock, &mut buf).await? else { return Ok(()) };
@@ -327,7 +384,14 @@ async fn handle_conn(mut sock: TcpStream, st: Arc<State>) -> std::io::Result<()>
         }
         let range = hdr.get("range").cloned();
         let if_range = hdr.get("if-range").cloned();
+        let t0 = *st.started.get_or_init(Instant::now);
+        let mut names: Vec<String> = hdr.keys().cloned().collect();
+        names.sort();
         st.log.lock().unwrap().push(LogEntry {
+            conn,
+            at_ms: t0.elapsed().as_millis(),
+            user_agent: hdr.get("user-agent").cloned(),
+            header_names: names,
             method: method.clone(),
             path: path.clone(),
             range: range.clone(),
@@ -352,7 +416,12 @@ async fn handle_conn(mut sock: TcpStream, st: Arc<State>) -> std::io::Result<()>
             r.clone()
         };
         if let Some(to) = &res.redirect_to {
-            let h = format!("HTTP/1.1 {} X\r\nLocation: {to}\r\nContent-Length: 0\r\n\r\n", res.redirect_status);
+            let h = format!(
+                "HTTP/1.1 {} {}\r\n{}Location: {to}\r\nContent-Length: 0\r\n\r\n",
+                res.redirect_status,
+                reason(res.redirect_status),
+                date_header()
+            );
             sock.write_all(h.as_bytes()).await?;
             continue;
         }
@@ -406,7 +475,7 @@ async fn handle_conn(mut sock: TcpStream, st: Arc<State>) -> std::io::Result<()>
             }
         }
         let body_len = if size == 0 { 0 } else { end - start + 1 };
-        let mut h = format!("HTTP/1.1 {status} X\r\nContent-Type: {}\r\n", res.content_type);
+        let mut h = format!("HTTP/1.1 {status} {}\r\n{}Content-Type: {}\r\n", reason(status), date_header(), res.content_type);
         if let Some(e) = &res.etag {
             h.push_str(&format!("ETag: {e}\r\n"));
         }
@@ -469,7 +538,10 @@ async fn handle_conn(mut sock: TcpStream, st: Arc<State>) -> std::io::Result<()>
                 }
             }
             if take > 0 {
-                let chunk = res.body.read(start + sent, take);
+                let chunk = match &res.mirror_body {
+                    Some(m) if start > 0 => m.read(start + sent, take),
+                    _ => res.body.read(start + sent, take),
+                };
                 if res.chunked {
                     sock.write_all(format!("{:X}\r\n", chunk.len()).as_bytes()).await?;
                     sock.write_all(&chunk).await?;

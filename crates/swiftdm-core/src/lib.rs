@@ -3,7 +3,9 @@
 
 pub mod api;
 pub mod appdata;
+pub mod batch;
 pub mod cancel;
+pub mod capture;
 pub mod categories;
 pub mod engine;
 pub mod errors;
@@ -16,12 +18,15 @@ pub mod manager;
 pub mod media;
 pub mod models;
 pub mod proxy;
+pub mod quota;
 pub mod router;
 pub mod scheduler;
+pub mod search;
 pub mod secrets;
 pub mod settings;
 pub mod states;
 pub mod store;
+pub mod wildcard;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

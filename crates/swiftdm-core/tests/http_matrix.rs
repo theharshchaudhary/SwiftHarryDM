@@ -419,3 +419,103 @@ async fn speed_limit_and_refresh_address() {
     ok(&s, &big);
     assert!(range_starts(&e, "/new.bin", 0).iter().all(|&x| x > 0));
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn slow_middle_segment_is_split_and_file_is_exact() {
+    // 8 segments of 3 MiB; the one starting at 9 MiB stalls, so the others finish first and
+    // the stalled segment is split while it runs (the new piece lies mid-file).
+    let e = env().await;
+    let b = Body::gen("split-mid", 24 * MIB);
+    let r = Resource::new(b.clone())
+        .etag("\"m\"")
+        .fault(Fault::stall(256 * 1024, Duration::from_secs(4)).when(|_, r| r.is_some_and(|r| r.starts_with(&format!("bytes={}-", 9 * MIB)))));
+    let s = e.run(&e.srv.add("/mid.bin", r), 90).await;
+    ok(&s, &b);
+    let starts = range_starts(&e, "/mid.bin", 0);
+    assert!(starts.iter().any(|&x| x > 9 * MIB && x < 12 * MIB), "no split inside the stalled segment: {starts:?}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mirrors_with_different_files_fall_back_to_one_connection() {
+    // Requests that start past byte 0 reach a mirror holding a different file of the same size.
+    let e = env().await;
+    let a = Body::gen("mirror-a", 16 * MIB);
+    let r = Resource::new(a.clone()).mirror(Body::gen("mirror-b", 16 * MIB));
+    let s = e.run(&e.srv.add("/mirror.bin", r), 90).await;
+    ok(&s, &a);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn per_server_connection_limit() {
+    use swiftdm_core::settings::ServerLimit;
+    let e = env_with(
+        |_| {},
+        Settings { server_limits: vec![ServerLimit { host: "127.0.0.1".into(), max_connections: 2 }], ..Settings::default() },
+    )
+    .await;
+    let b = Body::gen("limited", 16 * MIB);
+    ok(&e.run(&e.srv.add("/lim.bin", Resource::new(b.clone()).etag("\"l\"")), 60).await, &b);
+    let starts = range_starts(&e, "/lim.bin", 0);
+    // Planned as two halves; an 8-way plan would also start at 2, 4 and 6 MiB.
+    assert!(starts.contains(&(8 * MIB)), "{starts:?}");
+    assert!(!starts.contains(&(2 * MIB)) && !starts.contains(&(6 * MIB)), "{starts:?}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn download_quota_stops_downloads_and_releases() {
+    use swiftdm_core::events::Event;
+    let e = env_with(|_| {}, Settings { quota_mb: 2, quota_hours: 1, ..Settings::default() }).await;
+    let mut events = e.m.subscribe();
+    let b = Body::gen("quota", 8 * MIB);
+    let id = e.submit(&e.srv.add("/q.bin", Resource::new(b.clone()).etag("\"q\"").throttle(4 * MIB)));
+    let s = e.m.wait_for(&id, &[S::Paused, S::Completed], Duration::from_secs(30)).await.unwrap();
+    assert_eq!(s.state, S::Paused, "the quota should stop the download");
+    let st = e.m.quota_status();
+    assert!(st.blocked && st.used >= 2 * MIB && st.limit == 2 * MIB, "{st:?}");
+    let mut saw = false;
+    while let Ok(ev) = events.try_recv() {
+        if let Event::QuotaExceeded { resume_in_secs, .. } = ev {
+            assert!(resume_in_secs > 3000.0, "{resume_in_secs}");
+            saw = true;
+        }
+    }
+    assert!(saw, "QuotaExceeded was not published");
+    // New downloads do not start while blocked.
+    let id2 = e.submit(&e.srv.add("/q2.bin", Resource::new(Body::gen("q2", MIB))));
+    tokio::time::sleep(Duration::from_millis(800)).await;
+    assert_eq!(e.m.get(&id2).unwrap().state, S::Queued);
+    // Raising the quota releases it and the stopped download resumes by itself.
+    e.m.settings().update(|s| s.quota_mb = 0).unwrap();
+    ok(&e.m.wait_for(&id, DONE, Duration::from_secs(60)).await.unwrap(), &b);
+    assert_eq!(e.m.wait_for(&id2, DONE, Duration::from_secs(30)).await.unwrap().state, S::Completed);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn duplicates_are_found_by_address() {
+    let e = env().await;
+    let url = e.srv.add("/dup.bin", Resource::new(Body::gen("dup", MIB)));
+    assert!(e.m.find_duplicates(&url).is_empty());
+    let id = e.submit(&url);
+    e.m.wait_for(&id, DONE, Duration::from_secs(30)).await;
+    assert_eq!(e.m.find_duplicates(&url).len(), 1);
+    e.m.remove(&id, false);
+    e.m.sync().await;
+    assert!(e.m.find_duplicates(&url).is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn per_download_speed_limit_changes_while_running() {
+    let e = env().await;
+    let b = Body::gen("live-limit", 64 * MIB);
+    let id = e.submit(&e.srv.add("/ll.bin", Resource::new(b.clone()).etag("\"ll\"").throttle(8 * MIB)));
+    e.m.wait_for(&id, &[S::Downloading], Duration::from_secs(10)).await;
+    e.m.set_speed_limit(&id, Some(MIB));
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let a = e.m.progress(&id).unwrap().downloaded;
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    let rate = (e.m.progress(&id).unwrap().downloaded - a) as f64 / 2.0;
+    assert!(rate < 1.6 * MIB as f64, "limit not applied: {rate} B/s");
+    assert_eq!(e.m.get(&id).unwrap().state, S::Downloading);
+    e.m.set_speed_limit(&id, None);
+    ok(&e.m.wait_for(&id, DONE, Duration::from_secs(90)).await.unwrap(), &b);
+}

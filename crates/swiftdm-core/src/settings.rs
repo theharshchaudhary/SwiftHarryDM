@@ -22,6 +22,14 @@ pub struct SiteLogin {
     pub password_enc: String,
 }
 
+/// Connection cap for matching servers (some servers ban clients that open many connections).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ServerLimit {
+    /// Host or wildcard pattern, e.g. "files.example.com" or "dl*.mirror.net".
+    pub host: String,
+    pub max_connections: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
@@ -55,6 +63,16 @@ pub struct Settings {
     pub sound_on_complete: bool,
     pub theme: String, // system | light | dark
     pub api_port: u16,
+    pub server_limits: Vec<ServerLimit>,
+    /// Browser downloads from these sites are left to the browser.
+    pub capture_skip_sites: Vec<String>,
+    /// Browser downloads whose address matches one of these `*` patterns are left to the browser.
+    pub capture_skip_urls: Vec<String>,
+    /// What to do when the same address is added again: ask | number | overwrite | resume.
+    pub duplicate_policy: String,
+    /// "Download no more than quota_mb every quota_hours hours" (0 MB = off).
+    pub quota_mb: u64,
+    pub quota_hours: u32,
 }
 
 pub const DEFAULT_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) \
@@ -98,6 +116,12 @@ impl Default for Settings {
             sound_on_complete: true,
             theme: "system".into(),
             api_port: 5001,
+            server_limits: vec![],
+            capture_skip_sites: vec![],
+            capture_skip_urls: vec![],
+            duplicate_policy: "ask".into(),
+            quota_mb: 0,
+            quota_hours: 24,
         }
     }
 }
@@ -128,7 +152,34 @@ impl Settings {
             *e = e.trim().trim_start_matches('.').to_lowercase();
         }
         self.capture_extensions.retain(|e| !e.is_empty());
+        for l in self.server_limits.iter_mut() {
+            l.host = l.host.trim().to_lowercase();
+            l.max_connections = l.max_connections.clamp(1, 32);
+        }
+        self.server_limits.retain(|l| !l.host.is_empty());
+        for list in [&mut self.capture_skip_sites, &mut self.capture_skip_urls] {
+            for e in list.iter_mut() {
+                *e = e.trim().to_string();
+            }
+            list.retain(|e| !e.is_empty());
+        }
+        if !matches!(self.duplicate_policy.as_str(), "ask" | "number" | "overwrite" | "resume") {
+            self.duplicate_policy = "ask".into();
+        }
+        self.quota_hours = self.quota_hours.clamp(1, 24 * 31);
         self
+    }
+
+    /// Connections allowed for a download address: the per-server cap if one matches,
+    /// otherwise the global maximum.
+    pub fn segments_for(&self, url: &str) -> u32 {
+        let host = url::Url::parse(url).ok().and_then(|u| u.host_str().map(str::to_string)).unwrap_or_default();
+        self.server_limits
+            .iter()
+            .find(|l| crate::wildcard::host_matches(&l.host, &host))
+            .map(|l| l.max_connections.min(self.max_segments))
+            .unwrap_or(self.max_segments)
+            .max(1)
     }
 
     /// Destination folder for a file name, honouring categories.
@@ -232,5 +283,25 @@ mod tests {
         });
         assert_eq!(s.login_for("files.example.com"), Some(("u".into(), "p".into())));
         assert_eq!(s.login_for("evil-example.com"), None);
+    }
+
+    #[test]
+    fn per_server_connection_limits() {
+        let s = Settings {
+            max_segments: 8,
+            server_limits: vec![
+                ServerLimit { host: " Files.Example.com ".into(), max_connections: 2 },
+                ServerLimit { host: "dl*.mirror.net".into(), max_connections: 99 },
+                ServerLimit { host: "".into(), max_connections: 1 },
+            ],
+            ..Settings::default()
+        }
+        .normalized();
+        assert_eq!(s.server_limits.len(), 2);
+        assert_eq!(s.segments_for("https://files.example.com/a.zip"), 2);
+        assert_eq!(s.segments_for("https://eu.files.example.com/a.zip"), 2);
+        assert_eq!(s.segments_for("https://dl3.mirror.net/a.zip"), 8); // capped by the global max
+        assert_eq!(s.segments_for("https://other.org/a.zip"), 8);
+        assert_eq!(s.segments_for("not a url"), 8);
     }
 }

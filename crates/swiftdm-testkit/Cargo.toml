@@ -10,3 +10,5 @@ tokio.workspace = true
 sha2.workspace = true
 hex.workspace = true
 flate2 = "1"
+serde.workspace = true
+serde_json.workspace = true

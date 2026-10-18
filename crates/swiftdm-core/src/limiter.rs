@@ -1,10 +1,13 @@
 //! Token-bucket speed limiter (global, and optionally per download). A rate of 0 means
 //! unlimited. The rate can change while downloads run.
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 pub struct Limiter {
     inner: Mutex<Bucket>,
+    /// Every byte that passed through, limited or not (used for the download quota).
+    received: AtomicU64,
 }
 
 struct Bucket {
@@ -15,7 +18,10 @@ struct Bucket {
 
 impl Limiter {
     pub fn new(rate: u64) -> Self {
-        Limiter { inner: Mutex::new(Bucket { rate, tokens: 0.0, last: Instant::now() }) }
+        Limiter { inner: Mutex::new(Bucket { rate, tokens: 0.0, last: Instant::now() }), received: AtomicU64::new(0) }
+    }
+    pub fn received(&self) -> u64 {
+        self.received.load(Ordering::Relaxed)
     }
     pub fn set_rate(&self, rate: u64) {
         let mut b = self.inner.lock().unwrap();
@@ -47,6 +53,7 @@ impl Limiter {
         }
     }
     pub async fn acquire(&self, n: usize) {
+        self.received.fetch_add(n as u64, Ordering::Relaxed);
         let wait = self.reserve(n);
         if !wait.is_zero() {
             tokio::time::sleep(wait).await;

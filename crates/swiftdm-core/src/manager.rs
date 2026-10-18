@@ -71,6 +71,8 @@ enum Cmd {
     DeleteQueue(String),
     MoveToQueue(String, Option<String>),
     SetDescription(String, Option<String>),
+    SetSpeedLimit(String, Option<u64>),
+    SetPriority(String, i32),
     ApplyRefresh(String, String, crate::http::probe::HttpProbe, oneshot::Sender<Result<(), String>>),
     Update(String, JobPatch),
     Phase(String, String),
@@ -86,6 +88,16 @@ struct Shared {
     snaps: RwLock<HashMap<String, JobSnapshot>>,
     progress: RwLock<HashMap<String, ProgressSnapshot>>,
     queues: RwLock<Vec<Queue>>,
+    quota: RwLock<QuotaStatus>,
+}
+
+/// Current use of the download quota, for the status bar.
+#[derive(Debug, Clone, Copy, Default, PartialEq, serde::Serialize)]
+pub struct QuotaStatus {
+    pub used: u64,
+    /// 0 = no quota.
+    pub limit: u64,
+    pub blocked: bool,
 }
 
 #[derive(Clone)]
@@ -130,6 +142,20 @@ fn log_event(hub: &EventHub, job_id: &str, level: &str, message: &str) {
     hub.publish(Event::JobLog { job_id: job_id.into(), level: level.into(), message: message.into() });
 }
 
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct UrlInfo {
+    pub file_name: String,
+    pub size: Option<u64>,
+    pub content_type: Option<String>,
+    pub resumable: bool,
+    pub final_url: String,
+    /// The address opens a web page; the media engine may still find a video on it.
+    pub is_web_page: bool,
+    pub category: Option<String>,
+    /// Folder the file would be saved to (its category folder).
+    pub folder: String,
+}
+
 pub struct ManagerConfig {
     pub retry_base: Duration,
     pub autostart: bool,
@@ -155,6 +181,7 @@ impl Manager {
             snaps: RwLock::new(HashMap::new()),
             progress: RwLock::new(HashMap::new()),
             queues: RwLock::new(vec![]),
+            quota: RwLock::new(QuotaStatus::default()),
         });
         let hub = EventHub::new();
         let engines = Arc::new(engines);
@@ -181,6 +208,10 @@ impl Manager {
             tx: tx.clone(),
             config,
             last_tick: None,
+            quota: crate::quota::QuotaWindow::new(crate::now(), 0),
+            quota_blocked: false,
+            quota_paused: HashSet::new(),
+            job_limiters: HashMap::new(),
         };
         actor.recover()?;
         let mgr = Manager {
@@ -266,6 +297,34 @@ impl Manager {
     pub fn set_description(&self, id: &str, d: Option<String>) {
         let _ = self.tx.send(Cmd::SetDescription(id.into(), d));
     }
+    /// Per-download speed limit in bytes/s (None or 0 = no limit); applies immediately.
+    pub fn set_speed_limit(&self, id: &str, limit: Option<u64>) {
+        let _ = self.tx.send(Cmd::SetSpeedLimit(id.into(), limit.filter(|l| *l > 0)));
+    }
+    /// Higher priority starts first within its queue (used to reorder queue files).
+    pub fn set_priority(&self, id: &str, priority: i32) {
+        let _ = self.tx.send(Cmd::SetPriority(id.into(), priority));
+    }
+
+    /// What the "Download File Info" dialog shows before a download is added.
+    pub async fn inspect_url(&self, url: &str, cookies: Option<String>) -> Result<UrlInfo, String> {
+        let url = validate_url(url)?;
+        let s = self.settings.get();
+        let p = crate::http::probe::probe_url(&url, &s, &CancelToken::new(), cookies).await.map_err(|e| e.0.message)?;
+        let name = crate::fs::names::choose_filename(None, p.content_disposition.as_deref(), Some(&p.final_url), p.content_type.as_deref());
+        let (folder, category) = s.folder_for(&name);
+        Ok(UrlInfo {
+            file_name: name,
+            size: p.total,
+            content_type: p.content_type.clone(),
+            resumable: p.ranges,
+            final_url: p.final_url.clone(),
+            is_web_page: p.is_html(),
+            category,
+            folder: folder.to_string_lossy().into_owned(),
+        })
+    }
+
     pub fn schedule_tick(&self, minute: u32, weekday: usize) {
         let _ = self.tx.send(Cmd::ScheduleTick(minute, weekday));
     }
@@ -312,6 +371,20 @@ impl Manager {
     pub fn queues(&self) -> Vec<Queue> {
         self.shared.queues.read().unwrap().clone()
     }
+    pub fn quota_status(&self) -> QuotaStatus {
+        *self.shared.quota.read().unwrap()
+    }
+
+    /// Downloads with the same address (as typed or after redirects) that were not cancelled,
+    /// so the UI can offer the duplicate-link choices.
+    pub fn find_duplicates(&self, url: &str) -> Vec<JobSnapshot> {
+        let url = url.trim();
+        self.snapshot()
+            .into_iter()
+            .filter(|s| s.state != JobState::Cancelled && (s.url == url || s.final_url.as_deref() == Some(url)))
+            .collect()
+    }
+
     pub fn running_count(&self) -> usize {
         self.shared.snaps.read().unwrap().values().filter(|s| s.state.running()).count()
     }
@@ -397,6 +470,11 @@ pub struct Actor {
     tx: mpsc::UnboundedSender<Cmd>,
     config: ManagerConfig,
     last_tick: Option<u32>,
+    quota: crate::quota::QuotaWindow,
+    quota_blocked: bool,
+    /// Downloads stopped by the quota (not queue members), resumed when it frees up.
+    quota_paused: HashSet<String>,
+    job_limiters: HashMap<String, Arc<Limiter>>,
 }
 
 impl Actor {
@@ -436,6 +514,7 @@ impl Actor {
                 }
             } else {
                 self.limiter.set_rate(self.settings.get().speed_limit);
+                self.check_quota();
                 self.schedule();
             }
         }
@@ -474,6 +553,23 @@ impl Actor {
             Cmd::SetDescription(id, d) => {
                 if let Some(mut j) = self.jobs.remove(&id) {
                     j.spec.description = d;
+                    self.save(&mut j);
+                    self.jobs.insert(id, j);
+                }
+            }
+            Cmd::SetSpeedLimit(id, limit) => {
+                if let Some(l) = self.job_limiters.get(&id) {
+                    l.set_rate(limit.unwrap_or(0));
+                }
+                if let Some(mut j) = self.jobs.remove(&id) {
+                    j.spec.speed_limit = limit;
+                    self.save(&mut j);
+                    self.jobs.insert(id, j);
+                }
+            }
+            Cmd::SetPriority(id, p) => {
+                if let Some(mut j) = self.jobs.remove(&id) {
+                    j.spec.priority = p;
                     self.save(&mut j);
                     self.jobs.insert(id, j);
                 }
@@ -902,6 +998,7 @@ impl Actor {
 
     fn on_done(&mut self, id: &str, outcome: Outcome) {
         self.workers.remove(id);
+        self.job_limiters.remove(id);
         let p = self.shared.progress.read().unwrap().get(id).cloned();
         let requeue = self.requeue_on_stop.remove(id);
         self.with_job(id, |me, j| {
@@ -992,8 +1089,62 @@ impl Actor {
         }
     }
 
+    // ------------------------------------------------------------------ quota
+    fn check_quota(&mut self) {
+        let s = self.settings.get();
+        let now = crate::now();
+        self.quota.record(now, self.limiter.received());
+        let window = s.quota_hours.max(1) as f64 * 3600.0;
+        let limit = s.quota_mb.saturating_mul(1024 * 1024);
+        let used = self.quota.used(now, window);
+        let status = QuotaStatus { used, limit, blocked: self.quota_blocked };
+        if *self.shared.quota.read().unwrap() != status {
+            *self.shared.quota.write().unwrap() = status;
+        }
+        if limit > 0 && !self.quota_blocked && used >= limit {
+            self.quota_blocked = true;
+            let ids: Vec<(String, JobState)> = self
+                .jobs
+                .values()
+                .filter(|j| j.state.active() || matches!(j.state, S::Queued | S::RetryWait))
+                .map(|j| (j.id.clone(), j.state))
+                .collect();
+            for (id, st) in ids {
+                if self.via_queue.contains_key(&id) {
+                    // Queue members go back to their queue, like when the queue is stopped.
+                    if st.active() {
+                        self.requeue_on_stop.insert(id.clone());
+                        self.on_pause(&id);
+                    } else {
+                        self.with_job(&id, |me, j| me.set_state(j, S::Paused, Some(QUEUED_REASON), None, true));
+                        self.via_queue.remove(&id);
+                    }
+                } else {
+                    self.quota_paused.insert(id.clone());
+                    self.on_pause(&id);
+                }
+            }
+            let resume_in_secs = self.quota.seconds_until_below(now, window, limit.saturating_sub(1));
+            tracing::warn!("download quota reached: {used} of {limit} bytes");
+            self.hub.publish(Event::QuotaExceeded { used, limit, resume_in_secs });
+        } else if self.quota_blocked && (limit == 0 || used < limit) {
+            self.quota_blocked = false;
+            let ids: Vec<String> = self.quota_paused.drain().collect();
+            for id in ids {
+                let resumable = self.jobs.get(&id).is_some_and(|j| j.state == S::Paused && j.reason.as_deref() == Some("paused"));
+                if resumable {
+                    self.on_resume(&id);
+                }
+            }
+            self.hub.publish(Event::QuotaReleased);
+        }
+    }
+
     // ------------------------------------------------------------------ scheduling
     fn schedule(&mut self) {
+        if self.quota_blocked {
+            return;
+        }
         // 1. Running queues pull their waiting jobs.
         let queues: Vec<(String, usize)> =
             self.queues.iter().filter(|q| q.running).map(|q| (q.id.clone(), q.max_concurrent.max(1) as usize)).collect();
@@ -1071,11 +1222,14 @@ impl Actor {
             copy = Some(j.clone());
         });
         let Some(job) = copy else { return };
+        let job_limiter = Arc::new(Limiter::new(job.spec.speed_limit.unwrap_or(0)));
+        self.job_limiters.insert(job.id.clone(), job_limiter.clone());
         let ctx = RunCtx {
             cancel: token.clone(),
             reporter: self.reporter.clone(),
             settings: self.settings.clone(),
             limiter: self.limiter.clone(),
+            job_limiter,
         };
         let engines = self.engines.clone();
         let tx = self.tx.clone();
