@@ -136,3 +136,30 @@ fn walk(dir: &str) -> Vec<String> {
     }
     out
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ytdlp_update_is_verified_before_use() {
+    use axum::routing::get;
+    use sha2::{Digest, Sha256};
+    let e = env(); // isolated SWIFTDM_HOME
+    let exe = std::fs::read(fake()).unwrap();
+    let good = format!("{}  yt-dlp.exe\n", hex::encode(Sha256::digest(&exe)));
+    let serve = |sums: String| {
+        let exe = exe.clone();
+        async move {
+            let app = axum::Router::new()
+                .route("/SHA2-256SUMS", get(move || async move { sums }))
+                .route("/yt-dlp.exe", get(move || async move { exe }));
+            let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let base = format!("http://{}/", l.local_addr().unwrap());
+            tokio::spawn(async move { axum::serve(l, app).await.unwrap() });
+            base
+        }
+    };
+    let bad = serve(format!("{}  yt-dlp.exe\n", "0".repeat(64))).await;
+    assert!(swiftdm_core::media::tools::update_ytdlp(&bad).await.unwrap_err().contains("SHA-256"));
+    let ok = serve(good).await;
+    assert_eq!(swiftdm_core::media::tools::update_ytdlp(&ok).await.unwrap(), "2026.01.01-fake");
+    assert!(swiftdm_core::appdata::tools_dir().join("yt-dlp.exe").is_file());
+    drop(e);
+}

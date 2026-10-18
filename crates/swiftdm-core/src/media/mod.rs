@@ -74,8 +74,13 @@ impl MediaEngine {
         MediaEngine { tools: Mutex::new(tools), extra_args: vec![] }
     }
 
-    fn tools(&self) -> Tools {
+    pub fn tools(&self) -> Tools {
         self.tools.lock().unwrap().clone()
+    }
+
+    /// Use newly found tools (after an update).
+    pub fn set_tools(&self, t: Tools) {
+        *self.tools.lock().unwrap() = t;
     }
 
     fn ytdlp(&self) -> Result<String, SdmError> {
