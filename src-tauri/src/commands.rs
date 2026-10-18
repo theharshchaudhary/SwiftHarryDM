@@ -415,3 +415,15 @@ pub fn reject_request(st: State<AppState>, rid: String) {
         h.reject(&rid);
     }
 }
+
+#[tauri::command]
+pub fn is_media_url(url: String) -> bool {
+    swiftdm_core::router::is_media_url(&url)
+}
+
+/// Title and formats of a video page, for the quality picker.
+#[tauri::command]
+pub async fn inspect_media(st: State<'_, AppState>, url: String) -> R<swiftdm_core::media::MediaInfo> {
+    let url = swiftdm_core::manager::validate_url(&url)?;
+    st.media.inspect(&url).await
+}

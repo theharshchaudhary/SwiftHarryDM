@@ -12,6 +12,7 @@ use std::time::Duration;
 use serde_json::json;
 use swiftdm_core::events::Event;
 use swiftdm_core::manager::{Manager, ManagerConfig};
+use swiftdm_core::media::{MediaEngine, Tools};
 use swiftdm_core::models::JobState;
 use swiftdm_core::scheduler::AfterAction;
 use swiftdm_core::settings::SettingsStore;
@@ -32,6 +33,7 @@ pub struct AppState {
     exiting: Mutex<bool>,
     /// The browser-extension API, or why it could not start.
     pub api: Mutex<Result<swiftdm_core::api::ApiHandle, String>>,
+    pub media: Arc<MediaEngine>,
 }
 
 impl AppState {
@@ -40,11 +42,11 @@ impl AppState {
     }
 }
 
-fn start_manager() -> Result<Manager, String> {
+fn start_manager(media: Arc<MediaEngine>) -> Result<Manager, String> {
     let store = Arc::new(Store::open(swiftdm_core::appdata::db_path()).map_err(|e| e.to_string())?);
     let settings = SettingsStore::open(swiftdm_core::appdata::settings_path());
     let http = Arc::new(swiftdm_core::http::HttpEngine::new(store.clone())) as Arc<dyn swiftdm_core::engine::Engine>;
-    let engines = HashMap::from([("http".to_string(), http)]);
+    let engines = HashMap::from([("http".to_string(), http), ("media".to_string(), media as Arc<dyn swiftdm_core::engine::Engine>)]);
     Manager::start(store, engines, settings, ManagerConfig::default()).map_err(|e| e.to_string())
 }
 
@@ -248,7 +250,11 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--minimized"])))
         .setup(|app| {
-            let mgr = tauri::async_runtime::block_on(async { start_manager() }).map_err(|e| {
+            let tools = Tools::discover();
+            tracing::info!("media tools: yt-dlp={:?} ffmpeg={:?} ffprobe={:?}", tools.ytdlp, tools.ffmpeg, tools.ffprobe);
+            let media = Arc::new(MediaEngine::new(tools));
+            let m2 = media.clone();
+            let mgr = tauri::async_runtime::block_on(async move { start_manager(m2) }).map_err(|e| {
                 tracing::error!("cannot start: {e}");
                 e
             })?;
@@ -260,6 +266,7 @@ pub fn run() {
                 seen: Mutex::new(HashMap::new()),
                 exiting: Mutex::new(false),
                 api: Mutex::new(Err("starting".into())),
+                media,
             });
             build_tray(app.handle())?;
             let h = app.handle().clone();
@@ -331,6 +338,8 @@ pub fn run() {
             commands::exit_app,
             commands::protect_password,
             commands::api_status,
+            commands::is_media_url,
+            commands::inspect_media,
             commands::revoke_extension,
             commands::deny_pairing,
             commands::resolve_request,

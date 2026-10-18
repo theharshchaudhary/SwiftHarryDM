@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, windowParams, type Job, type UrlInfo } from "../api";
+import { api, windowParams, type Job, type MediaInfo, type UrlInfo } from "../api";
 import * as F from "../format";
 import { Dialog, Loading } from "../components/Dialog";
 import { Icon, categoryIcon } from "../icons";
@@ -13,13 +13,30 @@ function splitPath(p: string): [string, string] {
   return i < 0 ? ["", p] : [p.slice(0, i), p.slice(i + 1)];
 }
 
-/** "Download File Info": confirm name, category and folder, then start now or later. */
+const PRESETS: [string, string][] = [
+  ["best", "Best quality"],
+  ["2160", "2160p (4K)"],
+  ["1440", "1440p"],
+  ["1080", "1080p"],
+  ["720", "720p"],
+  ["480", "480p"],
+  ["360", "360p"],
+  ["mp4", "MP4 (plays everywhere)"],
+  ["mkv", "MKV (any codec)"],
+  ["mp3", "MP3 audio"],
+  ["m4a", "M4A audio"],
+];
+const AUDIO = new Set(["mp3", "m4a"]);
+
+/** "Download File Info": confirm name, category and folder (or video quality), then start now or later. */
 export default function FileInfo() {
   const live = useLive();
   useTheme(live?.settings.theme);
   const params = windowParams();
+  const rid = params.get("rid");
   const [url, setUrl] = useState(params.get("url") ?? "");
   const [info, setInfo] = useState<UrlInfo | null>(null);
+  const [media, setMedia] = useState<MediaInfo | null>(null);
   const [probeErr, setProbeErr] = useState("");
   const [probing, setProbing] = useState(true);
   const [category, setCategory] = useState<string>("");
@@ -27,7 +44,11 @@ export default function FileInfo() {
   const [pathTouched, setPathTouched] = useState(false);
   const [desc, setDesc] = useState(params.get("description") ?? "");
   const [queueId, setQueueId] = useState("main");
-  const rid = params.get("rid");
+  const [quality, setQuality] = useState("best");
+  const [dups, setDups] = useState<Job[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
   // A browser request that is closed without a decision counts as cancelled.
   useEffect(() => {
     if (!rid) return;
@@ -35,22 +56,35 @@ export default function FileInfo() {
     window.addEventListener("beforeunload", off);
     return () => window.removeEventListener("beforeunload", off);
   }, [rid]);
-  const [dups, setDups] = useState<Job[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
 
-  // Inspect the address (size, name, type) and look for duplicates.
+  // Inspect the address: video sites go to the media engine; other links get a quick file
+  // check, and if that finds a web page, the media engine is asked whether it has a video.
   useEffect(() => {
     let alive = true;
     setProbing(true);
     setProbeErr("");
-    const t = setTimeout(() => {
-      api
-        .inspectUrl(url)
-        .then((i) => alive && setInfo(i))
-        .catch((e) => alive && (setInfo(null), setProbeErr(String(e))))
-        .finally(() => alive && setProbing(false));
+    setMedia(null);
+    setInfo(null);
+    const t = setTimeout(async () => {
       api.findDuplicates(url).then((d) => alive && setDups(d));
+      try {
+        if (await api.isMediaUrl(url)) {
+          const m = await api.inspectMedia(url);
+          if (alive) setMedia(m);
+        } else {
+          const i = await api.inspectUrl(url);
+          if (!alive) return;
+          setInfo(i);
+          if (i.is_web_page) {
+            const m = await api.inspectMedia(url).catch(() => null);
+            if (alive && m) setMedia(m);
+          }
+        }
+      } catch (e) {
+        if (alive) setProbeErr(String(e));
+      } finally {
+        if (alive) setProbing(false);
+      }
     }, 300);
     return () => {
       alive = false;
@@ -59,6 +93,7 @@ export default function FileInfo() {
   }, [url]);
 
   const settings = live?.settings;
+  const isMedia = media != null;
   const name = params.get("filename") || info?.file_name || "";
   const folderFor = useMemo(
     () => (cat: string) => {
@@ -71,34 +106,46 @@ export default function FileInfo() {
     [settings],
   );
 
-  // Default category and path once the name is known (unless the user changed them).
+  // Default category and path (unless the user changed them).
   useEffect(() => {
     if (!settings || pathTouched) return;
+    if (isMedia) {
+      const cat = settings.categories.some((c) => c.name === (AUDIO.has(quality) ? "Music" : "Video")) ? (AUDIO.has(quality) ? "Music" : "Video") : "";
+      setCategory(cat);
+      setPath(cat ? folderFor(cat) : settings.download_dir);
+      return;
+    }
     const cat = info?.category ?? "";
     setCategory(cat);
     if (name) setPath(joinPath(cat ? folderFor(cat) : settings.download_dir, name));
-  }, [info, name, settings, folderFor, pathTouched]);
+  }, [info, name, settings, folderFor, pathTouched, isMedia, quality]);
 
   if (!live || !settings) return <Loading />;
 
   const changeCategory = (c: string) => {
     setCategory(c);
-    const [, n] = splitPath(path || name);
-    setPath(joinPath(c ? folderFor(c) : settings.download_dir, n || name));
+    if (isMedia) setPath(c ? folderFor(c) : settings.download_dir);
+    else {
+      const [, n] = splitPath(path || name);
+      setPath(joinPath(c ? folderFor(c) : settings.download_dir, n || name));
+    }
   };
 
   const browse = async () => {
-    const [dir] = splitPath(path);
+    const dir = isMedia ? path : splitPath(path)[0];
     const picked = await api.pickFolder(dir || settings.download_dir);
     if (picked) {
-      setPath(joinPath(picked, splitPath(path)[1] || name));
+      setPath(isMedia ? picked : joinPath(picked, splitPath(path)[1] || name));
       setPathTouched(true);
     }
   };
 
+  const exact = quality.startsWith("f:") ? quality.slice(2) : null;
+  const preset = exact ? "best" : quality;
+
   const go = async (mode: "now" | "later") => {
     setErr("");
-    const [dir, file] = splitPath(path);
+    const [dir, file] = isMedia ? [path, ""] : splitPath(path);
     if (!dir) {
       setErr("Choose a folder to save to.");
       return;
@@ -108,7 +155,7 @@ export default function FileInfo() {
       if (rid) {
         await api.resolveRequest(rid, {
           dest_dir: dir,
-          filename: file || null,
+          filename: isMedia ? null : file || null,
           category: category || null,
           description: desc.trim() || null,
           mode,
@@ -121,11 +168,14 @@ export default function FileInfo() {
         {
           url,
           dest_dir: dir,
-          filename: file && file !== info?.file_name ? file : file || null,
+          kind: isMedia ? "media" : "auto",
+          filename: isMedia ? null : file || null,
+          media: isMedia ? { preset, format_id: exact, max_height: null } : null,
+          format_label: isMedia ? preset : "best",
           referer: params.get("referer"),
           source: params.get("source") ?? "ui",
           category: category || null,
-          description: desc.trim() || null,
+          description: desc.trim() || (isMedia ? media!.title : null),
           queue_id: mode === "later" ? queueId : null,
         },
         mode,
@@ -137,17 +187,32 @@ export default function FileInfo() {
     }
   };
 
+  const sizeText = (() => {
+    if (probing) return "…";
+    if (probeErr) return `Unknown: ${probeErr.replace(/\.$/, "")}. The download will still be tried (with retries).`;
+    if (isMedia) {
+      const f = exact ? media!.formats.find((x) => x.id === exact) : null;
+      if (f?.size) return `About ${F.size(f.size)}`;
+      return media!.duration ? `Length ${F.duration(media!.duration)}; the size depends on the quality` : "Depends on the quality";
+    }
+    return info?.size != null ? `${F.size(info.size)} (${info.size.toLocaleString()} bytes)` : "Unknown (the server did not say)";
+  })();
+
   const dup = dups[0];
   return (
     <Dialog
-      left={<span className="hint">{probing ? "Checking the address…" : info ? `${info.resumable ? "Resumable" : "Not resumable"}${info.content_type ? ` · ${info.content_type.split(";")[0]}` : ""}` : ""}</span>}
+      left={
+        <span className="hint">
+          {probing ? "Checking the address…" : isMedia ? `Video from ${media!.extractor || F.host(url)}` : info ? `${info.resumable ? "Resumable" : "Not resumable"}${info.content_type ? ` · ${info.content_type.split(";")[0]}` : ""}` : ""}
+        </span>
+      }
       foot={
         <>
-          <button className="btn primary" disabled={busy || !url} onClick={() => go("now")}>
+          <button className="btn primary" disabled={busy || !url || probing} onClick={() => go("now")}>
             Start download
           </button>
           <span className="row" style={{ gap: 0 }}>
-            <button className="btn" disabled={busy || !url} onClick={() => go("later")} style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}>
+            <button className="btn" disabled={busy || !url || probing} onClick={() => go("later")} style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}>
               Download later
             </button>
             <select value={queueId} onChange={(e) => setQueueId(e.target.value)} title="Queue for “Download later”" style={{ height: 30, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, marginLeft: -1 }}>
@@ -185,6 +250,27 @@ export default function FileInfo() {
       <div className="grid2">
         <span>Address</span>
         <input type="text" value={url} onChange={(e) => setUrl(e.target.value.trim())} />
+        {isMedia && (
+          <>
+            <span>Video</span>
+            <b className="ellipsis" title={media!.title}>{media!.title}</b>
+            <span>Quality</span>
+            <select value={quality} disabled={!!rid} onChange={(e) => { setQuality(e.target.value); }}>
+              <optgroup label="Presets">
+                {PRESETS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </optgroup>
+              {media!.formats.length > 0 && (
+                <optgroup label="Exact formats">
+                  {media!.formats.map((f) => (
+                    <option key={f.id} value={`f:${f.id}`}>
+                      {[f.height ? `${f.height}p` : "audio", f.ext, f.vcodec && !f.acodec ? "video only (best audio added)" : "", f.size ? F.size(f.size) : "", f.note].filter(Boolean).join(" · ")}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </>
+        )}
         <span>Category</span>
         <div className="row">
           <Icon name={categoryIcon(category || null)} size={18} />
@@ -196,7 +282,7 @@ export default function FileInfo() {
           </select>
           <button className="btn small" title="Edit categories" onClick={() => api.openWindow("options", { tab: "saveto" })}>+</button>
         </div>
-        <span>Save as</span>
+        <span>{isMedia ? "Save in" : "Save as"}</span>
         <div className="row">
           <input type="text" className="grow" value={path} placeholder={probing ? "…" : ""} onChange={(e) => { setPath(e.target.value); setPathTouched(true); }} />
           <button className="btn small" onClick={browse}>Browse…</button>
@@ -204,20 +290,13 @@ export default function FileInfo() {
         <span>Description</span>
         <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} />
         <span>Size</span>
-        <span className="muted">
-          {probing
-            ? "…"
-            : probeErr
-              ? `Unknown: ${probeErr.replace(/\.$/, "")}. The download will still be tried (with retries).`
-              : info?.size != null
-                ? `${F.size(info.size)} (${info.size.toLocaleString()} bytes)`
-                : "Unknown (the server did not say)"}
-        </span>
+        <span className="muted">{sizeText}</span>
       </div>
-      {info?.is_web_page && (
+      {isMedia && <div className="hint">The file is named after the video. Protected (DRM) videos, playlists and live streams are not downloaded.</div>}
+      {!isMedia && info?.is_web_page && !probing && (
         <div className="banner">
           <Icon name="video" size={18} />
-          <div>This address opens a web page, not a file. If the page has a video, SwiftHarryDM will try to save the video instead.</div>
+          <div>This address opens a web page, not a file, and no video was found on it.</div>
         </div>
       )}
       {err && <div className="err">{err}</div>}

@@ -134,10 +134,27 @@ export interface AppState {
   version: string;
 }
 
+export interface MediaOptions { preset: string; max_height?: number | null; format_id?: string | null }
+
+export interface FormatInfo {
+  id: string;
+  ext: string;
+  height: number | null;
+  fps: number | null;
+  vcodec: string | null;
+  acodec: string | null;
+  size: number | null;
+  note: string;
+}
+
+export interface MediaInfo { title: string; extractor: string; duration: number | null; thumbnail: string | null; formats: FormatInfo[] }
+
 export interface JobSpec {
   url: string;
   dest_dir: string;
   kind?: string;
+  media?: MediaOptions | null;
+  format_label?: string;
   filename?: string | null;
   source?: string;
   referer?: string | null;
@@ -207,6 +224,8 @@ export const api = {
   getJobAfter: (id: string) => invoke<AfterAction>("get_job_after", { id }),
   refreshUrl: (id: string, url: string) => invoke<void>("refresh_url", { id, url }),
   inspectUrl: (url: string) => invoke<UrlInfo>("inspect_url", { url }),
+  isMediaUrl: (url: string) => invoke<boolean>("is_media_url", { url }),
+  inspectMedia: (url: string) => invoke<MediaInfo>("inspect_media", { url }),
   findDuplicates: (url: string) => invoke<Job[]>("find_duplicates", { url }),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
   expandBatch: (pattern: string, series: Series) => invoke<string[]>("expand_batch", { pattern, series }),
