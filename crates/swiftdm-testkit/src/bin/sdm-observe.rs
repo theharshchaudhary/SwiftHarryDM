@@ -48,6 +48,23 @@ async fn main() {
         None,
     );
     add("/s7/flaky.bin", Resource::new(Body::gen("s7", 4 * MIB)).etag("\"s7\"").statuses(&[503, 503]), None);
+    // Pages for browser tests: a page with download links, and a small PDF for "leave it to
+    // the browser" (Alt+click) checks.
+    add(
+        "/p/alt.pdf",
+        Resource::new(Body::gen("alt", 200_000)).content_type("application/pdf").disposition("attachment; filename=\"alt.pdf\""),
+        None,
+    );
+    let page = format!(
+        "<!doctype html><html><head><meta charset=utf-8><title>Downloads</title></head><body>\
+         <h1>Test downloads</h1>\
+         <p><a id=report href=\"{b}/s6/get\">Report (PDF)</a></p>\
+         <p><a id=alt href=\"{b}/p/alt.pdf\">Alt-click PDF</a></p>\
+         <p><a id=bin href=\"{b}/s7/flaky.bin\">Flaky binary</a></p>\
+         </body></html>",
+        b = srv.base
+    );
+    add("/p/links.html", Resource::new(Body::raw(page.into_bytes())).content_type("text/html; charset=utf-8"), None);
     std::fs::write(out.join("expected.json"), serde_json::to_string_pretty(&expected).unwrap()).unwrap();
     println!("ready {}", srv.base);
     loop {

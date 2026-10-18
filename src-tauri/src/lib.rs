@@ -186,7 +186,7 @@ async fn watch_clipboard(app: AppHandle) {
             continue;
         }
         let Ok(url) = swiftdm_core::manager::validate_url(t) else { continue };
-        let c = swiftdm_core::capture::Candidate { url: &url, file_name: None, size: None, forced: false };
+        let c = swiftdm_core::capture::Candidate { url: &url, file_name: None, size: None, mime: None, forced: false };
         if swiftdm_core::capture::decide(&settings, &c) == swiftdm_core::capture::Decision::Capture {
             open_logged(&app, "info", &[("url".into(), url), ("source".into(), "clipboard".into())]);
         }

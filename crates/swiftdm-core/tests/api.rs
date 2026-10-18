@@ -181,6 +181,7 @@ async fn capture_decisions_and_link_lists() {
     assert_eq!(check(json!({ "url": "https://a.com/page.html" })).await.1["capture"].as_bool(), Some(false));
     assert_eq!(check(json!({ "url": "https://a.com/page.html", "forced": true })).await.1["capture"].as_bool(), Some(true));
     assert_eq!(check(json!({ "url": "https://a.com/get?id=7", "fileName": "Report.pdf" })).await.1["capture"].as_bool(), Some(true));
+    assert_eq!(check(json!({ "url": "https://a.com/get?id=8", "mime": "application/zip" })).await.1["capture"].as_bool(), Some(true));
     let (s, v) = e.call("POST", "/api/links", Some(EXT), Some(&t), Some(json!({ "urls": ["https://a.com/1.zip", "javascript:x", "https://a.com/2.zip", "https://a.com/1.zip"] }))).await;
     assert_eq!((s, v["count"].as_u64()), (202, Some(2)));
     assert_eq!(e.hooks.links.lock().unwrap()[0], vec!["https://a.com/1.zip".to_string(), "https://a.com/2.zip".to_string()]);

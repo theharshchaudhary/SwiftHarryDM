@@ -353,7 +353,8 @@ async fn capture_check(State(st): State<Arc<Inner>>, h: HeaderMap, body: Bytes) 
     let Some(v) = parse_json(&body) else { return err(StatusCode::BAD_REQUEST, "bad request") };
     let Some(url) = v.get("url").and_then(Value::as_str).filter(|u| u.len() <= 8192) else { return err(StatusCode::BAD_REQUEST, "url required") };
     let name = v.get("fileName").and_then(Value::as_str).filter(|n| n.len() <= 1024);
-    let c = Candidate { url, file_name: name, size: v.get("fileSize").and_then(Value::as_u64), forced: v.get("forced").and_then(Value::as_bool).unwrap_or(false) };
+    let mime = v.get("mime").and_then(Value::as_str).filter(|m| m.len() <= 256);
+    let c = Candidate { url, file_name: name, size: v.get("fileSize").and_then(Value::as_u64), mime, forced: v.get("forced").and_then(Value::as_bool).unwrap_or(false) };
     match capture::decide(&st.mgr.settings().get(), &c) {
         Decision::Capture => Json(json!({ "success": true, "capture": true })).into_response(),
         Decision::Skip(why) => Json(json!({ "success": true, "capture": false, "reason": why })).into_response(),

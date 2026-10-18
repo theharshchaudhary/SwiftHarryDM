@@ -13,6 +13,7 @@ class BackgroundManager {
         this.apiVersion = 0;
         this.bypass = new Map(); // url -> time the user Alt-clicked it
         this.resent = new Set(); // urls handed back to the browser after a failed take-over
+        this.seen = new Set(); // download ids already considered (two events fire per download)
         this.createContextMenu();
         this.setupMessageListener();
         this.setupCapture();
@@ -120,15 +121,22 @@ class BackgroundManager {
     }
 
     setupCapture() {
-        // onDeterminingFilename gives the final name, size and type; answer it at once so
-        // the browser is never kept waiting, then decide asynchronously.
+        // onCreated fires for every download (also when DevTools controls downloads) and has
+        // the type and size; onDeterminingFilename adds the final name in normal browsing.
+        // Each download is considered once, at whichever event comes first.
+        chrome.downloads.onCreated.addListener((item) => {
+            this.maybeTakeOver(item).catch(() => {});
+        });
         chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
-            suggest();
+            suggest(); // never keep the browser waiting
             this.maybeTakeOver(item).catch(() => {});
         });
     }
 
     async maybeTakeOver(item) {
+        if (this.seen.has(item.id)) return;
+        this.seen.add(item.id);
+        if (item.state && item.state !== 'in_progress') return;
         const url = item.finalUrl || item.url;
         if (!/^https?:/i.test(url) || item.byExtensionId === chrome.runtime.id) return;
         if (this.resent.delete(url)) return;
@@ -138,7 +146,7 @@ class BackgroundManager {
         if (!(await this.findAppPort()) || this.apiVersion < 3) return;
         const fileName = (item.filename || '').split(/[\\/]/).pop() || null;
         const fileSize = item.totalBytes > 0 ? item.totalBytes : (item.fileSize > 0 ? item.fileSize : null);
-        const check = await this.request('/api/capture/check', { method: 'POST', body: { url, fileName, fileSize } });
+        const check = await this.request('/api/capture/check', { method: 'POST', body: { url, fileName, fileSize, mime: item.mime || null } });
         if (!check.ok || !check.data.capture) return;
         try {
             await chrome.downloads.cancel(item.id);

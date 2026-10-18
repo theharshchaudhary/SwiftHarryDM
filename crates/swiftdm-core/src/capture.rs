@@ -16,8 +16,38 @@ pub struct Candidate<'a> {
     /// File name suggested by the browser or the server, if known.
     pub file_name: Option<&'a str>,
     pub size: Option<u64>,
+    /// Content type reported by the browser; used when the name has no extension yet.
+    pub mime: Option<&'a str>,
     /// The user held the "force" key: take it over regardless of type and size.
     pub forced: bool,
+}
+
+/// Usual file extension for a content type (only types that are downloads, not pages).
+pub fn mime_extension(mime: &str) -> Option<&'static str> {
+    let m = mime.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
+    Some(match m.as_str() {
+        "application/pdf" => "pdf",
+        "application/zip" | "application/x-zip-compressed" => "zip",
+        "application/x-7z-compressed" => "7z",
+        "application/vnd.rar" | "application/x-rar-compressed" => "rar",
+        "application/gzip" | "application/x-gzip" => "gz",
+        "application/x-tar" => "tar",
+        "application/x-msdownload" | "application/vnd.microsoft.portable-executable" | "application/x-msdos-program" => "exe",
+        "application/x-msi" | "application/x-ms-installer" => "msi",
+        "application/vnd.android.package-archive" => "apk",
+        "application/x-iso9660-image" => "iso",
+        "application/x-apple-diskimage" => "dmg",
+        "audio/mpeg" => "mp3",
+        "audio/mp4" | "audio/x-m4a" => "m4a",
+        "audio/flac" => "flac",
+        "audio/wav" | "audio/x-wav" => "wav",
+        "video/mp4" => "mp4",
+        "video/webm" => "webm",
+        "video/x-matroska" => "mkv",
+        "video/quicktime" => "mov",
+        "video/x-msvideo" => "avi",
+        _ => return None,
+    })
 }
 
 pub fn decide(s: &Settings, c: &Candidate) -> Decision {
@@ -38,7 +68,10 @@ pub fn decide(s: &Settings, c: &Candidate) -> Decision {
     let name = c.file_name.map(str::to_string).unwrap_or_else(|| {
         u.path_segments().and_then(|mut p| p.next_back().map(str::to_string)).unwrap_or_default()
     });
-    let ext = std::path::Path::new(&name).extension().map(|e| e.to_string_lossy().to_lowercase());
+    let ext = std::path::Path::new(&name)
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .or_else(|| c.mime.and_then(mime_extension).map(str::to_string));
     match ext {
         Some(e) if s.capture_extensions.contains(&e) => {}
         Some(e) => return Decision::Skip(format!(".{e} files are not in the list of file types to take over")),
@@ -56,7 +89,7 @@ pub fn decide(s: &Settings, c: &Candidate) -> Decision {
 mod tests {
     use super::*;
     fn cand(url: &str) -> Candidate<'_> {
-        Candidate { url, file_name: None, size: None, forced: false }
+        Candidate { url, file_name: None, size: None, mime: None, forced: false }
     }
     #[test]
     fn rules() {
@@ -80,5 +113,10 @@ mod tests {
         assert_eq!(decide(&s, &forced), Decision::Capture);
         let forced_excluded = Candidate { forced: true, ..cand("https://intranet.local/f.zip") };
         assert!(matches!(decide(&s, &forced_excluded), Decision::Skip(_)));
+        // The browser often knows only the content type when the download starts.
+        let typed = Candidate { mime: Some("application/pdf; charset=binary"), ..cand("https://a.org/get?id=1") };
+        assert_eq!(decide(&s, &typed), Decision::Capture);
+        let page = Candidate { mime: Some("text/html"), ..cand("https://a.org/get?id=1") };
+        assert!(matches!(decide(&s, &page), Decision::Skip(_)));
     }
 }
