@@ -13,6 +13,7 @@ import Batch from "./windows/Batch";
 import Links from "./windows/Links";
 import Properties from "./windows/Properties";
 import { About, Countdown, Unknown } from "./windows/Small";
+import Pairing from "./windows/Pairing";
 
 // Every window loads this page; ?w= selects what it shows.
 const WINDOWS: Record<string, () => JSX.Element | null> = {
@@ -28,6 +29,7 @@ const WINDOWS: Record<string, () => JSX.Element | null> = {
   properties: Properties,
   about: About,
   countdown: Countdown,
+  pairing: Pairing,
 };
 
 const TITLES: Record<string, string> = {
@@ -43,6 +45,7 @@ const TITLES: Record<string, string> = {
   properties: "Properties",
   about: "About SwiftHarryDM",
   countdown: "SwiftHarryDM",
+  pairing: "Connect browser extension",
 };
 
 const kind = windowParams().get("w") ?? "main";

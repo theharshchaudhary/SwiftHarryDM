@@ -31,6 +31,7 @@ fn spec(kind: &str) -> Option<Spec> {
         "properties" => s("Properties", 620.0, 560.0, true, Some("id"), false),
         "about" => s("About SwiftHarryDM", 460.0, 280.0, false, None, false),
         "countdown" => s("SwiftHarryDM", 400.0, 250.0, false, None, true),
+        "pairing" => s("Connect browser extension", 440.0, 300.0, false, Some("pid"), true),
         _ => return None,
     })
 }

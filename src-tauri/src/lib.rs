@@ -1,5 +1,6 @@
 //! SwiftHarryDM desktop shell: hosts the core download manager, forwards its events to the
 //! windows, and adds what only a desktop app can do (tray, clipboard, notifications, power).
+mod bridge;
 mod commands;
 mod system;
 mod windows;
@@ -29,6 +30,8 @@ pub struct AppState {
     /// Last state seen per download, to detect transitions.
     seen: Mutex<HashMap<String, JobState>>,
     exiting: Mutex<bool>,
+    /// The browser-extension API, or why it could not start.
+    pub api: Mutex<Result<swiftdm_core::api::ApiHandle, String>>,
 }
 
 impl AppState {
@@ -256,12 +259,14 @@ pub fn run() {
                 watch_progress: Mutex::new(HashSet::new()),
                 seen: Mutex::new(HashMap::new()),
                 exiting: Mutex::new(false),
+                api: Mutex::new(Err("starting".into())),
             });
             build_tray(app.handle())?;
             let h = app.handle().clone();
             tauri::async_runtime::spawn(pump_events(h.clone()));
             tauri::async_runtime::spawn(pump_quota(h.clone()));
             tauri::async_runtime::spawn(watch_clipboard(h.clone()));
+            tauri::async_runtime::spawn(bridge::start(h.clone()));
             if let Some(main) = app.get_webview_window("main") {
                 if !start_hidden {
                     let _ = main.show();
@@ -325,6 +330,11 @@ pub fn run() {
             commands::power_action,
             commands::exit_app,
             commands::protect_password,
+            commands::api_status,
+            commands::revoke_extension,
+            commands::deny_pairing,
+            commands::resolve_request,
+            commands::reject_request,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build the app")

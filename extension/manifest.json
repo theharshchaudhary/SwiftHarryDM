@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "SwiftHarryDM Downloader",
-  "version": "3.0.0",
-  "description": "Send videos, audio and files to the SwiftHarryDM desktop app (paired, local only).",
+  "version": "3.1.0",
+  "description": "Send downloads, links, videos and audio to the SwiftHarryDM desktop app (paired, local only).",
   "permissions": [
     "activeTab",
     "storage",
     "contextMenus",
-    "notifications"
+    "notifications",
+    "downloads"
   ],
   "host_permissions": [
     "http://127.0.0.1/*",
@@ -18,9 +19,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["styles.css"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
     }
   ],
   "action": {
@@ -37,8 +44,20 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "web_accessible_resources": [{
-    "resources": ["icons/download-icon.png"],
-    "matches": ["<all_urls>"]
-  }]
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/download-icon.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "optional_permissions": [
+    "cookies"
+  ],
+  "optional_host_permissions": [
+    "<all_urls>"
+  ]
 }

@@ -27,6 +27,14 @@ export default function FileInfo() {
   const [pathTouched, setPathTouched] = useState(false);
   const [desc, setDesc] = useState(params.get("description") ?? "");
   const [queueId, setQueueId] = useState("main");
+  const rid = params.get("rid");
+  // A browser request that is closed without a decision counts as cancelled.
+  useEffect(() => {
+    if (!rid) return;
+    const off = () => api.rejectRequest(rid);
+    window.addEventListener("beforeunload", off);
+    return () => window.removeEventListener("beforeunload", off);
+  }, [rid]);
   const [dups, setDups] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -97,6 +105,18 @@ export default function FileInfo() {
     }
     setBusy(true);
     try {
+      if (rid) {
+        await api.resolveRequest(rid, {
+          dest_dir: dir,
+          filename: file || null,
+          category: category || null,
+          description: desc.trim() || null,
+          mode,
+          queue_id: mode === "later" ? queueId : null,
+        });
+        api.closeSelf();
+        return;
+      }
       await api.submit(
         {
           url,
@@ -136,10 +156,16 @@ export default function FileInfo() {
               ))}
             </select>
           </span>
-          <button className="btn" onClick={() => api.closeSelf()}>Cancel</button>
+          <button className="btn" onClick={() => { if (rid) api.rejectRequest(rid); api.closeSelf(); }}>Cancel</button>
         </>
       }
     >
+      {rid && (
+        <div className="banner">
+          <Icon name="link" size={18} />
+          <div>Sent from your browser{params.get("referer") ? <> by <b>{F.host(params.get("referer"))}</b></> : null}. Check the details and choose how to download it.</div>
+        </div>
+      )}
       {dup && settings.duplicate_policy === "ask" && (
         <div className="banner warn">
           <Icon name="warning" size={18} />
@@ -178,8 +204,14 @@ export default function FileInfo() {
         <span>Description</span>
         <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} />
         <span>Size</span>
-        <span className={probeErr ? "err" : "muted"}>
-          {probing ? "…" : probeErr ? probeErr : info?.size != null ? `${F.size(info.size)} (${info.size.toLocaleString()} bytes)` : "Unknown (the server did not say)"}
+        <span className="muted">
+          {probing
+            ? "…"
+            : probeErr
+              ? `Unknown: ${probeErr.replace(/\.$/, "")}. The download will still be tried (with retries).`
+              : info?.size != null
+                ? `${F.size(info.size)} (${info.size.toLocaleString()} bytes)`
+                : "Unknown (the server did not say)"}
         </span>
       </div>
       {info?.is_web_page && (

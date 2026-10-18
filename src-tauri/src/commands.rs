@@ -371,3 +371,47 @@ pub fn exit_app(app: AppHandle) {
 pub fn protect_password(password: String) -> R<String> {
     swiftdm_core::secrets::protect_str(&password).ok_or_else(|| "Windows could not encrypt the password.".into())
 }
+
+#[derive(Serialize)]
+pub struct ApiStatus {
+    port: Option<u16>,
+    paired: Vec<String>,
+    error: Option<String>,
+}
+
+#[tauri::command]
+pub fn api_status(st: State<AppState>) -> ApiStatus {
+    match &*st.api.lock().unwrap() {
+        Ok(h) => ApiStatus { port: Some(h.port()), paired: h.paired(), error: None },
+        Err(e) => ApiStatus { port: None, paired: vec![], error: Some(e.clone()) },
+    }
+}
+
+/// Forget one paired browser extension, or all of them.
+#[tauri::command]
+pub fn revoke_extension(st: State<AppState>, id: Option<String>) {
+    if let Ok(h) = &*st.api.lock().unwrap() {
+        h.revoke(id.as_deref());
+    }
+}
+
+#[tauri::command]
+pub fn deny_pairing(st: State<AppState>, pairing_id: String) {
+    if let Ok(h) = &*st.api.lock().unwrap() {
+        h.deny_pairing(&pairing_id);
+    }
+}
+
+/// Accept a download the extension sent, with the edits made in the file-info window.
+#[tauri::command]
+pub fn resolve_request(st: State<AppState>, rid: String, overrides: swiftdm_core::api::Overrides) -> R<String> {
+    let h = st.api.lock().unwrap().clone().map_err(|e| format!("The browser connection is not running: {e}"))?;
+    h.resolve(&rid, overrides)
+}
+
+#[tauri::command]
+pub fn reject_request(st: State<AppState>, rid: String) {
+    if let Ok(h) = &*st.api.lock().unwrap() {
+        h.reject(&rid);
+    }
+}

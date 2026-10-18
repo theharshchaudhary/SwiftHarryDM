@@ -1,13 +1,21 @@
-// background.js - talks to the SwiftHarryDM desktop app on 127.0.0.1 (API v2).
+// background.js - talks to the SwiftHarryDM desktop app on 127.0.0.1.
 // The app only accepts requests carrying a token obtained by pairing: the app shows
 // a one-time code, the user types it into this extension's popup.
+// API 3 adds taking over browser downloads (the app decides which ones by file type,
+// size and exception lists) and sending all or selected links of a page.
 const PORTS = [5001, 5002];
+// Hold Alt while clicking a link to leave that download to the browser.
+const BYPASS_MS = 4000;
 
 class BackgroundManager {
     constructor() {
         this.appPort = null;
+        this.apiVersion = 0;
+        this.bypass = new Map(); // url -> time the user Alt-clicked it
+        this.resent = new Set(); // urls handed back to the browser after a failed take-over
         this.createContextMenu();
         this.setupMessageListener();
+        this.setupCapture();
     }
 
     async token() {
@@ -53,6 +61,7 @@ class BackgroundManager {
                 const data = await r.json();
                 if (r.ok && data.app === 'SwiftHarryDM') {
                     this.appPort = port;
+                    this.apiVersion = data.api || 0;
                     return port;
                 }
             } catch (e) {
@@ -90,6 +99,80 @@ class BackgroundManager {
     async unpair() {
         await chrome.storage.local.remove('swiftdmToken');
         return { success: true };
+    }
+
+    // ------------------------------------------------------------ taking over downloads
+    async captureEnabled() {
+        const { swiftdmCapture } = await chrome.storage.local.get('swiftdmCapture');
+        return swiftdmCapture !== false;
+    }
+
+    async cookiesFor(url) {
+        try {
+            const ok = await chrome.permissions.contains({ permissions: ['cookies'], origins: ['<all_urls>'] });
+            if (!ok) return null;
+            const list = await chrome.cookies.getAll({ url });
+            const header = list.map((c) => `${c.name}=${c.value}`).join('; ');
+            return header ? header.slice(0, 16 * 1024) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    setupCapture() {
+        // onDeterminingFilename gives the final name, size and type; answer it at once so
+        // the browser is never kept waiting, then decide asynchronously.
+        chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
+            suggest();
+            this.maybeTakeOver(item).catch(() => {});
+        });
+    }
+
+    async maybeTakeOver(item) {
+        const url = item.finalUrl || item.url;
+        if (!/^https?:/i.test(url) || item.byExtensionId === chrome.runtime.id) return;
+        if (this.resent.delete(url)) return;
+        const clicked = this.bypass.get(item.url) || this.bypass.get(url);
+        if (clicked && Date.now() - clicked < BYPASS_MS) return;
+        if (!(await this.captureEnabled()) || !(await this.token())) return;
+        if (!(await this.findAppPort()) || this.apiVersion < 3) return;
+        const fileName = (item.filename || '').split(/[\\/]/).pop() || null;
+        const fileSize = item.totalBytes > 0 ? item.totalBytes : (item.fileSize > 0 ? item.fileSize : null);
+        const check = await this.request('/api/capture/check', { method: 'POST', body: { url, fileName, fileSize } });
+        if (!check.ok || !check.data.capture) return;
+        try {
+            await chrome.downloads.cancel(item.id);
+            await chrome.downloads.erase({ id: item.id });
+        } catch (e) {
+            return; // already finished: leave it to the browser
+        }
+        const body = { url, fileName, fileSize, mode: 'now' };
+        if (item.referrer && /^https?:/i.test(item.referrer)) body.pageUrl = item.referrer;
+        const cookies = await this.cookiesFor(url);
+        if (cookies) body.cookies = cookies;
+        const r = await this.request('/api/download', { method: 'POST', body });
+        if (!r.ok) {
+            // The app could not take it: give the download back to the browser.
+            this.resent.add(url);
+            chrome.downloads.download({ url });
+            this.notify('SwiftHarryDM', `Could not take over the download: ${r.data.error || 'HTTP ' + r.status}`);
+        }
+    }
+
+    async sendLinks(urls, pageUrl) {
+        const unique = [...new Set(urls.filter((u) => /^https?:/i.test(u)))].slice(0, 5000);
+        if (!unique.length) {
+            this.notify('SwiftHarryDM', 'No links were found.');
+            return { success: false };
+        }
+        const body = { urls: unique };
+        if (pageUrl && /^https?:/i.test(pageUrl)) body.pageUrl = pageUrl;
+        const r = await this.request('/api/links', { method: 'POST', body });
+        if (!r.ok) {
+            this.notify('Links not sent', r.status === 401 ? 'Connect the extension to SwiftHarryDM first.' : (r.data.error || `HTTP ${r.status}`));
+            return { success: false };
+        }
+        return { success: true, count: r.data.count };
     }
 
     async jobs() {
@@ -133,6 +216,10 @@ class BackgroundManager {
                                          contexts: ['video', 'audio', 'link'] });
             chrome.contextMenus.create({ id: 'download-page-media', title: 'Download all media from page',
                                          contexts: ['page'] });
+            chrome.contextMenus.create({ id: 'download-all-links', title: 'Download all links with SwiftHarryDM',
+                                         contexts: ['page'] });
+            chrome.contextMenus.create({ id: 'download-selected-links', title: 'Download selected links with SwiftHarryDM',
+                                         contexts: ['selection'] });
         });
     }
 
@@ -145,6 +232,11 @@ class BackgroundManager {
                 pairConfirm: () => this.pairConfirm(req.pairingId, req.code),
                 unpair: () => this.unpair(),
                 listJobs: () => this.jobs(),
+                sendLinks: () => this.sendLinks(req.urls || [], req.pageUrl),
+                bypassNext: async () => {
+                    if (req.url) this.bypass.set(req.url, Date.now());
+                    return { success: true };
+                },
             };
             const h = handlers[req.action];
             if (!h) return false;
@@ -162,5 +254,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         chrome.tabs.sendMessage(tab.id, { action: 'contextMenuDownload', context: info });
     } else if (info.menuItemId === 'download-page-media') {
         chrome.tabs.sendMessage(tab.id, { action: 'downloadPageMedia' });
+    } else if (info.menuItemId === 'download-all-links' || info.menuItemId === 'download-selected-links') {
+        chrome.tabs.sendMessage(tab.id, { action: 'collectLinks', selectionOnly: info.menuItemId === 'download-selected-links' });
     }
 });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, windowParams, type Category, type Settings } from "../api";
+import { api, onCore, windowParams, type ApiStatus, type Category, type Settings } from "../api";
 import { Check, Loading, Num, Tabs } from "../components/Dialog";
 import { useLive, useTheme } from "../store";
 
@@ -69,7 +69,7 @@ export default function Options() {
           {tab === "proxy" && <Proxy s={s} set={set} />}
           {tab === "logins" && <Logins s={s} set={set} />}
           {tab === "complete" && <AfterDownload s={s} set={set} />}
-          {tab === "browser" && <Browser s={s} />}
+          {tab === "browser" && <Browser s={s} set={set} />}
           {tab === "appearance" && <Appearance s={s} set={set} />}
         </div>
       </div>
@@ -393,19 +393,54 @@ function AfterDownload({ s, set }: P) {
   );
 }
 
-function Browser({ s }: { s: Settings }) {
+function Browser({ s, set }: P) {
+  const [st, setSt] = useState<ApiStatus | null>(null);
+  const load = () => api.apiStatus().then(setSt);
+  useEffect(() => {
+    load();
+    const un = onCore((e) => e.type === "extension_changed" && load());
+    return () => {
+      un.then((f) => f());
+    };
+  }, []);
   return (
     <>
+      <fieldset>
+        <legend>Connection</legend>
+        {st == null ? (
+          <span className="muted">Checking…</span>
+        ) : st.port ? (
+          <div className="okc">Ready for the browser extension on port {st.port}.</div>
+        ) : (
+          <div className="err">Not available: {st.error}</div>
+        )}
+      </fieldset>
       <div>
-        The SwiftHarryDM browser extension sends downloads, links and videos from Chrome and Edge to this app. It connects to
-        port <b>{s.api_port}</b> on this computer and must be paired once.
+        The SwiftHarryDM extension sends downloads, links and videos from Chrome and Edge to this app. To connect it, click its toolbar button, choose{" "}
+        <b>Connect to app</b>, and type the code that SwiftHarryDM shows.
       </div>
-      <ol style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
-        <li>Install the SwiftHarryDM extension in your browser.</li>
-        <li>Click its toolbar button and choose <b>Connect to app</b>.</li>
-        <li>Type the 6-digit code that SwiftHarryDM shows.</li>
-      </ol>
-      <div className="hint">Which downloads are taken over is set on the “File types” page.</div>
+      <div>
+        <div>Connected extensions</div>
+        <div className="tbl" style={{ maxHeight: 130 }}>
+          <table>
+            <tbody>
+              {(st?.paired ?? []).map((id) => (
+                <tr key={id}>
+                  <td className="mono">{id}</td>
+                  <td style={{ width: 100 }}>
+                    <button className="btn small" onClick={async () => { await api.revokeExtension(id); load(); }}>Disconnect</button>
+                  </td>
+                </tr>
+              ))}
+              {!(st?.paired ?? []).length && <tr><td className="muted">None yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <Check checked={!s.trust_extension} onChange={(v) => set({ trust_extension: !v })}>
+        Show the “Download file info” window for downloads sent from the browser
+      </Check>
+      <div className="hint">Which browser downloads are taken over is set on the “File types” page.</div>
     </>
   );
 }

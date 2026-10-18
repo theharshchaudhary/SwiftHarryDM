@@ -150,6 +150,17 @@ export interface JobSpec {
 
 export type StartMode = "now" | "later";
 
+export interface ApiStatus { port: number | null; paired: string[]; error: string | null }
+
+export interface Overrides {
+  dest_dir?: string | null;
+  filename?: string | null;
+  category?: string | null;
+  description?: string | null;
+  mode?: StartMode;
+  queue_id?: string | null;
+}
+
 export type Series =
   | { kind: "numbers"; from: number; to: number; width: number }
   | { kind: "letters"; from: string; to: string };
@@ -166,11 +177,12 @@ export type CoreEvent =
   // Emitted by the app shell, not the core:
   | { type: "settings_changed"; settings: Settings }
   | { type: "queues_changed"; queues: Queue[] }
-  | { type: "quota"; quota: QuotaStatus };
+  | { type: "quota"; quota: QuotaStatus }
+  | { type: "extension_changed" };
 
 export type WindowKind =
   | "add" | "info" | "progress" | "complete" | "options" | "scheduler" | "batch"
-  | "properties" | "about" | "countdown" | "links";
+  | "properties" | "about" | "countdown" | "links" | "pairing";
 
 export const api = {
   state: () => invoke<AppState>("get_state"),
@@ -213,6 +225,11 @@ export const api = {
   powerAction: (action: AfterAction) => invoke<void>("power_action", { action }),
   exitApp: () => invoke<void>("exit_app"),
   protectPassword: (password: string) => invoke<string>("protect_password", { password }),
+  apiStatus: () => invoke<ApiStatus>("api_status"),
+  revokeExtension: (id: string | null) => invoke<void>("revoke_extension", { id }),
+  denyPairing: (pairingId: string) => invoke<void>("deny_pairing", { pairingId }),
+  resolveRequest: (rid: string, overrides: Overrides) => invoke<string>("resolve_request", { rid, overrides }),
+  rejectRequest: (rid: string) => invoke<void>("reject_request", { rid }),
 };
 
 export function onCore(handler: (e: CoreEvent) => void): Promise<UnlistenFn> {

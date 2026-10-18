@@ -607,12 +607,26 @@ cleanVideoUrl(url) {
                 case 'showMediaDetection':
                     this.showDetectionResults();
                     break;
+                case 'collectLinks':
+                    this.sendLinks(request.selectionOnly);
+                    break;
                 case 'forceRescan':
                     this.detectAllMedia();
                     this.showNotification('🔍 Rescan Complete', `Found ${this.mediaElements.size} media elements`, '#3b82f6');
                     break;
             }
         });
+    }
+
+    // Links of the whole page, or only those inside the current selection.
+    sendLinks(selectionOnly) {
+        let anchors = [...document.querySelectorAll('a[href]')];
+        if (selectionOnly) {
+            const sel = window.getSelection();
+            anchors = anchors.filter((a) => sel && sel.rangeCount && sel.containsNode(a, true));
+        }
+        const urls = anchors.map((a) => a.href).filter((h) => /^https?:/i.test(h));
+        chrome.runtime.sendMessage({ action: 'sendLinks', urls, pageUrl: location.href });
     }
 
     handleContextMenuDownload(context) {
@@ -708,3 +722,9 @@ window.addEventListener('load', () => {
         }
     }, 2000);
 });
+// Alt+click on a link leaves that download to the browser.
+document.addEventListener('mousedown', (e) => {
+    if (!e.altKey) return;
+    const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (a && /^https?:/i.test(a.href)) chrome.runtime.sendMessage({ action: 'bypassNext', url: a.href });
+}, true);

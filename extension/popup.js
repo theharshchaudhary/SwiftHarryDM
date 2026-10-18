@@ -88,6 +88,17 @@ document.addEventListener('DOMContentLoaded', () => {
     $('downloadAllBtn').addEventListener('click', () => toActiveTab({ action: 'downloadPageMedia' }));
     statusEl.addEventListener('click', refresh);
 
+    const capture = $('captureToggle');
+    chrome.storage.local.get('swiftdmCapture').then(({ swiftdmCapture }) => { capture.checked = swiftdmCapture !== false; });
+    capture.addEventListener('change', () => chrome.storage.local.set({ swiftdmCapture: capture.checked }));
+
+    const cookiesBtn = $('cookiesBtn');
+    const want = { permissions: ['cookies'], origins: ['<all_urls>'] };
+    chrome.permissions.contains(want).then((ok) => { if (ok) cookiesBtn.textContent = 'Site cookies are sent with taken-over downloads'; });
+    cookiesBtn.addEventListener('click', async () => {
+        if (await chrome.permissions.request(want)) cookiesBtn.textContent = 'Site cookies are sent with taken-over downloads';
+    });
+
     refresh();
     const timer = setInterval(refresh, 3000);
     window.addEventListener('unload', () => clearInterval(timer));
