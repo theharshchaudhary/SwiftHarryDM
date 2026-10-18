@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/swiftdm-core", "crates/swiftdm-testkit", "src-tauri"]
+members = ["crates/swiftdm-core", "crates/swiftdm-testkit", "crates/swiftdm-cli", "src-tauri"]
 
 [workspace.package]
 version = "3.0.0"
@@ -36,6 +36,9 @@ windows = { version = "0.58", features = ["Win32_Foundation", "Win32_System_JobO
 tempfile = "3"
 proptest = "1"
 
+# Small and fast enough: downloads are limited by the network, not the CPU.
 [profile.release]
+opt-level = "s"
 codegen-units = 1
-lto = "thin"
+lto = true
+strip = true

@@ -1,105 +1,91 @@
-// popup.js - status, pairing and the recent download list. All text is set with
-// textContent: titles come from web pages and must never be parsed as HTML.
+// popup.js - connection status, page actions, settings and recent downloads.
+// All text is set with textContent: titles come from web pages and are never parsed as HTML.
 document.addEventListener('DOMContentLoaded', () => {
     const $ = (id) => document.getElementById(id);
-    const statusEl = $('status');
-    const pairBox = $('pairBox');
-    const codeInput = $('pairCode');
+    const send = (msg) => chrome.runtime.sendMessage(msg);
     let pairingId = null;
 
-    const send = (msg) => chrome.runtime.sendMessage(msg);
-
     function setStatus(text, ok) {
-        statusEl.textContent = text;
-        statusEl.className = 'status ' + (ok ? 'connected' : 'disconnected');
+        $('status').textContent = text;
+        $('dot').classList.toggle('ok', !!ok);
     }
 
     async function refresh() {
         const s = await send({ action: 'checkAppStatus' });
-        if (!s || !s.connected) {
-            setStatus('❌ SwiftHarryDM is not running', false);
-            pairBox.classList.add('hidden');
-            return;
-        }
-        if (!s.paired) {
-            setStatus(`⚠️ App found (v${s.version}) - not connected yet`, false);
-            pairBox.classList.remove('hidden');
-            return;
-        }
-        setStatus(`✅ Connected to SwiftHarryDM v${s.version}`, true);
-        pairBox.classList.add('hidden');
-        renderJobs();
+        const connected = s && s.connected;
+        const paired = connected && s.paired;
+        if (!connected) setStatus('SwiftHarryDM is not running', false);
+        else if (!paired) setStatus('SwiftHarryDM found, not connected yet', false);
+        else setStatus(`Connected to SwiftHarryDM ${s.version}`, true);
+        $('pairBox').classList.toggle('hidden', !connected || paired);
+        $('actions').classList.toggle('hidden', !paired);
+        $('unpairBtn').classList.toggle('hidden', !paired);
+        if (paired) renderJobs();
     }
 
     async function renderJobs() {
         const r = await send({ action: 'listJobs' });
-        const list = $('downloadsList');
+        const list = $('list');
         list.replaceChildren();
-        if (!r || !r.success || !r.jobs.length) {
-            $('pendingDownloads').classList.add('hidden');
-            return;
-        }
-        $('pendingDownloads').classList.remove('hidden');
-        for (const job of r.jobs.slice(-8).reverse()) {
-            const item = document.createElement('div');
-            item.className = 'download-item';
-            const title = document.createElement('strong');
-            title.textContent = job.title;
-            const line = document.createElement('div');
-            line.textContent = `${job.state}${job.progress !== null ? ` · ${job.progress}%` : ''}`;
-            item.append(title, line);
-            list.append(item);
+        const jobs = r && r.success ? r.jobs.slice(-6).reverse() : [];
+        $('recent').classList.toggle('hidden', !jobs.length);
+        for (const job of jobs) {
+            const row = document.createElement('div');
+            row.className = 'item';
+            const name = document.createElement('span');
+            name.textContent = job.title;
+            const state = document.createElement('span');
+            const word = { COMPLETED: 'Done', DOWNLOADING: 'Downloading', PAUSED: 'Stopped', FAILED: 'Error', QUEUED: 'Waiting' }[job.state] || job.state;
+            state.textContent = job.state === 'DOWNLOADING' && job.progress != null ? `${job.progress}%` : word;
+            row.append(name, state);
+            list.append(row);
         }
     }
 
     $('pairStartBtn').addEventListener('click', async () => {
         const r = await send({ action: 'pairStart' });
-        if (!r.success) {
-            setStatus(`Pairing failed: ${r.error}`, false);
+        if (!r || !r.success) {
+            setStatus(`Could not connect: ${(r && r.error) || 'no answer'}`, false);
             return;
         }
         pairingId = r.pairingId;
         $('pairStep2').classList.remove('hidden');
-        setStatus('Type the 6-digit code shown in the SwiftHarryDM window', false);
-        codeInput.focus();
+        setStatus('Type the code shown by SwiftHarryDM', false);
+        $('pairCode').focus();
     });
-
     $('pairConfirmBtn').addEventListener('click', async () => {
-        const r = await send({ action: 'pairConfirm', pairingId, code: codeInput.value });
-        if (r.success) {
+        const r = await send({ action: 'pairConfirm', pairingId, code: $('pairCode').value });
+        if (r && r.success) {
             $('pairStep2').classList.add('hidden');
             refresh();
         } else {
-            setStatus(r.status === 401 ? 'Wrong code, try again' : `Pairing failed: ${r.error}`, false);
+            setStatus(r && r.status === 401 ? 'Wrong code, try again' : `Could not connect: ${(r && r.error) || ''}`, false);
         }
     });
-
     $('unpairBtn').addEventListener('click', async () => {
         await send({ action: 'unpair' });
         refresh();
     });
 
     const toActiveTab = (msg) => chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, msg);
+        if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, msg).catch(() => {});
         window.close();
     });
-    $('scanPageBtn').addEventListener('click', () => toActiveTab({ action: 'showMediaDetection' }));
-    $('forceRescanBtn').addEventListener('click', () => toActiveTab({ action: 'forceRescan' }));
-    $('downloadAllBtn').addEventListener('click', () => toActiveTab({ action: 'downloadPageMedia' }));
-    statusEl.addEventListener('click', refresh);
+    $('videoBtn').addEventListener('click', () => toActiveTab({ action: 'downloadPageMedia' }));
+    $('linksBtn').addEventListener('click', () => toActiveTab({ action: 'collectLinks', selectionOnly: false }));
 
     const capture = $('captureToggle');
     chrome.storage.local.get('swiftdmCapture').then(({ swiftdmCapture }) => { capture.checked = swiftdmCapture !== false; });
     capture.addEventListener('change', () => chrome.storage.local.set({ swiftdmCapture: capture.checked }));
 
-    const cookiesBtn = $('cookiesBtn');
     const want = { permissions: ['cookies'], origins: ['<all_urls>'] };
-    chrome.permissions.contains(want).then((ok) => { if (ok) cookiesBtn.textContent = 'Site cookies are sent with taken-over downloads'; });
-    cookiesBtn.addEventListener('click', async () => {
-        if (await chrome.permissions.request(want)) cookiesBtn.textContent = 'Site cookies are sent with taken-over downloads';
+    const cookiesOn = () => { $('cookiesBtn').textContent = 'Site cookies are sent with taken-over downloads'; };
+    chrome.permissions.contains(want).then((ok) => ok && cookiesOn());
+    $('cookiesBtn').addEventListener('click', async () => {
+        if (await chrome.permissions.request(want)) cookiesOn();
     });
 
     refresh();
     const timer = setInterval(refresh, 3000);
-    window.addEventListener('unload', () => clearInterval(timer));
+    addEventListener('unload', () => clearInterval(timer));
 });

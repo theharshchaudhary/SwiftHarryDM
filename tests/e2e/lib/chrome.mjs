@@ -81,7 +81,17 @@ export class Chrome {
     const { sessionId } = await this.send("Target.attachToTarget", { targetId, flatten: true });
     await this.send("Runtime.enable", {}, sessionId);
     await sleep(1200);
+    this.targets = { ...(this.targets ?? {}), [sessionId]: targetId };
     return sessionId;
+  }
+
+  async shot(session, path) {
+    const r = await this.send("Page.captureScreenshot", { format: "png" }, session);
+    (await import("node:fs")).writeFileSync(path, Buffer.from(r.data, "base64"));
+  }
+
+  async closeTab(session) {
+    await this.send("Target.closeTarget", { targetId: this.targets[session] });
   }
 
   async stop() {

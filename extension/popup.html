@@ -3,182 +3,59 @@
 <head>
     <meta charset="utf-8">
     <style>
-        body {
-            width: 350px;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        :root { --accent: #2c5f8a; --accent-2: #3a7bb3; --text: #1c2733; --muted: #56657a; --border: #d5dde6; --bg: #f4f6f9; --ok: #2e8b57; --warn: #c77700; }
+        @media (prefers-color-scheme: dark) {
+            :root { --text: #e6ebf0; --muted: #9aa7b5; --border: #39414b; --bg: #1b1f24; --accent: #5b9bd5; --accent-2: #7ab3e6; --ok: #4caf7d; --warn: #f0a640; }
         }
-
-        .container {
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .status {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .status.connected {
-            border-left: 4px solid #10b981;
-        }
-
-        .status.disconnected {
-            border-left: 4px solid #ef4444;
-        }
-
-        .actions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-
-        .btn-primary {
-            background: #10b981;
-        }
-
-        .btn-primary:hover {
-            background: #059669;
-        }
-
-        .btn-warning {
-            background: #f59e0b;
-        }
-
-        .btn-warning:hover {
-            background: #d97706;
-        }
-
-        .pending-downloads {
-            margin-top: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 15px;
-        }
-
-        .pending-downloads h3 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .download-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px;
-            border-radius: 4px;
-            margin-bottom: 5px;
-            font-size: 12px;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .pair { margin-bottom: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; font-size: 13px; }
-        .pair input { width: 100%; box-sizing: border-box; padding: 8px; font-size: 18px; letter-spacing: 4px; text-align: center; border-radius: 6px; border: none; margin: 8px 0; }
-        .link { background: none; border: none; color: #e5e7eb; text-decoration: underline; cursor: pointer; font-size: 11px; margin-top: 10px; }
-
-        .icon {
-            width: 16px;
-            height: 16px;
-        }
+        * { box-sizing: border-box; }
+        body { width: 320px; margin: 0; font: 13px/1.4 "Segoe UI", system-ui, sans-serif; color: var(--text); background: var(--bg); }
+        header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--accent); color: #fff; }
+        header img { width: 28px; height: 28px; }
+        header b { font-size: 15px; }
+        main { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+        .status { display: flex; align-items: center; gap: 8px; }
+        .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--warn); flex: none; }
+        .dot.ok { background: var(--ok); }
+        .btn { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; text-align: left; }
+        .btn:hover { border-color: var(--accent-2); }
+        .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); text-align: center; }
+        .box { border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .muted { color: var(--muted); font-size: 12px; }
+        input[type=text] { width: 100%; padding: 8px; font-size: 18px; letter-spacing: 4px; text-align: center; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; }
+        label { display: flex; gap: 8px; align-items: center; }
+        .item { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+        .item span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .link { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 12px; text-align: left; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🚀 SwiftHarryDM</h1>
-            <p>Universal Media Downloader</p>
-        </div>
+    <header><img src="icons/icon48.png" alt=""><b>SwiftHarryDM</b></header>
+    <main>
+        <div class="status"><span id="dot" class="dot"></span><span id="status">Checking…</span></div>
 
-        <div id="status" class="status">
-            Checking app status...
-        </div>
-
-        <div id="pairBox" class="pair hidden">
-            <div>Connect this browser to the SwiftHarryDM app. The app will show a 6-digit code.</div>
-            <button id="pairStartBtn" class="btn btn-primary" style="width:100%;margin-top:8px">Connect to app</button>
+        <div id="pairBox" class="box hidden">
+            <div>Connect this browser to SwiftHarryDM. The app shows a 6-digit code.</div>
+            <button id="pairStartBtn" class="btn primary">Connect with a code</button>
             <div id="pairStep2" class="hidden">
-                <input id="pairCode" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000">
-                <button id="pairConfirmBtn" class="btn btn-primary" style="width:100%">Confirm code</button>
+                <input id="pairCode" type="text" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000">
+                <button id="pairConfirmBtn" class="btn primary" style="margin-top:8px">Confirm</button>
             </div>
         </div>
 
-        <div class="pair">
-            <label style="display:flex;gap:8px;align-items:center">
-                <input id="captureToggle" type="checkbox"> Take over downloads from this browser
-            </label>
-            <div style="font-size:11px;opacity:.85;margin-top:4px">File types and exceptions are set in SwiftHarryDM &gt; Options. Hold Alt while clicking a link to keep it in the browser.</div>
-            <button id="cookiesBtn" class="link">Allow sending site cookies (for downloads that need a login)</button>
+        <div id="actions" class="hidden" style="display:flex;flex-direction:column;gap:6px">
+            <button id="videoBtn" class="btn">Download the video on this page</button>
+            <button id="linksBtn" class="btn">Download links on this page…</button>
         </div>
 
-        <div class="actions">
-            <button id="scanPageBtn" class="btn">
-                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-                </svg>
-                Scan Page for Media
-            </button>
+        <label><input id="captureToggle" type="checkbox"> Take over downloads from this browser</label>
+        <div class="muted">File types and exceptions are set in SwiftHarryDM › Options. Hold Alt while clicking a link to keep that download in the browser.</div>
 
-            <button id="forceRescanBtn" class="btn">
-                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                </svg>
-                Force Rescan
-            </button>
+        <div id="recent" class="box hidden"><b>Recent downloads</b><div id="list"></div></div>
 
-            <button id="downloadAllBtn" class="btn btn-primary">
-                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                </svg>
-                Download All Media
-            </button>
-        </div>
-
-        <div id="pendingDownloads" class="pending-downloads hidden">
-            <h3>Recent downloads</h3>
-            <div id="downloadsList"></div>
-        </div>
-        <button id="unpairBtn" class="link">Disconnect this browser</button>
-    </div>
-
+        <button id="cookiesBtn" class="link">Send site cookies with taken-over downloads (for sites that need a login)</button>
+        <button id="unpairBtn" class="link hidden">Disconnect this browser</button>
+    </main>
     <script src="popup.js"></script>
 </body>
 </html>

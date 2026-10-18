@@ -18,12 +18,16 @@ fn search_dirs() -> Vec<PathBuf> {
     if let Some(exe_dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(Path::to_path_buf)) {
         d.push(exe_dir.join("tools"));
         d.push(exe_dir.clone());
-        // target\debug\app.exe -> repo\tools\bin
-        for up in exe_dir.ancestors().take(4) {
-            d.push(up.join("tools").join("bin"));
+        if cfg!(debug_assertions) {
+            // Development: target\debug\app.exe -> repo\tools\bin (scripts/fetch-tools.mjs)
+            for up in exe_dir.ancestors().take(4) {
+                d.push(up.join("tools").join("bin"));
+            }
         }
     }
-    d.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("tools").join("bin"));
+    if cfg!(debug_assertions) {
+        d.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("tools").join("bin"));
+    }
     if let Some(path) = std::env::var_os("PATH") {
         d.extend(std::env::split_paths(&path));
     }

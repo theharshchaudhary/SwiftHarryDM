@@ -269,27 +269,33 @@ const scenarios = {
       await until(() => existsSync(join(chromeDl, "alt.pdf")), 20000, 250, "Chrome to save alt.pdf itself");
       assert(!(await app.hasWindow("Download file info")), "an Alt-clicked download is not taken over");
 
-      // The page's video panel lists the app's formats and sends the chosen one.
+      // Hovering a player shows "Download this video"; its panel lists the app's formats.
       const vtab = await chrome.tab(URL_("/p/video.html"));
-      await until(() => chrome.evalIn(vtab, "!!document.querySelector('.swiftharry-download-btn')"), 15000, 250, "the video download button");
-      await chrome.evalIn(vtab, "document.querySelector('.swiftharry-download-btn').click()");
+      const shadow = "document.querySelector('swiftharrydm-overlay').shadowRoot";
+      await until(async () => {
+        await chrome.evalIn(vtab, "document.getElementById('v').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))");
+        return chrome.evalIn(vtab, `!!document.querySelector('swiftharrydm-overlay') && ${shadow}.querySelector('.pill').style.display === 'flex'`);
+      }, 15000, 300, "the Download this video button");
+      await chrome.evalIn(vtab, `${shadow}.querySelector('.pill').click()`);
       const nFormats = await until(
-        () => chrome.evalIn(vtab, "document.querySelectorAll('.swiftharry-download-popup optgroup[label=\"Exact formats\"] option').length"),
+        () => chrome.evalIn(vtab, `${shadow}.querySelectorAll('optgroup[label="Exact formats"] option').length`),
         120000, 500, "the app's format list in the page panel");
       assert(nFormats >= 1, `the panel lists the video's formats (${nFormats})`);
-      await chrome.evalIn(vtab, `(() => { const s = document.querySelector('.swiftharry-download-popup .format-select');
+      await chrome.shot(vtab, join(SHOTS, "chrome-video-panel.png"));
+      await chrome.evalIn(vtab, `(() => { const s = ${shadow}.querySelector('.format-select');
         s.value = s.querySelector('optgroup[label="Exact formats"] option').value; })()`);
-      await chrome.evalIn(vtab, "document.querySelector('.swiftharry-download-popup .download-now-btn').click()");
+      await chrome.evalIn(vtab, `${shadow}.querySelector('.download-now-btn').click()`);
       const vinfo = await app.window("Download file info", 20000);
       assert((await vinfo.text()).includes("Sent from your browser"), "the chosen video format reaches the app");
       await vinfo.click("Cancel");
+      await chrome.closeTab(vtab);
 
       // "Download all links": the app shows the link chooser.
       // Like the context menu: the extension has no "tabs" permission, so tab URLs are hidden;
       // only the page with the content script answers.
       await chrome.worker(`chrome.tabs.query({}).then(t => Promise.all(t.map(x => chrome.tabs.sendMessage(x.id, { action: 'collectLinks', selectionOnly: false }).catch(() => null))))`);
       const links = await app.window("Choose files to download", 15000);
-      const n = await links.eval("document.querySelectorAll('.tbl tbody tr').length");
+      const n = await until(() => links.eval("document.querySelectorAll('.tbl tbody tr').length"), 10000, 200, "the links");
       assert(n === 3, `all three links arrive (${n})`);
       await links.shot(join(SHOTS, "chrome-links.png"));
       await links.click("Cancel");

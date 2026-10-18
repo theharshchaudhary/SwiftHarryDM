@@ -41,10 +41,24 @@
     ],
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "compression": "lzma",
+        "displayLanguageSelector": false,
+        "installerHooks": "./windows/hooks.nsh"
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
       }
     },
-    "createUpdaterArtifacts": true
+    "createUpdaterArtifacts": true,
+    "resources": {
+      "../extension/": "extension/"
+    },
+    "publisher": "Harsh Chaudhary",
+    "copyright": "© Harsh Chaudhary",
+    "shortDescription": "Fast, resumable download manager",
+    "longDescription": "SwiftHarryDM downloads files, videos and audio with multiple connections, resumes after interruptions, and works with your browser.",
+    "category": "Utility"
   },
   "plugins": {
     "updater": {

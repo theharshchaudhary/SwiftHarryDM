@@ -1,8 +1,8 @@
 // background.js - talks to the SwiftHarryDM desktop app on 127.0.0.1.
-// The app only accepts requests carrying a token obtained by pairing: the app shows
-// a one-time code, the user types it into this extension's popup.
-// API 3 adds taking over browser downloads (the app decides which ones by file type,
-// size and exception lists) and sending all or selected links of a page.
+// The app only accepts requests carrying a token. The token comes from the app's native
+// messaging host (no typing), or from pairing with a one-time code as a fallback.
+// Browser downloads the app accepts (by file type, size and exception lists) are taken over;
+// links and videos can be sent from the context menu, the popup and the page panel.
 const PORTS = [5001, 5002];
 // The app registers itself as this native messaging host; the browser only lets this
 // extension (by its ID) talk to it, so connecting needs no code.
@@ -156,6 +156,7 @@ class BackgroundManager {
 
     async maybeTakeOver(item) {
         if (this.seen.has(item.id)) return;
+        if (this.seen.size > 500) this.seen.clear();
         this.seen.add(item.id);
         if (item.state && item.state !== 'in_progress') return;
         const url = item.finalUrl || item.url;
@@ -289,11 +290,17 @@ const backgroundManager = new BackgroundManager();
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab || tab.id === undefined) return;
+    const toTab = (msg) => chrome.tabs.sendMessage(tab.id, msg).catch(() => {});
     if (info.menuItemId === 'download-with-swiftharry') {
-        chrome.tabs.sendMessage(tab.id, { action: 'contextMenuDownload', context: info });
+        if (info.mediaType === 'video' || info.mediaType === 'audio') {
+            toTab({ action: 'contextMenuDownload', context: info });
+        } else if (info.linkUrl) {
+            // A plain link: the app shows its download window for it.
+            backgroundManager.handleDownload({ url: info.linkUrl, title: info.selectionText || '', instantDownload: true, pageUrl: info.pageUrl });
+        }
     } else if (info.menuItemId === 'download-page-media') {
-        chrome.tabs.sendMessage(tab.id, { action: 'downloadPageMedia' });
+        toTab({ action: 'downloadPageMedia' });
     } else if (info.menuItemId === 'download-all-links' || info.menuItemId === 'download-selected-links') {
-        chrome.tabs.sendMessage(tab.id, { action: 'collectLinks', selectionOnly: info.menuItemId === 'download-selected-links' });
+        toTab({ action: 'collectLinks', selectionOnly: info.menuItemId === 'download-selected-links' });
     }
 });

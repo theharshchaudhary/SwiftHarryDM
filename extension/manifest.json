@@ -26,9 +26,8 @@
       "js": [
         "content.js"
       ],
-      "css": [
-        "styles.css"
-      ]
+      "all_frames": true,
+      "run_at": "document_idle"
     }
   ],
   "action": {
@@ -45,16 +44,6 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "icons/download-icon.png"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ],
   "optional_permissions": [
     "cookies"
   ],

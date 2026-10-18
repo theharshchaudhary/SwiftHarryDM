@@ -1,80 +1,85 @@
 # SwiftHarryDM
 
-A download manager for Windows: segmented, resumable HTTP/HTTPS downloads, video and audio
-from supported sites, and a paired browser extension.
+A fast, lightweight download manager for Windows. It splits downloads across several
+connections, resumes after interruptions and restarts, saves videos and audio from web
+pages, and takes over downloads from your browser.
 
-## What it does
+The installer is under 5 MB. Updates install with one click.
 
-- **Native segmented downloads.** Up to 16 connections per file, with dynamic splitting of
-  slow segments. Every partial response is validated (`Content-Range`, `If-Range` with ETag
-  or Last-Modified). Data is fsync'ed before a checkpoint is recorded.
-- **Resume that survives restarts.** Pause and resume, network drops, app restarts and
-  crashes. If the file on the server changed, the download restarts instead of being
-  stitched from two different files.
-- **Honest completion.** A download is only marked *Completed* after the final file exists
-  with the expected size. Media files must also pass an `ffprobe` check. Failures are shown
-  with actionable messages.
-- **No overwrites by default.** Name collisions become `name (1).ext`. Server-supplied file
-  names are reduced to a safe basename.
-- **Video and audio.** Uses yt-dlp, run as a separate process that can be stopped, plus
-  FFmpeg: Best, 2160p down to 360p, MP4, MKV, MP3, M4A. The chosen formats are pinned, so a
-  resumed download never switches quality. Playlists, live streams and DRM-protected media
-  are not supported, and nothing bypasses access controls.
-- **Browser extension.** Chrome and Edge (Manifest V3). It pairs with the app using a
-  one-time code, and downloads it sends are confirmed in the app by default.
+## Features
 
-## Install and run (from source)
+**Downloads**
+- Up to 32 connections per file, with dynamic splitting: when a connection finishes, it
+  takes over half of the largest remaining part.
+- Resume after pauses, network drops, app restarts and crashes. Data is flushed to disk
+  before progress is recorded, and the file on the server is re-validated before resuming.
+- Checks that connections received the same file where their parts meet; mirrors that
+  serve different files are detected and the download continues on one connection.
+- Speed limiter (overall and per download, changeable while downloading), download quota
+  ("no more than X MB every Y hours"), per-server connection limits.
+- Refresh an expired download address without losing the downloaded part.
+- Categories with their own folders, duplicate-link handling, antivirus scan after download.
 
-Requirements: Windows 10/11 x64 and Python 3.11.
+**Video and audio**
+- Save videos and audio from YouTube and many other sites: best quality, 4K to 360p,
+  MP4, MKV, MP3 or M4A, or an exact format from the list.
+- Protected (DRM) videos, playlists and live streams are not downloaded.
+- The video components (yt-dlp and FFmpeg) are downloaded once when first needed, verified,
+  and kept up to date automatically.
+
+**Browser**
+- Chrome, Edge and Brave extension that connects to the app by itself, with no code to type.
+- Takes over browser downloads by file type, size and exception lists. Hold **Alt** while
+  clicking a link to leave that download to the browser.
+- "Download this video" button on players, "Download with SwiftHarryDM", and "Download
+  all links" or "selected links" in the context menu.
+
+**Organizing**
+- Queues with schedules (start and stop times, days of the week), files at the same time,
+  and an action when a queue finishes (exit, sleep, hibernate, shut down).
+- Batch downloads (`img*.jpg` with numbers or letters), clipboard monitor, import and export
+  of address lists, drag and drop of links.
+- Find (Ctrl+F), sortable and configurable columns, dark mode, tray icon, start with Windows.
+
+## Install
+
+1. Download `SwiftHarryDM_x.y.z_x64-setup.exe` from the
+   [Releases](https://github.com/theharshchaudhary/SwiftHarryDM/releases) page and run it.
+   No administrator rights are needed.
+2. On first start, SwiftHarryDM offers to connect your browser. Follow the two steps; the
+   extension then connects by itself.
+
+Requirements: Windows 10 or 11 (64-bit). The Microsoft Edge WebView2 runtime is part of
+Windows 11 and is installed automatically on Windows 10 if missing.
+
+## Updates
+
+SwiftHarryDM checks for updates once a day. When one is available, a bar in the main window
+offers **Update now**: the update is downloaded, its signature checked, installed, and the
+app restarts with your downloads continuing where they were.
+
+## Build from source
+
+Requirements: Rust (stable, MSVC), Node.js 22+, and the Visual Studio C++ build tools.
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\python -m pip install --require-hashes -r requirements.lock
-.venv\Scripts\python packaging\fetch_tools.py      # pinned, checksum-verified FFmpeg (LGPL)
-.venv\Scripts\python main.py
+npm ci --prefix ui
+node scripts/fetch-tools.mjs                        # optional: yt-dlp + FFmpeg for development
+ui\node_modules\.bin\tauri build --debug --no-bundle  # app at target\debug\swiftharrydm.exe
+ui\node_modules\.bin\tauri build                     # installer in target\release\bundle\nsis
 ```
 
-Optional: install [Node.js](https://nodejs.org) or Deno. yt-dlp uses a JavaScript runtime
-for the best YouTube support.
-
-### Engine selection
-
-v2 is the default. The legacy engine is kept for rollback until the removal criteria in
-`docs/MIGRATION.md` are met:
+Tests:
 
 ```powershell
-python main.py --engine legacy        # or: set SWIFTDM_ENGINE=legacy, or Settings > Download engine
+cargo test -p swiftdm-core -p swiftharrydm           # engine, manager, API, media, licensing
+cargo build -p swiftdm-testkit --bin sdm-observe
+node tests/e2e/run.mjs                               # the built app and the extension in Chrome
 ```
 
-## Browser extension
-
-1. Open `chrome://extensions` (or `edge://extensions`), enable Developer mode, then
-   "Load unpacked" and select the `extension` folder. Packaged builds include it under
-   `_internal\extension`.
-2. Click the SwiftHarryDM toolbar icon, then **Connect to app**. The app shows a 6-digit
-   code; type it into the popup.
-3. Downloads sent from the browser show a confirmation in the app. You can turn that off
-   in Settings.
-
-## Build a release
-
-See `docs/BUILD.md`. In short: `python packaging\build.py --zip` (add `--installer` when
-Inno Setup 6 is installed).
-
-## Tests
-
-```powershell
-.venv\Scripts\python -m pip install --require-hashes -r requirements-dev.lock
-.venv\Scripts\python -m pytest -m "not live"      # PR gate
-.venv\Scripts\python -m pytest                    # everything, incl. live CC-media tests
-```
-
-## Data locations
-
-- Settings, job database and logs: `%LOCALAPPDATA%\SwiftHarryDM`. Logs redact URL query
-  strings and tokens.
-- Downloads: the folder you choose (default `Desktop\SwiftHarryDM Downloads`).
+More in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## License
 
-MIT, see `LICENSE.txt`. Third-party components are listed in `THIRD_PARTY_NOTICES.md`.
+MIT, see [LICENSE.txt](LICENSE.txt). Third-party components are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

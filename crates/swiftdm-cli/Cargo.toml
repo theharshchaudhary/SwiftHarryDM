@@ -1,0 +1,15 @@
+[package]
+name = "swiftdm-cli"
+description = "Headless SwiftHarryDM downloads, crash-recovery runs and benchmarks"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+swiftdm-core = { path = "../swiftdm-core" }
+swiftdm-testkit = { path = "../swiftdm-testkit" }
+tokio.workspace = true
+sha2.workspace = true
+hex.workspace = true
+rand.workspace = true
+windows = { version = "0.58", features = ["Win32_Foundation", "Win32_System_ProcessStatus", "Win32_System_Threading"] }

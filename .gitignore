@@ -1,34 +1,27 @@
-__pycache__/
-*.py[cod]
-*$py.class
-swiftharrydm_env/
-build/
-dist/
-*.egg-info/
-.DS_Store
-Thumbs.db
-.vscode/
+# Build output
+target/
+ui/dist/
+ui/node_modules/
+src-tauri/gen/
 
-# local environments and build output
-.venv/
-.pytest_cache/
-.hypothesis/
-packaging/tools/
-packaging/build/
-packaging/dist/
+# Media tools fetched by scripts/fetch-tools.mjs (development only)
+tools/bin/
 
-# signing material must never be committed
+# Signing material must never be committed
+*.pem
+*.key
 *.pfx
 *.p12
-*.pvk
-*.key
-*.pem
-*.spc
 
-# Rust / Node build output
-target/
-node_modules/
-ui/dist/
-src-tauri/gen/
-src-tauri/binaries/
-tools/bin/
+# Local environments and editors
+.venv/
+.vscode/
+.idea/
+*.log
+Thumbs.db
+.DS_Store
+
+# Old Python packaging output, if still present locally
+packaging/build/
+packaging/dist/
+packaging/tools/

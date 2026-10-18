@@ -87,9 +87,11 @@ pub fn register() {
 /// Where the extension that ships with the app lives (for installing it by hand).
 pub fn bundled_extension() -> Option<PathBuf> {
     let exe_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
-    [exe_dir.join("extension"), exe_dir.join("resources").join("extension"), PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("extension")]
-        .into_iter()
-        .find(|p| p.join("manifest.json").is_file())
+    let mut c = vec![exe_dir.join("extension"), exe_dir.join("resources").join("extension")];
+    if cfg!(debug_assertions) {
+        c.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("extension"));
+    }
+    c.into_iter().find(|p| p.join("manifest.json").is_file())
 }
 
 fn read_message(r: &mut impl Read) -> Option<Value> {
