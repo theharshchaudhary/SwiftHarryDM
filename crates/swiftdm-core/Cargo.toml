@@ -41,3 +41,10 @@ hex.workspace = true
 rand.workspace = true
 tokio.workspace = true
 serde_json.workspace = true
+
+# Stand-in for yt-dlp.exe, built for the media engine tests (CARGO_BIN_EXE_sdm-fake-ytdlp).
+[[bin]]
+name = "sdm-fake-ytdlp"
+path = "tests/support/fake_ytdlp.rs"
+test = false
+doc = false

@@ -53,7 +53,9 @@ async function fetchTool(t) {
       writeFileSync(zip, buf);
       const members = Object.values(t.files).map((m) => `${t.zipRoot}/${m}`);
       // Windows 10+ ships bsdtar, which extracts zip archives; only the named members are taken.
-      execFileSync('tar', ['-xf', zip, '-C', work, ...members], { stdio: 'inherit' });
+      // Call it by full path: in Git Bash, plain `tar` is GNU tar, which cannot read zip files.
+      const bsdtar = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
+      execFileSync(bsdtar, ['-xf', zip, '-C', work, ...members], { stdio: 'inherit' });
       for (const [out, member] of Object.entries(t.files)) {
         copyFileSync(join(work, t.zipRoot, member), join(DEST, out));
       }
