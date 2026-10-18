@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/swiftdm-core", "crates/swiftdm-testkit"]
+members = ["crates/swiftdm-core", "crates/swiftdm-testkit", "src-tauri"]
 
 [workspace.package]
 version = "3.0.0"
