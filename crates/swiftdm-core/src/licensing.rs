@@ -281,50 +281,11 @@ fn machine_guid() -> Option<String> {
     Some(String::from_utf16_lossy(&buf[..n]))
 }
 
-// ---------------------------------------------------------------------- app updates
-
-pub const UPDATE_CHECK_URL: &str = "https://swiftharrydm.harshchaudhary.com.np/version.txt";
-pub const DOWNLOAD_PAGE_URL: &str = "https://swiftharrydm.harshchaudhary.com.np/downloads";
-
-pub fn parse_version(text: &str) -> Option<Vec<u64>> {
-    let t = text.trim().trim_start_matches(['v', 'V']);
-    let parts: Vec<&str> = t.split('.').collect();
-    if parts.is_empty() || parts.len() > 4 || parts.iter().any(|p| p.is_empty() || !p.chars().all(|c| c.is_ascii_digit())) {
-        return None;
-    }
-    parts.iter().map(|p| p.parse().ok()).collect()
-}
-
-/// The newer version if the server offers one; Err for an unexpected response.
-pub fn newer(current: &str, server_text: &str) -> Result<Option<String>, String> {
-    let latest = parse_version(server_text).ok_or("The update server returned an unexpected response.")?;
-    let cur = parse_version(current).unwrap_or_else(|| vec![0]);
-    let w = latest.len().max(cur.len());
-    let pad = |v: &Vec<u64>| {
-        let mut v = v.clone();
-        v.resize(w, 0);
-        v
-    };
-    Ok((pad(&latest) > pad(&cur)).then(|| server_text.trim().to_string()))
-}
-
-pub async fn check_for_update(current: &str, url: &str) -> Result<Option<String>, String> {
-    let r = reqwest::Client::new().get(url).timeout(std::time::Duration::from_secs(8)).send().await.map_err(|e| format!("Could not reach the update server ({e})."))?;
-    if !r.status().is_success() {
-        return Err(format!("The update server answered {}.", r.status()));
-    }
-    newer(current, &r.text().await.map_err(|e| e.to_string())?)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn versions() {
-        assert_eq!(newer("3.0.0", "3.0.1").unwrap().as_deref(), Some("3.0.1"));
-        assert_eq!(newer("3.0.0", "3.0").unwrap(), None);
-        assert_eq!(newer("3.0.0", "v3.1").unwrap().as_deref(), Some("v3.1"));
-        assert!(newer("3.0.0", "<html>error</html>").is_err());
+    fn keys() {
         assert_eq!(clean_key(" abcd-efgh ijkl "), "ABCDEFGHIJKL");
     }
 }

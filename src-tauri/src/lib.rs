@@ -2,6 +2,7 @@
 //! windows, and adds what only a desktop app can do (tray, clipboard, notifications, power).
 mod bridge;
 mod browser;
+mod upkeep;
 
 pub use browser::native_host;
 mod commands;
@@ -37,6 +38,8 @@ pub struct AppState {
     /// The browser-extension API, or why it could not start.
     pub api: Mutex<Result<swiftdm_core::api::ApiHandle, String>>,
     pub media: Arc<MediaEngine>,
+    pub license: Mutex<Option<swiftdm_core::licensing::LicenseStatus>>,
+    pub update: Mutex<Option<upkeep::UpdateInfo>>,
 }
 
 impl AppState {
@@ -77,7 +80,7 @@ fn open_logged(app: &AppHandle, kind: &str, params: &[(String, String)]) {
     }
 }
 
-fn notify(app: &AppHandle, title: &str, body: &str) {
+pub(crate) fn notify(app: &AppHandle, title: &str, body: &str) {
     let _ = app.notification().builder().title(title).body(body).show();
 }
 
@@ -249,6 +252,8 @@ pub fn run() {
             handle_args(app, &args);
         }))
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--minimized"])))
@@ -270,6 +275,8 @@ pub fn run() {
                 exiting: Mutex::new(false),
                 api: Mutex::new(Err("starting".into())),
                 media,
+                license: Mutex::new(None),
+                update: Mutex::new(None),
             });
             build_tray(app.handle())?;
             browser::register();
@@ -278,6 +285,11 @@ pub fn run() {
             tauri::async_runtime::spawn(pump_quota(h.clone()));
             tauri::async_runtime::spawn(watch_clipboard(h.clone()));
             tauri::async_runtime::spawn(bridge::start(h.clone()));
+            tauri::async_runtime::spawn(upkeep::license_loop(h.clone()));
+            tauri::async_runtime::spawn(upkeep::ytdlp_loop(h.clone()));
+            if !cfg!(debug_assertions) {
+                tauri::async_runtime::spawn(upkeep::update_loop(h.clone()));
+            }
             if let Some(main) = app.get_webview_window("main") {
                 if !start_hidden {
                     let _ = main.show();
@@ -342,6 +354,18 @@ pub fn run() {
             commands::exit_app,
             commands::protect_password,
             commands::api_status,
+            browser::extension_setup,
+            upkeep::license_status,
+            upkeep::license_check,
+            upkeep::license_activate,
+            upkeep::license_reset,
+            upkeep::license_info,
+            upkeep::components_status,
+            upkeep::install_components,
+            upkeep::update_ytdlp,
+            upkeep::check_update,
+            upkeep::install_update,
+            upkeep::pending_update,
             commands::is_media_url,
             commands::inspect_media,
             commands::revoke_extension,

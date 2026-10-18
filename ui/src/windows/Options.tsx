@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { api, onCore, windowParams, type ApiStatus, type Category, type Settings } from "../api";
 import { Check, Loading, Num, Tabs } from "../components/Dialog";
+import { ComponentsBanner, useComponents } from "../components/Components";
 import { useLive, useTheme } from "../store";
 
-type Tab = "general" | "types" | "downloads" | "saveto" | "connection" | "proxy" | "logins" | "complete" | "browser" | "appearance";
+type Tab = "general" | "types" | "downloads" | "saveto" | "connection" | "proxy" | "logins" | "complete" | "browser" | "video" | "appearance";
 const TABS: [Tab, string][] = [
   ["general", "General"],
   ["types", "File types"],
@@ -14,6 +15,7 @@ const TABS: [Tab, string][] = [
   ["logins", "Site logins"],
   ["complete", "After download"],
   ["browser", "Browser"],
+  ["video", "Video"],
   ["appearance", "Appearance"],
 ];
 
@@ -70,6 +72,7 @@ export default function Options() {
           {tab === "logins" && <Logins s={s} set={set} />}
           {tab === "complete" && <AfterDownload s={s} set={set} />}
           {tab === "browser" && <Browser s={s} set={set} />}
+          {tab === "video" && <Video />}
           {tab === "appearance" && <Appearance s={s} set={set} />}
         </div>
       </div>
@@ -437,10 +440,58 @@ function Browser({ s, set }: P) {
           </table>
         </div>
       </div>
+      <div>
+        <button className="btn small" onClick={() => api.openWindow("browser")}>Add the extension to Chrome or Edge…</button>
+      </div>
       <Check checked={!s.trust_extension} onChange={(v) => set({ trust_extension: !v })}>
         Show the “Download file info” window for downloads sent from the browser
       </Check>
       <div className="hint">Which browser downloads are taken over is set on the “File types” page.</div>
+    </>
+  );
+}
+
+function Video() {
+  const { c, reload } = useComponents();
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <>
+      <div>Video and audio downloads use two free components: yt-dlp (finds the video) and FFmpeg (joins video and audio).</div>
+      <ComponentsBanner />
+      {c?.ready && (
+        <fieldset>
+          <legend>Installed</legend>
+          <div className="kv">
+            <span>yt-dlp</span>
+            <span>{c.ytdlp_version ?? "installed"}</span>
+            <span>FFmpeg</span>
+            <span>{c.ffmpeg && c.ffprobe ? "installed" : "missing"}</span>
+          </div>
+          <div className="row" style={{ marginTop: 8 }}>
+            <button
+              className="btn small"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setMsg("Checking…");
+                try {
+                  setMsg(`yt-dlp is now ${await api.updateYtdlp()}.`);
+                } catch (e) {
+                  setMsg(String(e));
+                }
+                setBusy(false);
+                reload();
+              }}
+            >
+              Update yt-dlp now
+            </button>
+            <span className="hint">{msg}</span>
+          </div>
+        </fieldset>
+      )}
+      <div className="hint">yt-dlp is checked for updates once a week and updated automatically; every update is verified before it is used. Sites change often, so keeping it current keeps video downloads working.</div>
+      <div className="hint">Protected (DRM) videos are never downloaded.</div>
     </>
   );
 }

@@ -69,9 +69,15 @@ export class Page {
     const r = await this.send("Page.captureScreenshot", { format: "png" });
     writeFileSync(path, Buffer.from(r.data, "base64"));
   }
-  click(text, selector = "button") {
-    return this.eval(`(() => { const b = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.textContent.trim() === ${JSON.stringify(text)} && !e.disabled);
-      if (!b) return false; b.click(); return true; })()`);
+  /** Click a button by its text. A button that closes its own window counts as clicked. */
+  async click(text, selector = "button") {
+    try {
+      return await this.eval(`(() => { const b = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.textContent.trim() === ${JSON.stringify(text)} && !e.disabled);
+        if (!b) return false; b.click(); return true; })()`);
+    } catch (e) {
+      if (String(e).includes("window closed")) return true;
+      throw e;
+    }
   }
   fill(selector, value) {
     return this.eval(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false;

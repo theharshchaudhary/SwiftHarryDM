@@ -150,3 +150,63 @@ mod tests {
         assert_eq!(read_message(&mut huge.as_slice()), None);
     }
 }
+
+fn browser_exe(browser: &str) -> Option<PathBuf> {
+    let pf = |v: &str| std::env::var_os(v).map(PathBuf::from);
+    let cands: Vec<PathBuf> = match browser {
+        "edge" => vec![pf("ProgramFiles(x86)"), pf("ProgramFiles")].into_iter().flatten().map(|p| p.join(r"Microsoft\Edge\Application\msedge.exe")).collect(),
+        _ => vec![pf("ProgramFiles"), pf("ProgramFiles(x86)"), pf("LOCALAPPDATA")].into_iter().flatten().map(|p| p.join(r"Google\Chrome\Application\chrome.exe")).collect(),
+    };
+    cands.into_iter().find(|p| p.is_file())
+}
+
+#[derive(serde::Serialize)]
+pub struct ExtensionSetup {
+    /// "store" (the store page was opened) or "manual" (steps to follow).
+    mode: &'static str,
+    /// Folder to choose with "Load unpacked".
+    folder: Option<String>,
+    browser_found: bool,
+}
+
+/// Help the user add the extension: the store page when published, otherwise the bundled
+/// copy in a fixed folder plus the browser's extensions page.
+#[tauri::command]
+pub fn extension_setup(browser: String) -> Result<ExtensionSetup, String> {
+    let exe = browser_exe(&browser);
+    let store = match browser.as_str() {
+        "edge" => EDGE_STORE_ID.map(|id| format!("https://microsoftedge.microsoft.com/addons/detail/{id}")),
+        _ => CHROME_STORE_ID.map(|id| format!("https://chromewebstore.google.com/detail/{id}")),
+    };
+    if let Some(url) = store {
+        let r = match &exe {
+            Some(e) => std::process::Command::new(e).arg(&url).spawn().map(|_| ()).map_err(|e| e.to_string()),
+            None => crate::system::open_path(&url),
+        };
+        r?;
+        return Ok(ExtensionSetup { mode: "store", folder: None, browser_found: exe.is_some() });
+    }
+    let src = bundled_extension().ok_or("The extension files are missing from this installation.")?;
+    let dest = swiftdm_core::appdata::app_dir().join("extension");
+    copy_dir(&src, &dest).map_err(|e| format!("Could not prepare the extension: {e}"))?;
+    if let Some(e) = &exe {
+        let page = if browser == "edge" { "edge://extensions/" } else { "chrome://extensions/" };
+        let _ = std::process::Command::new(e).arg(page).spawn();
+    }
+    let _ = crate::system::open_path(&dest.to_string_lossy());
+    Ok(ExtensionSetup { mode: "manual", folder: Some(dest.to_string_lossy().into_owned()), browser_found: exe.is_some() })
+}
+
+fn copy_dir(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for e in std::fs::read_dir(src)? {
+        let e = e?;
+        let to = dst.join(e.file_name());
+        if e.file_type()?.is_dir() {
+            copy_dir(&e.path(), &to)?;
+        } else {
+            std::fs::copy(e.path(), to)?;
+        }
+    }
+    Ok(())
+}

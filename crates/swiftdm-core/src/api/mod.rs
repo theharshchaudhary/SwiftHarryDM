@@ -135,6 +135,10 @@ pub trait ApiHooks: Send + Sync {
     fn links(&self, urls: Vec<String>, page_url: Option<String>);
     /// A download from the extension was added and starts now.
     fn started(&self, job_id: &str);
+    /// False while no license or trial is active.
+    fn downloads_allowed(&self) -> bool {
+        true
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -322,6 +326,9 @@ async fn download(State(st): State<Arc<Inner>>, h: HeaderMap, body: Bytes) -> Re
     }
     if st.authed(&h).is_none() {
         return err(StatusCode::UNAUTHORIZED, "not paired: open the extension and pair it with SwiftHarryDM");
+    }
+    if !st.hooks.downloads_allowed() {
+        return err(StatusCode::FORBIDDEN, "downloads are paused until a license or trial is active");
     }
     let req = match parse_json(&body).ok_or_else(|| "Request body must be JSON.".to_string()).and_then(|v| parse_download_request(&v)) {
         Ok(r) => r,

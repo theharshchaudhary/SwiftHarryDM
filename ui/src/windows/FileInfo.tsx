@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, windowParams, type Job, type MediaInfo, type UrlInfo } from "../api";
 import * as F from "../format";
 import { Dialog, Loading } from "../components/Dialog";
+import { ComponentsBanner, useComponents } from "../components/Components";
 import { Icon, categoryIcon } from "../icons";
 import { useLive, useTheme } from "../store";
 
@@ -48,6 +49,7 @@ export default function FileInfo() {
   const [dups, setDups] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const comps = useComponents();
 
   // A browser request that is closed without a decision counts as cancelled.
   useEffect(() => {
@@ -90,10 +92,11 @@ export default function FileInfo() {
       alive = false;
       clearTimeout(t);
     };
-  }, [url]);
+  }, [url, comps.c?.ready]);
 
   const settings = live?.settings;
-  const isMedia = media != null;
+  const isMedia = media != null || (probeErr !== "" && !!comps.c && !comps.c.ytdlp && /video|media|yt-dlp/i.test(probeErr));
+  const needsComponents = isMedia && !!comps.c && !comps.c.ready;
   const name = params.get("filename") || info?.file_name || "";
   const folderFor = useMemo(
     () => (cat: string) => {
@@ -175,7 +178,7 @@ export default function FileInfo() {
           referer: params.get("referer"),
           source: params.get("source") ?? "ui",
           category: category || null,
-          description: desc.trim() || (isMedia ? media!.title : null),
+          description: desc.trim() || (isMedia ? media?.title ?? null : null),
           queue_id: mode === "later" ? queueId : null,
         },
         mode,
@@ -189,11 +192,13 @@ export default function FileInfo() {
 
   const sizeText = (() => {
     if (probing) return "…";
+    if (probeErr && isMedia && !media) return "Known after the video components are installed";
     if (probeErr) return `Unknown: ${probeErr.replace(/\.$/, "")}. The download will still be tried (with retries).`;
     if (isMedia) {
-      const f = exact ? media!.formats.find((x) => x.id === exact) : null;
+      if (!media) return "Known after the video components are installed";
+      const f = exact ? media.formats.find((x) => x.id === exact) : null;
       if (f?.size) return `About ${F.size(f.size)}`;
-      return media!.duration ? `Length ${F.duration(media!.duration)}; the size depends on the quality` : "Depends on the quality";
+      return media.duration ? `Length ${F.duration(media.duration)}; the size depends on the quality` : "Depends on the quality";
     }
     return info?.size != null ? `${F.size(info.size)} (${info.size.toLocaleString()} bytes)` : "Unknown (the server did not say)";
   })();
@@ -203,16 +208,16 @@ export default function FileInfo() {
     <Dialog
       left={
         <span className="hint">
-          {probing ? "Checking the address…" : isMedia ? `Video from ${media!.extractor || F.host(url)}` : info ? `${info.resumable ? "Resumable" : "Not resumable"}${info.content_type ? ` · ${info.content_type.split(";")[0]}` : ""}` : ""}
+          {probing ? "Checking the address…" : isMedia ? `Video from ${media?.extractor || F.host(url)}` : info ? `${info.resumable ? "Resumable" : "Not resumable"}${info.content_type ? ` · ${info.content_type.split(";")[0]}` : ""}` : ""}
         </span>
       }
       foot={
         <>
-          <button className="btn primary" disabled={busy || !url || probing} onClick={() => go("now")}>
+          <button className="btn primary" disabled={busy || !url || probing || needsComponents} onClick={() => go("now")}>
             Start download
           </button>
           <span className="row" style={{ gap: 0 }}>
-            <button className="btn" disabled={busy || !url || probing} onClick={() => go("later")} style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}>
+            <button className="btn" disabled={busy || !url || probing || needsComponents} onClick={() => go("later")} style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}>
               Download later
             </button>
             <select value={queueId} onChange={(e) => setQueueId(e.target.value)} title="Queue for “Download later”" style={{ height: 30, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, marginLeft: -1 }}>
@@ -250,7 +255,7 @@ export default function FileInfo() {
       <div className="grid2">
         <span>Address</span>
         <input type="text" value={url} onChange={(e) => setUrl(e.target.value.trim())} />
-        {isMedia && (
+        {isMedia && media && (
           <>
             <span>Video</span>
             <b className="ellipsis" title={media!.title}>{media!.title}</b>
@@ -292,7 +297,8 @@ export default function FileInfo() {
         <span>Size</span>
         <span className="muted">{sizeText}</span>
       </div>
-      {isMedia && <div className="hint">The file is named after the video. Protected (DRM) videos, playlists and live streams are not downloaded.</div>}
+      {isMedia && <ComponentsBanner />}
+      {isMedia && media && <div className="hint">The file is named after the video. Protected (DRM) videos, playlists and live streams are not downloaded.</div>}
       {!isMedia && info?.is_web_page && !probing && (
         <div className="banner">
           <Icon name="video" size={18} />

@@ -65,6 +65,10 @@ impl ApiHooks for Hooks {
     fn started(&self, job_id: &str) {
         self.app.state::<AppState>().watch(job_id);
     }
+
+    fn downloads_allowed(&self) -> bool {
+        crate::upkeep::downloads_allowed(&self.app)
+    }
 }
 
 /// Start the API; failures are reported in the UI (Options > Browser), not fatal.

@@ -94,7 +94,12 @@ async function setup() {
     join(work, "home", "settings3.json"),
     JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false }),
   );
-  start(APP_EXE, [], { SWIFTDM_HOME: join(work, "home"), WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}` });
+  // SWIFTDM_SKIP_LICENSE only works in debug builds: tests must not depend on the license server.
+  start(APP_EXE, [], {
+    SWIFTDM_HOME: join(work, "home"),
+    SWIFTDM_SKIP_LICENSE: "1",
+    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
+  });
   const app = new App(CDP_PORT);
   await until(() => app.targets().then((t) => t.length > 0), 30000, 300, "the app to start");
   return app;
@@ -180,13 +185,21 @@ const scenarios = {
       ["batch", {}, "Batch download", "Replace * with"],
       ["links", { source: "typed", urls: JSON.stringify(["https://a.example/1.zip"]) }, "Choose files to download", "a.example"],
       ["about", {}, "About SwiftHarryDM", "Version"],
+      ["license", {}, "License", "License check skipped"],
+      ["browser", {}, "Connect your browser", "extension"],
+      ["options", { tab: "video" }, "Options", "yt-dlp"],
     ];
     if (job) cases.push(["properties", { id: job.id }, "Properties", "File name"]);
     for (const [kind, params, title, text] of cases) {
+      if (await app.hasWindow(title)) {
+        const old = await app.window(title);
+        await old.invoke("close_self").catch(() => {});
+        await until(async () => !(await app.hasWindow(title)), 5000, 100, `${title} to close`);
+      }
       await main.invoke("open_window", { kind, params });
       const w = await app.window(title);
       assert((await w.text()).includes(text), `${title} shows its content`);
-      await w.shot(join(SHOTS, `window-${kind}.png`));
+      await w.shot(join(SHOTS, `window-${kind}${params.tab ? "-" + params.tab : ""}.png`));
       await w.invoke("close_self").catch(() => {});
       await until(async () => !(await app.hasWindow(title)), 5000, 100, `${title} to close`);
     }
