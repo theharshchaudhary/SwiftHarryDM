@@ -141,7 +141,7 @@ fn walk(dir: &str) -> Vec<String> {
 async fn ytdlp_update_is_verified_before_use() {
     use axum::routing::get;
     use sha2::{Digest, Sha256};
-    let e = env(); // isolated SWIFTDM_HOME
+    let dir = tempfile::tempdir().unwrap();
     let exe = std::fs::read(fake()).unwrap();
     let good = format!("{}  yt-dlp.exe\n", hex::encode(Sha256::digest(&exe)));
     let serve = |sums: String| {
@@ -157,9 +157,8 @@ async fn ytdlp_update_is_verified_before_use() {
         }
     };
     let bad = serve(format!("{}  yt-dlp.exe\n", "0".repeat(64))).await;
-    assert!(swiftdm_core::media::tools::update_ytdlp(&bad).await.unwrap_err().contains("SHA-256"));
+    assert!(swiftdm_core::media::tools::update_ytdlp_in(dir.path(), &bad).await.unwrap_err().contains("SHA-256"));
     let ok = serve(good).await;
-    assert_eq!(swiftdm_core::media::tools::update_ytdlp(&ok).await.unwrap(), "2026.01.01-fake");
-    assert!(swiftdm_core::appdata::tools_dir().join("yt-dlp.exe").is_file());
-    drop(e);
+    assert_eq!(swiftdm_core::media::tools::update_ytdlp_in(dir.path(), &ok).await.unwrap(), "2026.01.01-fake");
+    assert!(dir.path().join("yt-dlp.exe").is_file());
 }

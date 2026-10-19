@@ -72,8 +72,13 @@ pub async fn version_of(exe: &Path) -> Option<String> {
 /// release's SHA2-256SUMS and check that it runs, then swap it in (the previous copy is kept
 /// as yt-dlp.exe.prev). Returns the new version.
 pub async fn update_ytdlp(base_url: &str) -> Result<String, String> {
+    update_ytdlp_in(&crate::appdata::tools_dir(), base_url).await
+}
+
+/// `update_ytdlp` into a given folder.
+pub async fn update_ytdlp_in(dir: &Path, base_url: &str) -> Result<String, String> {
     use sha2::{Digest, Sha256};
-    let dir = crate::appdata::tools_dir();
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     let client = reqwest::Client::builder().timeout(std::time::Duration::from_secs(300)).build().map_err(|e| e.to_string())?;
     let get = |url: String| {
         let client = client.clone();
