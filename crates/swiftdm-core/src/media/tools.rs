@@ -19,8 +19,9 @@ fn search_dirs() -> Vec<PathBuf> {
         d.push(exe_dir.join("tools"));
         d.push(exe_dir.clone());
         if cfg!(debug_assertions) {
-            // Development: target\debug\app.exe -> repo\tools\bin (scripts/fetch-tools.mjs)
+            // Development: target\debug\app.exe -> repo\tools\ffmpeg-slim and repo\tools\bin
             for up in exe_dir.ancestors().take(4) {
+                d.push(up.join("tools").join("ffmpeg-slim"));
                 d.push(up.join("tools").join("bin"));
             }
         }
@@ -124,18 +125,11 @@ pub fn rollback_ytdlp() -> bool {
 
 // ---------------------------------------------------------------------- on-demand components
 
-/// Pinned, checksum-verified downloads (keep in step with scripts/fetch-tools.mjs).
+/// Pinned, checksum-verified download (keep in step with scripts/fetch-tools.mjs).
 pub const YTDLP_PINNED: (&str, &str) = (
     "https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp.exe",
     "66674953fe251b89f4d08c5f0e35e0728679bd67ab3d7d05c0562af101dd3e7a",
 );
-/// FFmpeg LGPL build (no GPL-only components).
-pub const FFMPEG_PINNED: (&str, &str, &str) = (
-    "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n8.1.3-9-g29e619e767-win64-lgpl-8.1.zip",
-    "4a7642b2264c03e8a0ce8a3825b933ee5580656f45695a086fe7e294045ffc0a",
-    "ffmpeg-n8.1.3-9-g29e619e767-win64-lgpl-8.1",
-);
-
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ComponentStatus {
     pub ytdlp: Option<String>,
@@ -185,8 +179,8 @@ pub async fn fetch_verified(url: &str, sha256: &str, dest: &Path, progress: &(dy
     std::fs::rename(&tmp, dest).map_err(|e| e.to_string())
 }
 
-/// Install whatever is missing of yt-dlp, FFmpeg and ffprobe into the app data tools folder.
-/// `progress(step, done, total)` reports "yt-dlp" / "ffmpeg" / "unpacking".
+/// Install yt-dlp into the app data tools folder if it is missing (FFmpeg ships with the app,
+/// built by scripts/ffmpeg/build.sh). `progress(step, done, total)` reports "yt-dlp".
 pub async fn install_components(progress: &(dyn Fn(&str, u64, Option<u64>) + Send + Sync)) -> Result<ComponentStatus, String> {
     let dir = crate::appdata::tools_dir();
     let have = Tools::discover();
@@ -195,26 +189,7 @@ pub async fn install_components(progress: &(dyn Fn(&str, u64, Option<u64>) + Sen
         fetch_verified(url, sha, &dir.join("yt-dlp.exe"), &|d, t| progress("yt-dlp", d, t)).await?;
     }
     if have.ffmpeg.is_none() || have.ffprobe.is_none() {
-        let (url, sha, root) = FFMPEG_PINNED;
-        let work = dir.join("ffmpeg-download");
-        let _ = std::fs::remove_dir_all(&work);
-        std::fs::create_dir_all(&work).map_err(|e| e.to_string())?;
-        let zip = work.join("ffmpeg.zip");
-        fetch_verified(url, sha, &zip, &|d, t| progress("ffmpeg", d, t)).await?;
-        progress("unpacking", 0, None);
-        // Windows 10+ includes bsdtar, which reads zip archives.
-        let tar = std::env::var_os("SystemRoot").map(PathBuf::from).unwrap_or_else(|| PathBuf::from(r"C:\Windows")).join("System32").join("tar.exe");
-        let members: Vec<String> = ["bin/ffmpeg.exe", "bin/ffprobe.exe", "LICENSE.txt"].iter().map(|m| format!("{root}/{m}")).collect();
-        let mut cmd = tokio::process::Command::new(&tar);
-        cmd.arg("-xf").arg(&zip).arg("-C").arg(&work).args(&members).creation_flags(0x0800_0000);
-        let out = cmd.output().await.map_err(|e| format!("Could not unpack FFmpeg: {e}"))?;
-        if !out.status.success() {
-            return Err(format!("Could not unpack FFmpeg: {}", String::from_utf8_lossy(&out.stderr)));
-        }
-        for (src, dst) in [("bin/ffmpeg.exe", "ffmpeg.exe"), ("bin/ffprobe.exe", "ffprobe.exe"), ("LICENSE.txt", "FFMPEG-LICENSE.txt")] {
-            std::fs::rename(work.join(root).join(src), dir.join(dst)).map_err(|e| format!("Could not install {dst}: {e}"))?;
-        }
-        let _ = std::fs::remove_dir_all(&work);
+        return Err("FFmpeg is missing from this installation. Reinstall SwiftHarryDM to repair it.".into());
     }
     Ok(status())
 }

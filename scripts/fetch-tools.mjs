@@ -1,73 +1,37 @@
-// Download the pinned, SHA-256-verified media tools into tools/bin (git-ignored).
-//   yt-dlp.exe  official standalone release
-//   ffmpeg.exe / ffprobe.exe  BtbN LGPL build (no GPL-only components)
+// Development helper: download the pinned, SHA-256-verified yt-dlp.exe into tools/bin
+// (git-ignored), which debug builds use. Installed copies download it on first use.
+// FFmpeg is built from source by scripts/ffmpeg/build.sh into tools/ffmpeg-slim.
 // Usage: node scripts/fetch-tools.mjs [destDir]
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DEST = resolve(process.argv[2] || join(ROOT, 'tools', 'bin'));
 
-const TOOLS = [
-  {
-    name: 'yt-dlp',
-    url: 'https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp.exe',
-    sha256: '66674953fe251b89f4d08c5f0e35e0728679bd67ab3d7d05c0562af101dd3e7a',
-    files: { 'yt-dlp.exe': null },
-  },
-  {
-    name: 'ffmpeg',
-    url: 'https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n8.1.3-9-g29e619e767-win64-lgpl-8.1.zip',
-    sha256: '4a7642b2264c03e8a0ce8a3825b933ee5580656f45695a086fe7e294045ffc0a',
-    zipRoot: 'ffmpeg-n8.1.3-9-g29e619e767-win64-lgpl-8.1',
-    files: { 'ffmpeg.exe': 'bin/ffmpeg.exe', 'ffprobe.exe': 'bin/ffprobe.exe', 'FFMPEG-LICENSE.txt': 'LICENSE.txt' },
-  },
-];
-
-const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
-
-async function fetchTool(t) {
-  const stamp = join(DEST, `${t.name}.version`);
-  if (existsSync(stamp) && readFileSync(stamp, 'utf8').trim() === t.sha256 &&
-      Object.keys(t.files).every((f) => existsSync(join(DEST, f)))) {
-    console.log(`${t.name}: already present`);
-    return;
-  }
-  console.log(`${t.name}: downloading ${t.url}`);
-  const res = await fetch(t.url);
-  if (!res.ok) throw new Error(`${t.name}: HTTP ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  const got = sha256(buf);
-  if (got !== t.sha256) throw new Error(`${t.name}: SHA-256 mismatch (got ${got}, expected ${t.sha256})`);
-  console.log(`${t.name}: sha256 verified`);
-  if (!t.zipRoot) {
-    writeFileSync(join(DEST, Object.keys(t.files)[0]), buf);
-  } else {
-    const work = mkdtempSync(join(tmpdir(), 'sdm-tools-'));
-    try {
-      const zip = join(work, 'a.zip');
-      writeFileSync(zip, buf);
-      const members = Object.values(t.files).map((m) => `${t.zipRoot}/${m}`);
-      // Windows 10+ ships bsdtar, which extracts zip archives; only the named members are taken.
-      // Call it by full path: in Git Bash, plain `tar` is GNU tar, which cannot read zip files.
-      const bsdtar = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
-      execFileSync(bsdtar, ['-xf', zip, '-C', work, ...members], { stdio: 'inherit' });
-      for (const [out, member] of Object.entries(t.files)) {
-        copyFileSync(join(work, t.zipRoot, member), join(DEST, out));
-      }
-    } finally {
-      rmSync(work, { recursive: true, force: true });
-    }
-  }
-  writeFileSync(stamp, t.sha256 + '\n');
-  console.log(`${t.name}: installed to ${DEST}`);
-}
+// Keep in step with YTDLP_PINNED in crates/swiftdm-core/src/media/tools.rs.
+const YTDLP = {
+  url: 'https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp.exe',
+  sha256: '66674953fe251b89f4d08c5f0e35e0728679bd67ab3d7d05c0562af101dd3e7a',
+};
 
 mkdirSync(DEST, { recursive: true });
-for (const t of TOOLS) {
-  await fetchTool(t);
+const exe = join(DEST, 'yt-dlp.exe');
+const stamp = join(DEST, 'yt-dlp.version');
+if (existsSync(exe) && existsSync(stamp) && readFileSync(stamp, 'utf8').trim() === YTDLP.sha256) {
+  console.log('yt-dlp: already present');
+} else {
+  console.log(`yt-dlp: downloading ${YTDLP.url}`);
+  const res = await fetch(YTDLP.url);
+  if (!res.ok) throw new Error(`yt-dlp: HTTP ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  const got = createHash('sha256').update(buf).digest('hex');
+  if (got !== YTDLP.sha256) throw new Error(`yt-dlp: SHA-256 mismatch (got ${got}, expected ${YTDLP.sha256})`);
+  writeFileSync(exe, buf);
+  writeFileSync(stamp, YTDLP.sha256 + '\n');
+  console.log(`yt-dlp: verified and installed to ${DEST}`);
+}
+if (!existsSync(join(ROOT, 'tools', 'ffmpeg-slim', 'ffmpeg.exe'))) {
+  console.log('FFmpeg: not built yet. Run scripts/ffmpeg/build.sh (see docs/DEVELOPMENT.md).');
 }

@@ -38,8 +38,6 @@ export function useComponents() {
 
 const STEP_TEXT: Record<string, string> = {
   "yt-dlp": "Downloading the video downloader",
-  ffmpeg: "Downloading FFmpeg",
-  unpacking: "Unpacking FFmpeg",
 };
 
 /** Banner shown where video downloads need the components that are not installed yet. */
@@ -63,8 +61,8 @@ export function ComponentsBanner({ compact }: { compact?: boolean }) {
         ) : (
           <>
             <div>
-              Video and audio downloads need two free components (yt-dlp and FFmpeg).{" "}
-              {!compact && "They are downloaded once (about 100 MB), checked, and kept up to date automatically."}
+              Video and audio downloads need the free yt-dlp component.{" "}
+              {!compact && "It is downloaded once (about 18 MB), checked, and kept up to date automatically."}
             </div>
             <div>
               <button className="btn small primary" onClick={install}>Download components</button>

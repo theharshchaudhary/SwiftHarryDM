@@ -68,4 +68,5 @@ queue, quota, license and update events) after reading a full snapshot.
 - App: the Tauri updater with a signing key; GitHub Releases host the installer and
   `latest.json` (see `.github/workflows/release.yml`).
 - yt-dlp: weekly, checked against the release's SHA2-256SUMS and test-run before use.
-- FFmpeg: pinned build, installed on demand and verified by SHA-256.
+- FFmpeg: a small build from pinned sources (`scripts/ffmpeg/build.sh`), shipped in the
+  installer and updated with the app.

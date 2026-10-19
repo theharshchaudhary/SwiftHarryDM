@@ -10,10 +10,18 @@ permissions:
   contents: write
 
 jobs:
+  ffmpeg:
+    uses: ./.github/workflows/ffmpeg.yml
+
   release:
+    needs: ffmpeg
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ffmpeg-slim
+          path: tools/ffmpeg-slim
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4

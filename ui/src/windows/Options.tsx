@@ -457,7 +457,7 @@ function Video() {
   const [busy, setBusy] = useState(false);
   return (
     <>
-      <div>Video and audio downloads use two free components: yt-dlp (finds the video) and FFmpeg (joins video and audio).</div>
+      <div>Video and audio downloads use yt-dlp (finds the video; downloaded once) and FFmpeg (joins video and audio, converts audio; included with SwiftHarryDM).</div>
       {!c && <div className="muted">Checking the components…</div>}
       <ComponentsBanner />
       {c?.ready && (

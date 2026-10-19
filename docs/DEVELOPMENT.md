@@ -5,8 +5,19 @@
 - Rust stable (MSVC toolchain) and the Visual Studio 2022 C++ build tools with a Windows SDK
 - Node.js 22 or newer
 - `npm ci --prefix ui`
-- Optional: `node scripts/fetch-tools.mjs` puts pinned, checksum-verified yt-dlp and FFmpeg
-  into `tools\bin`, which debug builds use. Installed copies download them on first use.
+- Optional: `node scripts/fetch-tools.mjs` puts the pinned, checksum-verified yt-dlp into
+  `tools\bin`, which debug builds use. Installed copies download it on first use.
+- FFmpeg: the installer bundles a small LGPL build from `tools\ffmpeg-slim` (git-ignored),
+  made by `scripts/ffmpeg/build.sh` (cross-compiled with mingw-w64; about 9 MB for both
+  programs). Release builds need it; debug builds use it for video features. With Docker:
+
+  ```bash
+  docker run --rm -v "$PWD/scripts/ffmpeg:/src:ro" -v "$PWD/tools/ffmpeg-slim:/out" ubuntu:24.04 bash /src/build.sh
+  ```
+
+  From Git Bash on Windows, prefix the command with `MSYS_NO_PATHCONV=1`. CI builds it the
+  same way (`.github/workflows/ffmpeg.yml`, cached by the script's contents). To support
+  another format, add it to the allow-lists in the script.
 
 ## Run
 

@@ -192,10 +192,10 @@ export default function FileInfo() {
 
   const sizeText = (() => {
     if (probing) return "…";
-    if (probeErr && isMedia && !media) return "Known after the video components are installed";
+    if (probeErr && isMedia && !media) return "Known after the video component is installed";
     if (probeErr) return `Unknown: ${probeErr.replace(/\.$/, "")}. The download will still be tried (with retries).`;
     if (isMedia) {
-      if (!media) return "Known after the video components are installed";
+      if (!media) return "Known after the video component is installed";
       const f = exact ? media.formats.find((x) => x.id === exact) : null;
       if (f?.size) return `About ${F.size(f.size)}`;
       return media.duration ? `Length ${F.duration(media.duration)}; the size depends on the quality` : "Depends on the quality";

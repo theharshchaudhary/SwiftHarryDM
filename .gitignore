@@ -4,8 +4,10 @@ ui/dist/
 ui/node_modules/
 src-tauri/gen/
 
-# Media tools fetched by scripts/fetch-tools.mjs (development only)
+# Media tools: yt-dlp fetched by scripts/fetch-tools.mjs (development only) and the
+# FFmpeg built by scripts/ffmpeg/build.sh (bundled with the installer)
 tools/bin/
+tools/ffmpeg-slim/
 
 # Signing material must never be committed
 *.pem

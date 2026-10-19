@@ -1,0 +1,25 @@
+# Builds SwiftHarryDM's small FFmpeg (scripts/ffmpeg/build.sh) on Linux, cached by the build
+# script's contents, and hands it to the Windows jobs as the "ffmpeg-slim" artifact.
+name: ffmpeg
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: tools/ffmpeg-slim
+          key: ffmpeg-slim-${{ hashFiles('scripts/ffmpeg/build.sh') }}
+      - name: Build (cross-compiled for Windows)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p tools/ffmpeg-slim
+          docker run --rm -v "$PWD/scripts/ffmpeg:/src:ro" -v "$PWD/tools/ffmpeg-slim:/out" ubuntu:24.04 bash /src/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-slim
+          path: tools/ffmpeg-slim

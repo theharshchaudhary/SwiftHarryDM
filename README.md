@@ -27,8 +27,9 @@ The installer is under 5 MB. Updates install with one click.
   player loads (HLS, DASH or media files) and offers them in the same panel; the toolbar
   badge shows how many were found.
 - Protected (DRM) videos, playlists and live streams are not downloaded.
-- The video components (yt-dlp and FFmpeg) are downloaded once when first needed, verified,
-  and kept up to date automatically.
+- FFmpeg (a small build made for SwiftHarryDM) comes with the app. The video finder, yt-dlp,
+  is downloaded once when first needed (about 18 MB), verified, and kept up to date
+  automatically.
 
 **Browser**
 - Chrome, Edge and Brave extension that connects to the app by itself, with no code to type.
@@ -84,7 +85,7 @@ Requirements: Rust (stable, MSVC), Node.js 22+, and the Visual Studio C++ build 
 
 ```powershell
 npm ci --prefix ui
-node scripts/fetch-tools.mjs                        # optional: yt-dlp + FFmpeg for development
+node scripts/fetch-tools.mjs                        # optional: yt-dlp for development
 ui\node_modules\.bin\tauri build --debug --no-bundle  # app at target\debug\swiftharrydm.exe
 ui\node_modules\.bin\tauri build                     # installer in target\release\bundle\nsis
 ```

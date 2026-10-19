@@ -52,7 +52,12 @@
     },
     "createUpdaterArtifacts": true,
     "resources": {
-      "../extension/": "extension/"
+      "../extension/": "extension/",
+      "../tools/ffmpeg-slim/ffmpeg.exe": "tools/ffmpeg.exe",
+      "../tools/ffmpeg-slim/ffprobe.exe": "tools/ffprobe.exe",
+      "../tools/ffmpeg-slim/FFMPEG-LICENSE.txt": "tools/FFMPEG-LICENSE.txt",
+      "../tools/ffmpeg-slim/LAME-LICENSE.txt": "tools/LAME-LICENSE.txt",
+      "../tools/ffmpeg-slim/BUILD-INFO.txt": "tools/FFMPEG-BUILD-INFO.txt"
     },
     "publisher": "Harsh Chaudhary",
     "copyright": "© Harsh Chaudhary",
