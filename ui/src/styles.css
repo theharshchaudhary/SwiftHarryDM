@@ -226,7 +226,9 @@ legend { color: var(--text-2); padding: 0 4px; }
 .dlg { display: flex; flex-direction: column; height: 100%; background: var(--bg); }
 .dlg-body { flex: 1; overflow: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .dlg-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); background: var(--surface-2); }
-.dlg-foot .left { margin-right: auto; display: flex; gap: 8px; align-items: center; }
+.dlg-foot .left { margin-right: auto; display: flex; gap: 8px; align-items: center; min-width: 0; flex: 1; }
+.dlg-foot .left > .hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dlg-foot > :not(.left) { flex: none; white-space: nowrap; }
 .grid2 { display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; align-items: center; }
 .grid2 > .full { grid-column: 1 / -1; }
 .row { display: flex; gap: 8px; align-items: center; }

@@ -207,7 +207,7 @@ export default function FileInfo() {
   return (
     <Dialog
       left={
-        <span className="hint">
+        <span className="hint" title={info?.content_type ?? undefined}>
           {probing ? "Checking the address…" : isMedia ? `Video from ${media?.extractor || F.host(url)}` : info ? `${info.resumable ? "Resumable" : "Not resumable"}${info.content_type ? ` · ${info.content_type.split(";")[0]}` : ""}` : ""}
         </span>
       }
