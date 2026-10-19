@@ -954,7 +954,8 @@ async fn consume(c: &Ctx, idx: u32, resp: reqwest::Response, f: &File, v: Verify
             return Ok(progressed);
         }
         let (now, rest) = data.split_at(room.map_or(data.len(), |r| r.min(data.len())));
-        c.run.limiter.acquire(now.len()).await;
+        // Shared fairly between downloads; this download's own limiter identifies it.
+        c.run.limiter.acquire_for(Arc::as_ptr(&c.run.job_limiter) as usize, now.len()).await;
         if let Some(l) = &c.job_limiter {
             l.acquire(now.len()).await;
         }

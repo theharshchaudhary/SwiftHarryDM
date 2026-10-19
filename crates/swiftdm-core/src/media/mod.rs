@@ -323,7 +323,10 @@ impl Engine for MediaEngine {
         cmd.push(format!("temp:{tmp}"));
         cmd.extend(s(&["--continue", "--no-overwrites", "--newline", "--progress", "--progress-template", PROGRESS_TEMPLATE, "--progress-template", POSTPROCESS_TEMPLATE, "--print", FILE_TEMPLATE, "--no-simulate"]));
         cmd.extend(Self::job_args(job));
-        if let Some(l) = job.spec.speed_limit.filter(|l| *l > 0) {
+        // yt-dlp does its own transfers, so it gets the lower of this download's limit and the
+        // overall one (applied when it starts).
+        let limit = [job.spec.speed_limit.unwrap_or(0), ctx.settings.get().speed_limit].into_iter().filter(|l| *l > 0).min();
+        if let Some(l) = limit {
             cmd.push("--limit-rate".into());
             cmd.push(l.to_string());
         }

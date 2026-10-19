@@ -149,6 +149,17 @@ async fn server_errors_and_retry_after() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn forbidden_browser_agent_retries_as_ourselves() {
+    // Like a CDN that turns away a "browser" without a browser's fingerprint.
+    let e = env().await;
+    let b = Body::gen("ua", MIB);
+    ok(&e.run(&e.srv.add("/ua.bin", Resource::new(b.clone()).statuses(&[403])), 60).await, &b);
+    let ua: Vec<_> = e.srv.requests("/ua.bin").into_iter().map(|r| r.user_agent.unwrap_or_default()).collect();
+    assert!(ua[0].starts_with("Mozilla/"), "{ua:?}");
+    assert!(ua[1].starts_with("SwiftHarryDM/"), "{ua:?}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn broken_content_range() {
     let e = env().await;
     let b = Body::gen("wrong", 6 * MIB);
@@ -389,6 +400,24 @@ async fn cookies_and_site_logins_are_scoped() {
     let id = e.m.submit(spec, StartMode::Now).unwrap();
     ok(&e.m.wait_for(&id, DONE, Duration::from_secs(30)).await.unwrap(), &d);
     assert!(other.requests("/x.bin").iter().all(|r| r.cookie.is_none() && r.authorization.is_none()));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn overall_speed_limit_is_shared_fairly() {
+    let mut st = Settings::default();
+    st.speed_limit = 4 * MIB;
+    let e = env_with(|_| {}, st).await;
+    let a = e.submit(&e.srv.add("/fa.bin", Resource::new(Body::gen("fa", 64 * MIB)).etag("\"a\"")));
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    let b = e.submit(&e.srv.add("/fb.bin", Resource::new(Body::gen("fb", 64 * MIB)).etag("\"b\"")));
+    e.m.wait_for(&b, &[S::Downloading], Duration::from_secs(10)).await;
+    let got = |id: &str| e.m.progress(id).map(|p| p.downloaded).unwrap_or(0);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let (a0, b0) = (got(&a), got(&b));
+    tokio::time::sleep(Duration::from_secs(4)).await;
+    let (da, db) = ((got(&a) - a0) as f64, (got(&b) - b0) as f64);
+    println!("first {:.1} MB, second {:.1} MB", da / MIB as f64, db / MIB as f64);
+    assert!(db > da / 2.0 && da > db / 2.0, "unfair: {da} vs {db}");
 }
 
 #[tokio::test(flavor = "multi_thread")]

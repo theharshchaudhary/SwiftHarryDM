@@ -1,6 +1,6 @@
 //! HTTP request layer: client construction (proxy, user agent, TLS verification on),
 //! manual redirect policy, cookie/credential scoping, error mapping and the initial probe.
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue, COOKIE, LOCATION, RANGE, REFERER};
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue, COOKIE, LOCATION, RANGE, REFERER, USER_AGENT};
 use reqwest::{Client, Response, StatusCode};
 use std::time::Duration;
 
@@ -101,13 +101,22 @@ pub struct RequestAuth {
     pub cookies: Option<String>,
     pub basic: Option<(String, String)>,
     pub referer: Option<String>,
+    /// The browser-like default user agent is in use: on 403, try once more as ourselves.
+    pub plain_ua_fallback: bool,
 }
 
 impl RequestAuth {
     pub fn for_url(url: &str, settings: &Settings, cookies: Option<String>, referer: Option<String>) -> Self {
         let host = url::Url::parse(url).ok().and_then(|u| u.host_str().map(str::to_lowercase)).unwrap_or_default();
-        RequestAuth { basic: settings.login_for(&host), origin_host: host, cookies, referer }
+        let plain_ua_fallback = settings.user_agent == crate::settings::DEFAULT_UA;
+        RequestAuth { basic: settings.login_for(&host), origin_host: host, cookies, referer, plain_ua_fallback }
     }
+}
+
+/// Some CDNs (Cloudflare, for one) refuse a request that claims to be a browser but does not
+/// behave like one, while they let a program that names itself through.
+pub fn plain_user_agent() -> String {
+    format!("SwiftHarryDM/{}", env!("CARGO_PKG_VERSION"))
 }
 
 /// GET with manual redirects. Returns (response, final_url). Stops early on cancellation.
@@ -120,6 +129,7 @@ pub async fn open_url(
 ) -> Result<(Response, String), EngineError> {
     let mut current = url.to_string();
     let mut used_basic = false;
+    let mut plain_ua = false;
     for _ in 0..=MAX_REDIRECTS {
         if cancel.is_set() {
             return Err(EngineError::Stop(cancel.reason().unwrap_or(StopReason::Pause)));
@@ -127,6 +137,9 @@ pub async fn open_url(
         let host = url::Url::parse(&current).ok().and_then(|u| u.host_str().map(str::to_lowercase)).unwrap_or_default();
         let same_host = host == auth.origin_host;
         let mut req = client.get(&current).headers(extra.clone()).header("Accept-Encoding", "identity");
+        if plain_ua {
+            req = req.header(USER_AGENT, plain_user_agent());
+        }
         if let Some(r) = &auth.referer {
             if let Ok(v) = HeaderValue::from_str(r) {
                 req = req.header(REFERER, v);
@@ -156,6 +169,10 @@ pub async fn open_url(
         }
         if st == StatusCode::UNAUTHORIZED && same_host && auth.basic.is_some() && !used_basic {
             used_basic = true;
+            continue;
+        }
+        if st == StatusCode::FORBIDDEN && auth.plain_ua_fallback && !plain_ua {
+            plain_ua = true;
             continue;
         }
         return Ok((resp, current));
