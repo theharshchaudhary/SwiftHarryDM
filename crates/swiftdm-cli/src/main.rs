@@ -1,7 +1,7 @@
 //! swiftdm-cli: headless downloads with the SwiftHarryDM engine, plus the crash-recovery and
 //! performance checks used before releases.
 //!
-//!   swiftdm-cli get <url> --dir <folder> [--home <folder>] [--connections N]
+//!   swiftdm-cli get <url> --dir <folder> [--home <folder>] [--connections N] [--format 720]
 //!   swiftdm-cli kill-test [--runs N] [--size-mb N] [--conn-mbps N]
 //!   swiftdm-cli bench [--size-mb N]
 use std::collections::HashMap;
@@ -73,7 +73,18 @@ async fn get(args: &[String]) -> i32 {
             mgr.retry(&existing.id);
             existing.id
         }
-        None => match mgr.submit(JobSpec::new(url.clone(), dir), StartMode::Now) {
+        None => match mgr.submit(
+            {
+                let mut spec = JobSpec::new(url.clone(), dir);
+                if let Some(f) = arg(args, "--format") {
+                    // Video quality preset (best, 1080, 720, 480, 360, mp4, mkv, mp3, m4a).
+                    spec.media = Some(swiftdm_core::models::MediaOptions::preset(&f));
+                    spec.format_label = f;
+                }
+                spec
+            },
+            StartMode::Now,
+        ) {
             Ok(id) => id,
             Err(e) => {
                 eprintln!("{e}");
