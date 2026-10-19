@@ -270,3 +270,32 @@ async fn recovery_refinalizes_and_fails_honestly() {
     assert_eq!(std::fs::metadata(s.final_path.unwrap()).unwrap().len(), 42);
     assert_eq!(m.get(&k.id).unwrap().state, S::Failed);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn crash_right_after_moving_the_file_is_recovered() {
+    // The app stopped after the finished file was renamed into place but before that was
+    // recorded: on restart the file must be adopted, not downloaded again as "x (1).bin".
+    let dir = tempfile::tempdir().unwrap();
+    let dest = dir.path().join("dl");
+    std::fs::create_dir_all(&dest).unwrap();
+    let store = Arc::new(Store::open(dir.path().join("s.db")).unwrap());
+    let mk = |id: &str, name: &str, size: u64| {
+        let mut j = Job::new(id.to_string(), JobSpec::new(format!("http://fake.test/{name}"), dest.to_string_lossy()));
+        j.state = S::Finalizing;
+        j.kind = Some("http".into());
+        j.reserved_name = Some(name.into());
+        j.total_bytes = Some(1000);
+        j.size_verified = Some(true);
+        j.artifact_path = Some(dest.join(format!(".{name}.tmp")).to_string_lossy().into_owned());
+        std::fs::write(dest.join(name), vec![7u8; size as usize]).unwrap();
+        store.save_job(&j).unwrap();
+    };
+    mk("a0000000000000000000000000000001", "moved.bin", 1000);
+    mk("a0000000000000000000000000000002", "other.bin", 999); // wrong size: not ours
+    let m = manager(store.clone(), Arc::new(FakeEngine::default()), settings(2));
+    m.sync().await;
+    let a = m.get("a0000000000000000000000000000001").unwrap();
+    assert_eq!(a.state, S::Completed, "{:?}", a.error);
+    assert!(a.final_path.unwrap().ends_with("moved.bin"));
+    assert_eq!(m.get("a0000000000000000000000000000002").unwrap().state, S::Failed);
+}

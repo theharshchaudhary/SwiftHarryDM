@@ -178,6 +178,9 @@ async fn kill_test(args: &[String]) -> i32 {
         println!("run {run:>3}: {:<4} after {kills:>2} kills, {} file(s) in the folder", if good { "ok" } else { "FAIL" }, leftovers);
         if !good || leftovers != 1 {
             failures += 1;
+            for e in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+                println!("          {} ({} bytes)", e.file_name().to_string_lossy(), e.metadata().map(|m| m.len()).unwrap_or(0));
+            }
         }
         kills_total += kills;
         let _ = std::fs::remove_dir_all(&work);

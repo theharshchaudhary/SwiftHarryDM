@@ -735,6 +735,25 @@ impl Actor {
                 return;
             }
         }
+        // The app may have stopped right after moving the file into place and before recording
+        // it. The reserved name then holds a file of exactly the verified size, written after
+        // the download was added: that is this download's file.
+        if let (Some(name), Some(total), Some(true)) = (job.reserved_name.clone(), job.total_bytes, job.size_verified) {
+            let candidate = Path::new(job.dest_dir()).join(&name);
+            let meta = std::fs::metadata(crate::fs::long_path(&candidate));
+            let fresh = meta.as_ref().ok().and_then(|m| m.modified().ok()).and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).is_some_and(|t| t.as_secs_f64() + 2.0 >= job.created_at);
+            if meta.as_ref().is_ok_and(|m| m.is_file() && m.len() == total) && fresh {
+                job.final_path = Some(candidate.to_string_lossy().into_owned());
+                job.artifact_path = None;
+                job.temp_path = None;
+                job.committed_bytes = total;
+                job.completed_at = Some(crate::now());
+                self.log(&job.id, "info", "Finished moving the file into place after a restart.");
+                self.set_state(job, S::Completed, None, None, false);
+                self.res.release(&job.id);
+                return;
+            }
+        }
         let e = SdmError::new(ErrorCode::Postprocess, "The app closed while finishing this download and the file was not found.");
         self.set_state(job, S::Failed, None, Some(e.0), false);
     }
