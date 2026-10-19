@@ -78,6 +78,8 @@ pub fn register() {
     }
     if let Some(id) = CHROME_STORE_ID {
         let _ = set_reg(&format!(r"Software\Google\Chrome\Extensions\{id}"), Some("update_url"), "https://clients2.google.com/service/update2/crx");
+        // Brave installs from the Chrome Web Store too.
+        let _ = set_reg(&format!(r"Software\BraveSoftware\Brave-Browser\Extensions\{id}"), Some("update_url"), "https://clients2.google.com/service/update2/crx");
     }
     if let Some(id) = EDGE_STORE_ID {
         let _ = set_reg(&format!(r"Software\Microsoft\Edge\Extensions\{id}"), Some("update_url"), "https://edge.microsoft.com/extensionwebstorebase/v1/crx");
