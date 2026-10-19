@@ -33,7 +33,8 @@ fn spec(kind: &str) -> Option<Spec> {
         "countdown" => s("SwiftHarryDM", 400.0, 250.0, false, None, true),
         "pairing" => s("Connect browser extension", 440.0, 300.0, false, Some("pid"), true),
         "license" => s("License", 560.0, 420.0, false, None, false),
-        "browser" => s("Connect your browser", 600.0, 420.0, false, None, false),
+        "browser" => s("Connect your browser", 600.0, 330.0, false, None, false),
+        "drop" => s("Drop target", 88.0, 88.0, false, None, true),
         _ => return None,
     })
 }
@@ -82,6 +83,16 @@ pub fn open(app: &AppHandle, kind: &str, params: &[(String, String)]) -> Result<
         .initialization_script(&init)
         .center()
         .focused(true);
+    if kind == "drop" {
+        // A small round button that floats over other windows and accepts dropped links.
+        b = b.decorations(false).transparent(true).shadow(false).skip_taskbar(true).min_inner_size(sp.width, sp.height);
+        if let Some(m) = app.primary_monitor().ok().flatten() {
+            let s = m.size().to_logical::<f64>(m.scale_factor());
+            b = b.position(s.width - 140.0, s.height - 200.0);
+        }
+        b.build().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
     if let Some(main) = app.get_webview_window("main") {
         if main.is_visible().unwrap_or(false) && kind != "countdown" && kind != "complete" {
             b = b.parent(&main).map_err(|e| e.to_string())?;

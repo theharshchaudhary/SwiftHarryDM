@@ -114,7 +114,7 @@ export class App {
       `window ${match}`,
     );
     const p = await new Page(t).open();
-    await until(() => p.eval("document.readyState === 'complete' && document.body.innerText.length > 0"), 10000, 100, "window content");
+    await until(() => p.eval("document.readyState === 'complete' && (document.getElementById('root')?.childElementCount ?? 0) > 0"), 10000, 100, "window content");
     return p;
   }
   async hasWindow(title) {

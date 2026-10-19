@@ -205,6 +205,28 @@ const scenarios = {
     }
   },
 
+  async drop_target_and_command_line(app) {
+    const main = await app.window("SwiftHarryDM");
+    await main.invoke("open_window", { kind: "drop", params: {} });
+    const drop = await app.window("Drop target");
+    await drop.shot(join(SHOTS, "drop-target.png"));
+    await main.invoke("close_window", { label: "drop" });
+    await until(async () => !(await app.hasWindow("Drop target")), 5000, 100, "the drop target to close");
+
+    // A second start with /d <url> /n hands the download to the running app, no window.
+    const url = URL_("/p/alt.pdf");
+    const before = (await main.invoke("get_state")).jobs.filter((j) => j.url === url).length;
+    const second = spawn(APP_EXE, ["/d", url, "/n"], { env: { ...process.env, SWIFTDM_HOME: join(work, "home"), SWIFTDM_SKIP_LICENSE: "1" } });
+    await new Promise((res) => second.on("exit", res));
+    const job = await until(async () => {
+      const jobs = (await main.invoke("get_state")).jobs.filter((j) => j.url === url);
+      return jobs.length > before && jobs.find((j) => j.state === "COMPLETED");
+    }, 30000, 300, "the command-line download");
+    assert(!(await app.hasWindow("Download file info")), "/n starts without asking");
+    assert(job.file_name === "alt.pdf", `named from the server (${job.file_name})`);
+    await assertSha("alt.pdf", "/p/alt.pdf");
+  },
+
   async extension_protocol(app) {
     const base = await apiBase();
     const call = async (method, path, body, token) => {

@@ -458,6 +458,7 @@ function Video() {
   return (
     <>
       <div>Video and audio downloads use two free components: yt-dlp (finds the video) and FFmpeg (joins video and audio).</div>
+      {!c && <div className="muted">Checking the components…</div>}
       <ComponentsBanner />
       {c?.ready && (
         <fieldset>

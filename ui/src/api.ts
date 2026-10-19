@@ -208,7 +208,7 @@ export type CoreEvent =
 
 export type WindowKind =
   | "add" | "info" | "progress" | "complete" | "options" | "scheduler" | "batch"
-  | "properties" | "about" | "countdown" | "links" | "pairing" | "license" | "browser";
+  | "properties" | "about" | "countdown" | "links" | "pairing" | "license" | "browser" | "drop";
 
 export const api = {
   state: () => invoke<AppState>("get_state"),
@@ -250,6 +250,8 @@ export const api = {
   importList: () => invoke<string[]>("import_list"),
   openWindow: (kind: WindowKind, params: Record<string, string> = {}) => invoke<void>("open_window", { kind, params }),
   closeSelf: () => invoke<void>("close_self"),
+  closeWindow: (label: string) => invoke<void>("close_window", { label }),
+  showMain: () => invoke<void>("show_main"),
   powerAction: (action: AfterAction) => invoke<void>("power_action", { action }),
   exitApp: () => invoke<void>("exit_app"),
   protectPassword: (password: string) => invoke<string>("protect_password", { password }),

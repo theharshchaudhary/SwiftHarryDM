@@ -159,17 +159,121 @@ async fn pump_events(app: AppHandle) {
     }
 }
 
-/// Quota usage changes with every byte; send it to the status bar about once a second.
-async fn pump_quota(app: AppHandle) {
-    let mut last = None;
+/// Once a second: quota usage for the status bar, overall progress on the taskbar button,
+/// and the tray tooltip.
+async fn pump_status(app: AppHandle) {
+    use tauri::window::{ProgressBarState, ProgressBarStatus};
+    let mut last_quota = None;
+    let mut last_tip = String::new();
+    let mut had_progress = false;
     loop {
         tokio::time::sleep(Duration::from_secs(1)).await;
-        let q = app.state::<AppState>().mgr.quota_status();
-        if last != Some(q) {
-            last = Some(q);
+        let state = app.state::<AppState>();
+        let q = state.mgr.quota_status();
+        if last_quota != Some(q) {
+            last_quota = Some(q);
             let _ = app.emit("core", json!({ "type": "quota", "quota": q }));
         }
+        let (mut done, mut total, mut speed, mut active) = (0u64, 0u64, 0f64, 0usize);
+        for j in state.mgr.snapshot().iter().filter(|j| j.state.active()) {
+            active += 1;
+            if let Some(p) = state.mgr.progress(&j.id) {
+                speed += p.speed.unwrap_or(0.0);
+                if let Some(t) = p.total {
+                    done += p.downloaded;
+                    total += t;
+                }
+            }
+        }
+        if let Some(main) = app.get_webview_window("main") {
+            if active > 0 && total > 0 {
+                let pct = (done as f64 / total as f64 * 100.0).round() as u64;
+                let _ = main.set_progress_bar(ProgressBarState { status: Some(ProgressBarStatus::Normal), progress: Some(pct.min(100)) });
+                had_progress = true;
+            } else if had_progress {
+                let _ = main.set_progress_bar(ProgressBarState { status: Some(ProgressBarStatus::None), progress: None });
+                had_progress = false;
+            }
+        }
+        let tip = match active {
+            0 => "SwiftHarryDM".to_string(),
+            n => format!("SwiftHarryDM - {n} downloading, {}/s", human(speed as u64)),
+        };
+        if tip != last_tip {
+            if let Some(t) = app.tray_by_id("main") {
+                let _ = t.set_tooltip(Some(&tip));
+            }
+            last_tip = tip;
+        }
+        save_main_window(&app);
     }
+}
+
+fn human(n: u64) -> String {
+    let n = n as f64;
+    if n >= 1024.0 * 1024.0 {
+        format!("{:.1} MB", n / 1024.0 / 1024.0)
+    } else {
+        format!("{:.0} KB", n / 1024.0)
+    }
+}
+
+// ---------------------------------------------------------------------- main window memory
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy)]
+struct Placement {
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+    maximized: bool,
+}
+
+fn placement_file() -> std::path::PathBuf {
+    swiftdm_core::appdata::app_dir().join("window.json")
+}
+
+static LAST_PLACEMENT: Mutex<Option<Placement>> = Mutex::new(None);
+
+/// Remember where the main window is (only when it changed; maximized keeps the old size).
+fn save_main_window(app: &AppHandle) {
+    let Some(w) = app.get_webview_window("main") else { return };
+    if !w.is_visible().unwrap_or(false) || w.is_minimized().unwrap_or(false) {
+        return;
+    }
+    let maximized = w.is_maximized().unwrap_or(false);
+    let mut last = LAST_PLACEMENT.lock().unwrap();
+    let p = if maximized {
+        match *last {
+            Some(prev) => Placement { maximized: true, ..prev },
+            None => return,
+        }
+    } else {
+        let (Ok(pos), Ok(size)) = (w.outer_position(), w.inner_size()) else { return };
+        Placement { x: pos.x, y: pos.y, w: size.width, h: size.height, maximized: false }
+    };
+    if *last != Some(p) {
+        *last = Some(p);
+        let _ = std::fs::write(placement_file(), serde_json::to_vec(&p).unwrap());
+    }
+}
+
+/// Put the main window back where it was, if that place is still on a screen.
+fn restore_main_window(w: &tauri::WebviewWindow) {
+    let Some(p) = std::fs::read(placement_file()).ok().and_then(|b| serde_json::from_slice::<Placement>(&b).ok()) else { return };
+    let on_screen = w.available_monitors().unwrap_or_default().iter().any(|m| {
+        let (mp, ms) = (m.position(), m.size());
+        p.x + 50 >= mp.x && p.y >= mp.y - 10 && p.x + 50 < mp.x + ms.width as i32 && p.y + 30 < mp.y + ms.height as i32
+    });
+    if !on_screen || p.w < 400 || p.h < 300 {
+        return;
+    }
+    let _ = w.set_size(tauri::PhysicalSize::new(p.w, p.h));
+    let _ = w.set_position(tauri::PhysicalPosition::new(p.x, p.y));
+    if p.maximized {
+        let _ = w.maximize();
+    }
+    *LAST_PLACEMENT.lock().unwrap() = Some(p);
 }
 
 /// Offer to download a link when one is copied, if its file type is one we take over.
@@ -234,13 +338,38 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-/// A web address passed on the command line (e.g. by a browser or a shortcut) opens the
-/// download dialog.
+/// Command line, for scripts and other programs:
+///   swiftharrydm.exe <url>                     open the download window for <url>
+///   swiftharrydm.exe /d <url> [/p <folder>] [/f <file name>] [/n] [/a]
+///     /n  start without asking (no window)      /a  add to the main queue instead of starting
 fn handle_args(app: &AppHandle, args: &[String]) {
-    for a in args.iter().skip(1) {
-        if let Ok(url) = swiftdm_core::manager::validate_url(a) {
-            open_logged(app, "info", &[("url".into(), url), ("source".into(), "ui".into())]);
-        }
+    let flag = |f: &str| args.iter().any(|a| a.eq_ignore_ascii_case(f) || a.eq_ignore_ascii_case(&f.replace('/', "-")));
+    let value = |f: &str| {
+        args.windows(2).find(|w| w[0].eq_ignore_ascii_case(f) || w[0].eq_ignore_ascii_case(&f.replace('/', "-"))).map(|w| w[1].clone())
+    };
+    let url = value("/d").or_else(|| args.iter().skip(1).find(|a| swiftdm_core::manager::validate_url(a).is_ok()).cloned());
+    let Some(url) = url.and_then(|u| swiftdm_core::manager::validate_url(&u).ok()) else { return };
+    let quiet = flag("/n");
+    let later = flag("/a");
+    if !quiet && !later {
+        open_logged(app, "info", &[("url".into(), url), ("source".into(), "ui".into())]);
+        return;
+    }
+    let state = app.state::<AppState>();
+    if !upkeep::downloads_allowed(app) {
+        notify(app, "Download not started", upkeep::NOT_ALLOWED);
+        return;
+    }
+    let s = state.mgr.settings().get();
+    let mut spec = swiftdm_core::models::JobSpec::new(url.clone(), value("/p").unwrap_or_else(|| {
+        let name = value("/f").unwrap_or_else(|| url.rsplit('/').next().unwrap_or("").to_string());
+        s.folder_for(&name).0.to_string_lossy().into_owned()
+    }));
+    spec.filename = value("/f");
+    spec.source = "ui".into();
+    let mode = if later { swiftdm_core::manager::StartMode::Later } else { swiftdm_core::manager::StartMode::Now };
+    if let Err(e) = state.mgr.submit(spec, mode) {
+        notify(app, "Download not started", &e);
     }
 }
 
@@ -282,7 +411,7 @@ pub fn run() {
             browser::register();
             let h = app.handle().clone();
             tauri::async_runtime::spawn(pump_events(h.clone()));
-            tauri::async_runtime::spawn(pump_quota(h.clone()));
+            tauri::async_runtime::spawn(pump_status(h.clone()));
             tauri::async_runtime::spawn(watch_clipboard(h.clone()));
             tauri::async_runtime::spawn(bridge::start(h.clone()));
             tauri::async_runtime::spawn(upkeep::license_loop(h.clone()));
@@ -291,6 +420,7 @@ pub fn run() {
                 tauri::async_runtime::spawn(upkeep::update_loop(h.clone()));
             }
             if let Some(main) = app.get_webview_window("main") {
+                restore_main_window(&main);
                 if !start_hidden {
                     let _ = main.show();
                 }
@@ -305,6 +435,7 @@ pub fn run() {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let app = window.app_handle();
+                save_main_window(app);
                 if app.state::<AppState>().mgr.settings().get().minimize_to_tray {
                     let _ = window.hide();
                 } else {
@@ -350,6 +481,8 @@ pub fn run() {
             commands::import_list,
             commands::open_window,
             commands::close_self,
+            commands::close_window,
+            commands::show_main,
             commands::power_action,
             commands::exit_app,
             commands::protect_password,

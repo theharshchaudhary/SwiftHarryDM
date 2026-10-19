@@ -441,3 +441,13 @@ pub async fn inspect_media(st: State<'_, AppState>, url: String) -> R<swiftdm_co
     let url = swiftdm_core::manager::validate_url(&url)?;
     st.media.inspect(&url).await
 }
+
+#[tauri::command]
+pub fn close_window(app: AppHandle, label: String) {
+    windows::close(&app, &label);
+}
+
+#[tauri::command]
+pub fn show_main(app: AppHandle) {
+    windows::show_main(&app);
+}

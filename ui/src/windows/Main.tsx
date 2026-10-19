@@ -142,6 +142,17 @@ function MainView({ live }: { live: Live }) {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updating, setUpdating] = useState<{ done: number; total: number | null } | null>(null);
   const [updateErr, setUpdateErr] = useState("");
+  const [dropShown, setDropShown] = useState(() => pref<boolean>("dropTarget", false));
+  const toggleDrop = (on: boolean) => {
+    setDropShown(on);
+    savePref("dropTarget", on);
+    if (on) api.openWindow("drop");
+    else api.closeWindow("drop");
+  };
+  // Show the drop target again at start if it was open last time.
+  useEffect(() => {
+    if (pref<boolean>("dropTarget", false)) api.openWindow("drop");
+  }, []);
   useEffect(() => {
     api.licenseStatus().then(setLicense);
     api.pendingUpdate().then(setUpdate);
@@ -383,6 +394,8 @@ function MainView({ live }: { live: Live }) {
         { label: "Add new download…", hint: "Ctrl+N", onClick: act.add },
         { label: "Add batch download…", onClick: act.batch },
         { label: "Add batch download from clipboard", onClick: act.batchClipboard },
+        "sep",
+        { label: "Show drop target", checked: dropShown, onClick: () => toggleDrop(!dropShown) },
         "sep",
         {
           label: "Export",
