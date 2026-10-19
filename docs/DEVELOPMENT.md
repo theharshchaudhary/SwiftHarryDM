@@ -78,3 +78,9 @@ native messaging host only answers that ID (and the store IDs in `src-tauri/src/
 After publishing to the Chrome Web Store or Edge Add-ons, put the store IDs into
 `CHROME_STORE_ID` / `EDGE_STORE_ID`: the app then registers them so the browsers offer the
 extension automatically.
+
+## Screenshots
+
+`node scripts/screenshots.mjs` retakes the README pictures in `docs/images` with the debug
+build: it downloads a few public files for a few seconds in a throwaway profile, captures the
+windows, then deletes everything.

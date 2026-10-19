@@ -179,6 +179,7 @@ const scenarios = {
     const segs = await prog.eval("document.querySelectorAll('.segmap .seg').length");
     assert(segs >= 4, `the segment map shows the connections (${segs})`);
     await prog.shot(join(SHOTS, "progress.png"));
+    await main.shot(join(SHOTS, "main.png"));
     assert(await prog.click("Pause"), "Pause is available");
     await until(async () => (await prog.text()).includes("Resume"), 15000, 200, "pause");
     await prog.click("Resume");
