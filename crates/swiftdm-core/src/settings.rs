@@ -108,7 +108,7 @@ impl Default for Settings {
             capture_min_size_kb: 0,
             trust_extension: false,
             minimize_to_tray: true,
-            start_with_windows: false,
+            start_with_windows: true,
             start_minimized: false,
             av_scan_enabled: false,
             av_scan_command: r#""C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "{file}" -DisableRemediation"#

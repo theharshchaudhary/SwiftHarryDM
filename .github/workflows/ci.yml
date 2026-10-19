@@ -36,14 +36,5 @@ jobs:
           cargo build -p swiftdm-testkit --bin sdm-observe
           ui\node_modules\.bin\tauri build --debug --no-bundle
         shell: cmd
-      # The runner image has Edge but not the WebView2 runtime the app's windows use.
-      - name: WebView2 runtime
-        shell: pwsh
-        run: |
-          $key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
-          if (Test-Path $key) { "WebView2 $((Get-ItemProperty $key).pv) is installed"; exit 0 }
-          Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile "$env:RUNNER_TEMP\wv2.exe"
-          Start-Process "$env:RUNNER_TEMP\wv2.exe" -ArgumentList '/silent', '/install' -Wait
-          "WebView2 $((Get-ItemProperty $key).pv) installed"
       - name: End-to-end tests (app and extension in Chrome)
         run: node tests/e2e/run.mjs

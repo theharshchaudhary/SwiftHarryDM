@@ -96,7 +96,7 @@ async function setup() {
   );
   const proc = start(APP_EXE, [], {
     SWIFTDM_HOME: join(work, "home"),
-    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
+    SWIFTDM_DEVTOOLS_PORT: String(CDP_PORT),
   });
   let output = "";
   let exited = null;

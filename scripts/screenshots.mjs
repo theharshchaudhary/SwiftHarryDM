@@ -30,7 +30,7 @@ writeFileSync(
   JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false, theme: "light" }),
 );
 const proc = spawn(join(ROOT, "target", "debug", "swiftharrydm.exe"), [], {
-  env: { ...process.env, SWIFTDM_HOME: join(work, "home"), WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}` },
+  env: { ...process.env, SWIFTDM_HOME: join(work, "home"), SWIFTDM_DEVTOOLS_PORT: String(CDP_PORT) },
   stdio: "ignore",
 });
 

@@ -1,5 +1,5 @@
 // Drive the app's WebView2 windows over the DevTools HTTP endpoint (the app must be started
-// with WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=<port>).
+// with SWIFTDM_DEVTOOLS_PORT=<port>, debug builds only).
 import { writeFileSync } from "node:fs";
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

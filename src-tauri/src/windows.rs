@@ -49,6 +49,19 @@ fn encode(v: &str) -> String {
     out
 }
 
+/// Extra WebView2 arguments, the same for every window (windows sharing a profile must agree).
+/// Debug builds started with SWIFTDM_DEVTOOLS_PORT=<port> open the DevTools protocol on that
+/// port for the end-to-end tests; WebView2's own environment variable for this is ignored on
+/// some machines (GitHub's Windows runners).
+pub fn browser_args() -> Option<String> {
+    if !cfg!(debug_assertions) {
+        return None;
+    }
+    let port: u16 = std::env::var("SWIFTDM_DEVTOOLS_PORT").ok()?.parse().ok()?;
+    // Tauri's defaults, which setting our own arguments would otherwise drop.
+    Some(format!("--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port={port}"))
+}
+
 pub fn open(app: &AppHandle, kind: &str, params: &[(String, String)]) -> Result<(), String> {
     let sp = spec(kind).ok_or_else(|| format!("unknown window kind {kind}"))?;
     let label = match sp.key {
@@ -82,6 +95,9 @@ pub fn open(app: &AppHandle, kind: &str, params: &[(String, String)]) -> Result<
         .initialization_script(&init)
         .center()
         .focused(true);
+    if let Some(args) = browser_args() {
+        b = b.additional_browser_args(&args);
+    }
     if kind == "drop" {
         // A small round button that floats over other windows and accepts dropped links.
         b = b.decorations(false).transparent(true).shadow(false).skip_taskbar(true).min_inner_size(sp.width, sp.height);
