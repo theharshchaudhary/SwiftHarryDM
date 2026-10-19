@@ -13,15 +13,9 @@ tools/bin/
 *.pfx
 *.p12
 
-# Local environments and editors
-.venv/
+# Editors
 .vscode/
 .idea/
 *.log
 Thumbs.db
 .DS_Store
-
-# Old Python packaging output, if still present locally
-packaging/build/
-packaging/dist/
-packaging/tools/
