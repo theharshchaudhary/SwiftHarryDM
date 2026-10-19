@@ -39,7 +39,14 @@ The installer is under 5 MB. Updates install with one click.
   and an action when a queue finishes (exit, sleep, hibernate, shut down).
 - Batch downloads (`img*.jpg` with numbers or letters), clipboard monitor, import and export
   of address lists, drag and drop of links.
-- Find (Ctrl+F), sortable and configurable columns, dark mode, tray icon, start with Windows.
+- Find (Ctrl+F), sortable and configurable columns, dark mode, tray icon with live speed,
+  progress on the taskbar button, floating drop target for links, start with Windows.
+- Import address lists from text files, web pages and IDM export files (`.ef2`).
+
+**Lightweight**
+- Installer under 5 MB; about 25 MB of memory while downloading a 1 GB file.
+- On a local test with each connection capped at 64 MB/s: 63 MB/s with one connection,
+  436 MB/s with eight (`swiftdm-cli bench`).
 
 ## Install
 
@@ -51,6 +58,16 @@ The installer is under 5 MB. Updates install with one click.
 
 Requirements: Windows 10 or 11 (64-bit). The Microsoft Edge WebView2 runtime is part of
 Windows 11 and is installed automatically on Windows 10 if missing.
+
+## Command line
+
+```
+swiftharrydm.exe <url>                  open the download window for <url>
+swiftharrydm.exe /d <url> [/p <folder>] [/f <file name>] [/n] [/a]
+    /n  start without asking            /a  add to the main queue instead of starting
+```
+
+If SwiftHarryDM is already running, the request goes to the open app.
 
 ## Updates
 
@@ -75,6 +92,8 @@ Tests:
 cargo test -p swiftdm-core -p swiftharrydm           # engine, manager, API, media, licensing
 cargo build -p swiftdm-testkit --bin sdm-observe
 node tests/e2e/run.mjs                               # the built app and the extension in Chrome
+cargo run -p swiftdm-cli --release -- kill-test      # hard-kill the downloader at random, check every file
+cargo run -p swiftdm-cli --release -- bench          # throughput and memory, 1 vs 8 connections
 ```
 
 More in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

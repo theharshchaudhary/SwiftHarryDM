@@ -332,7 +332,7 @@ pub async fn import_list(app: AppHandle) -> R<Vec<String>> {
         .dialog()
         .file()
         .set_title("Import download list")
-        .add_filter("Text or web page", &["txt", "lst", "htm", "html", "csv"])
+        .add_filter("Address lists (text, web page, IDM export)", &["txt", "lst", "htm", "html", "csv", "ef2"])
         .blocking_pick_file()
         .and_then(|p| p.into_path().ok())
     else {
