@@ -64,7 +64,7 @@ const COLUMNS: Column[] = [
       const pct = F.isActive(r.j.state) ? F.percent(r.p?.downloaded ?? r.j.downloaded, r.p?.total ?? r.j.total) : null;
       return (
         <div className="statuscell" title={r.j.error?.message ?? undefined}>
-          {F.statusText(r.j, r.p)}
+          <span>{F.statusText(r.j, r.p)}</span>
           {pct != null && (
             <div className="minibar">
               <div style={{ width: `${pct}%` }} />

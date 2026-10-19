@@ -203,8 +203,9 @@ legend { color: var(--text-2); padding: 0 4px; }
 .list .namecell { display: flex; align-items: center; gap: 6px; overflow: hidden; }
 .list .namecell span { overflow: hidden; text-overflow: ellipsis; }
 .list .namecell .ico { flex: none; color: var(--text-2); }
-.list .statuscell { position: relative; }
-.list .minibar { position: absolute; left: 6px; right: 6px; bottom: 2px; height: 3px; border-radius: 2px; background: var(--bar-track); overflow: hidden; }
+.list .statuscell { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.list .statuscell > span { flex: none; overflow: hidden; text-overflow: ellipsis; }
+.list .minibar { flex: 1; min-width: 24px; height: 4px; border-radius: 2px; background: var(--bar-track); overflow: hidden; }
 .list .minibar > div { height: 100%; background: var(--bar); }
 .list .qmark { display: inline-block; min-width: 16px; text-align: center; font-size: 11px; font-weight: 600; color: var(--accent); }
 .list .empty { position: absolute; inset: 40px 0 0 0; text-align: center; color: var(--text-2); }

@@ -90,7 +90,19 @@ export function canStop(j: Job): boolean {
 }
 
 export function fileName(j: Job): string {
-  return j.file_name ?? j.title;
+  return j.file_name ?? nameFromUrl(j.title);
+}
+
+/** Until the server names the file, show the last part of its address (not the whole URL). */
+function nameFromUrl(title: string): string {
+  if (!/^https?:\/\//i.test(title)) return title;
+  try {
+    const u = new URL(title);
+    const last = u.pathname.split("/").filter(Boolean).pop();
+    return last ? decodeURIComponent(last) : u.hostname;
+  } catch {
+    return title;
+  }
 }
 
 export function extension(name: string): string {
