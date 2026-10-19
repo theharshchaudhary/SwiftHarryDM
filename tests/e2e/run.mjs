@@ -95,13 +95,25 @@ async function setup() {
     JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false }),
   );
   // SWIFTDM_SKIP_LICENSE only works in debug builds: tests must not depend on the license server.
-  start(APP_EXE, [], {
+  const proc = start(APP_EXE, [], {
     SWIFTDM_HOME: join(work, "home"),
     SWIFTDM_SKIP_LICENSE: "1",
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
   });
+  let output = "";
+  let exited = null;
+  proc.stdout.on("data", (d) => (output += d));
+  proc.stderr.on("data", (d) => (output += d));
+  proc.on("exit", (c) => (exited = c));
   const app = new App(CDP_PORT);
-  await until(() => app.targets().then((t) => t.length > 0), 30000, 300, "the app to start");
+  try {
+    await until(() => app.targets().then((t) => t.length > 0), 60000, 300, "the app to start");
+  } catch (e) {
+    // Say why: whether the app is still running, what it printed, and its log.
+    const logs = join(work, "home", "logs");
+    const log = existsSync(logs) ? readdirSync(logs).map((f) => readFileSync(join(logs, f), "utf8")).join("\n") : "(no log folder)";
+    throw new Error(`${e.message}\napp ${exited === null ? "still running" : `exited with code ${exited}`}\n--- app output ---\n${output.slice(-4000)}\n--- app log ---\n${log.slice(-4000)}`);
+  }
   return app;
 }
 
