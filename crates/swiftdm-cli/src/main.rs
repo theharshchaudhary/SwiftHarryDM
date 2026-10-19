@@ -2,7 +2,7 @@
 //! performance checks used before releases.
 //!
 //!   swiftdm-cli get <url> --dir <folder> [--home <folder>] [--connections N]
-//!   swiftdm-cli kill-test [--runs N] [--size-mb N]
+//!   swiftdm-cli kill-test [--runs N] [--size-mb N] [--conn-mbps N]
 //!   swiftdm-cli bench [--size-mb N]
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -28,7 +28,7 @@ fn num(args: &[String], name: &str, default: u64) -> u64 {
 
 fn usage() -> ! {
     eprintln!(
-        "usage:\n  swiftdm-cli get <url> --dir <folder> [--home <folder>] [--connections N]\n  swiftdm-cli kill-test [--runs N] [--size-mb N]\n  swiftdm-cli bench [--size-mb N]"
+        "usage:\n  swiftdm-cli get <url> --dir <folder> [--home <folder>] [--connections N]\n  swiftdm-cli kill-test [--runs N] [--size-mb N] [--conn-mbps N]\n  swiftdm-cli bench [--size-mb N]"
     );
     std::process::exit(2)
 }
@@ -137,14 +137,16 @@ fn me() -> PathBuf {
 /// Kill the downloading process at random moments, start it again, and check the final file.
 async fn kill_test(args: &[String]) -> i32 {
     let runs = num(args, "--runs", 20);
-    let size = num(args, "--size-mb", 48) * MIB;
+    let size = num(args, "--size-mb", 96) * MIB;
+    // Slow enough per connection that downloads take several seconds and get killed mid-way.
+    let rate = num(args, "--conn-mbps", 2) * MIB;
     let srv = TestServer::start().await;
     let mut failures = 0;
     let mut kills_total = 0;
     for run in 1..=runs {
         let body = Body::gen(&format!("kill-{run}"), size);
         let expected = body.sha256();
-        let url = srv.add(&format!("/k{run}.bin"), Resource::new(body).etag(&format!("\"k{run}\"")).throttle(6 * MIB));
+        let url = srv.add(&format!("/k{run}.bin"), Resource::new(body).etag(&format!("\"k{run}\"")).throttle(rate));
         let work = temp_dir("kill");
         let (home, dir) = (work.join("home"), work.join("dl"));
         let mut kills = 0;
