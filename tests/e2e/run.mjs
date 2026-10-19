@@ -8,7 +8,7 @@
 // settings are never touched), drives the app's windows over WebView2 DevTools, and checks
 // every downloaded file's SHA-256 against what the server sent. Screenshots go to the
 // temporary folder printed at the start (kept with --keep).
-import { spawn } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -112,7 +112,19 @@ async function setup() {
     // Say why: whether the app is still running, what it printed, and its log.
     const logs = join(work, "home", "logs");
     const log = existsSync(logs) ? readdirSync(logs).map((f) => readFileSync(join(logs, f), "utf8")).join("\n") : "(no log folder)";
-    throw new Error(`${e.message}\napp ${exited === null ? "still running" : `exited with code ${exited}`}\n--- app output ---\n${output.slice(-4000)}\n--- app log ---\n${log.slice(-4000)}`);
+    const sh = (cmd) => {
+      try {
+        return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+      } catch (err) {
+        return String(err.stdout || err.message);
+      }
+    };
+    const webviews = sh(`powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"Name='msedgewebview2.exe'\\" | Select-Object -First 3 -ExpandProperty CommandLine"`);
+    const ports = sh("netstat -ano -p tcp").split("\n").filter((l) => l.includes("LISTENING") && l.includes("127.0.0.1")).join("\n");
+    throw new Error(
+      `${e.message}\napp ${exited === null ? "still running" : `exited with code ${exited}`}\n--- app output ---\n${output.slice(-4000)}\n--- app log ---\n${log.slice(-4000)}` +
+        `\n--- WebView2 processes ---\n${webviews.slice(0, 3000) || "(none)"}\n--- listening on 127.0.0.1 ---\n${ports}`,
+    );
   }
   return app;
 }
