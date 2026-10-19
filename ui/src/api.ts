@@ -169,7 +169,6 @@ export type StartMode = "now" | "later";
 
 export interface ApiStatus { port: number | null; paired: string[]; error: string | null }
 
-export interface LicenseStatus { text: string; allowed: boolean; action: string | null; detail: string }
 export interface Components { ytdlp: string | null; ffmpeg: boolean; ffprobe: boolean; ready: boolean; ytdlp_version: string | null }
 export interface UpdateInfo { version: string; notes: string | null }
 export interface ExtensionSetup { mode: "store" | "manual"; folder: string | null; browser_found: boolean }
@@ -201,14 +200,13 @@ export type CoreEvent =
   | { type: "queues_changed"; queues: Queue[] }
   | { type: "quota"; quota: QuotaStatus }
   | { type: "extension_changed" }
-  | { type: "license"; license: LicenseStatus }
   | { type: "components"; step: string; done: number; total: number | null }
   | { type: "update_available"; update: UpdateInfo }
   | { type: "update_progress"; done: number; total: number | null };
 
 export type WindowKind =
   | "add" | "info" | "progress" | "complete" | "options" | "scheduler" | "batch"
-  | "properties" | "about" | "countdown" | "links" | "pairing" | "license" | "browser" | "drop";
+  | "properties" | "about" | "countdown" | "links" | "pairing" | "browser" | "drop";
 
 export const api = {
   state: () => invoke<AppState>("get_state"),
@@ -260,11 +258,6 @@ export const api = {
   denyPairing: (pairingId: string) => invoke<void>("deny_pairing", { pairingId }),
   resolveRequest: (rid: string, overrides: Overrides) => invoke<string>("resolve_request", { rid, overrides }),
   rejectRequest: (rid: string) => invoke<void>("reject_request", { rid }),
-  licenseStatus: () => invoke<LicenseStatus | null>("license_status"),
-  licenseCheck: () => invoke<LicenseStatus>("license_check"),
-  licenseActivate: (key: string) => invoke<LicenseStatus>("license_activate", { key }),
-  licenseReset: () => invoke<LicenseStatus>("license_reset"),
-  licenseInfo: () => invoke<Record<string, unknown>>("license_info"),
   componentsStatus: () => invoke<Components>("components_status"),
   installComponents: () => invoke<Components>("install_components"),
   updateYtdlp: () => invoke<string>("update_ytdlp"),

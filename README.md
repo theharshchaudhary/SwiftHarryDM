@@ -192,7 +192,7 @@ ui\node_modules\.bin\tauri build                      # installer in target\rele
 ### Tests
 
 ```powershell
-cargo test -p swiftdm-core -p swiftharrydm            # engine, manager, API, media, licensing
+cargo test -p swiftdm-core -p swiftharrydm            # engine, manager, API, media
 cargo build -p swiftdm-testkit --bin sdm-observe
 node tests/e2e/run.mjs                                # the built app, and the extension in Chrome
 cargo run -p swiftdm-cli --release -- kill-test       # hard-kill the downloader at random, check every file
@@ -206,7 +206,7 @@ tests drive the real app windows and a real Chrome, and check every downloaded f
 ### Project layout
 
 ```text
-crates/swiftdm-core     engine, manager, SQLite store, media, extension API, licensing
+crates/swiftdm-core     engine, manager, SQLite store, media, extension API
 crates/swiftdm-testkit  fault-injecting HTTP server for tests
 crates/swiftdm-cli      headless downloads, crash and speed checks
 src-tauri               desktop shell (Tauri 2): windows, tray, updates, native messaging

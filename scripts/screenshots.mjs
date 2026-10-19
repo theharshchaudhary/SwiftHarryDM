@@ -30,14 +30,11 @@ writeFileSync(
   JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false, theme: "light" }),
 );
 const proc = spawn(join(ROOT, "target", "debug", "swiftharrydm.exe"), [], {
-  env: { ...process.env, SWIFTDM_HOME: join(work, "home"), SWIFTDM_SKIP_LICENSE: "1", WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}` },
+  env: { ...process.env, SWIFTDM_HOME: join(work, "home"), WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}` },
   stdio: "ignore",
 });
 
-// The developer-build license note is not what users see; leave it out of the pictures.
-const tidy = (w) => w.eval(`document.querySelectorAll('[title="License"]').forEach(e => e.style.visibility = 'hidden')`);
 const shot = async (w, name) => {
-  await tidy(w);
   await sleep(400);
   await w.shot(join(OUT, name));
   console.log(`saved docs/images/${name}`);

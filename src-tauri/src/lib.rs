@@ -38,7 +38,6 @@ pub struct AppState {
     /// The browser-extension API, or why it could not start.
     pub api: Mutex<Result<swiftdm_core::api::ApiHandle, String>>,
     pub media: Arc<MediaEngine>,
-    pub license: Mutex<Option<swiftdm_core::licensing::LicenseStatus>>,
     pub update: Mutex<Option<upkeep::UpdateInfo>>,
 }
 
@@ -356,10 +355,6 @@ fn handle_args(app: &AppHandle, args: &[String]) {
         return;
     }
     let state = app.state::<AppState>();
-    if !upkeep::downloads_allowed(app) {
-        notify(app, "Download not started", upkeep::NOT_ALLOWED);
-        return;
-    }
     let s = state.mgr.settings().get();
     let mut spec = swiftdm_core::models::JobSpec::new(url.clone(), value("/p").unwrap_or_else(|| {
         let name = value("/f").unwrap_or_else(|| url.rsplit('/').next().unwrap_or("").to_string());
@@ -404,7 +399,6 @@ pub fn run() {
                 exiting: Mutex::new(false),
                 api: Mutex::new(Err("starting".into())),
                 media,
-                license: Mutex::new(None),
                 update: Mutex::new(None),
             });
             build_tray(app.handle())?;
@@ -414,7 +408,6 @@ pub fn run() {
             tauri::async_runtime::spawn(pump_status(h.clone()));
             tauri::async_runtime::spawn(watch_clipboard(h.clone()));
             tauri::async_runtime::spawn(bridge::start(h.clone()));
-            tauri::async_runtime::spawn(upkeep::license_loop(h.clone()));
             tauri::async_runtime::spawn(upkeep::ytdlp_loop(h.clone()));
             if !cfg!(debug_assertions) {
                 tauri::async_runtime::spawn(upkeep::update_loop(h.clone()));
@@ -488,11 +481,6 @@ pub fn run() {
             commands::protect_password,
             commands::api_status,
             browser::extension_setup,
-            upkeep::license_status,
-            upkeep::license_check,
-            upkeep::license_activate,
-            upkeep::license_reset,
-            upkeep::license_info,
             upkeep::components_status,
             upkeep::install_components,
             upkeep::update_ytdlp,

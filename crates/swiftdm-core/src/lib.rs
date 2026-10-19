@@ -12,7 +12,6 @@ pub mod errors;
 pub mod events;
 pub mod fs;
 pub mod http;
-pub mod licensing;
 pub mod limiter;
 pub mod logging;
 pub mod manager;

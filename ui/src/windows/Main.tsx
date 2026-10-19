@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, onCore, type Job, type LicenseStatus, type Progress, type Queue, type UpdateInfo } from "../api";
+import { api, onCore, type Job, type Progress, type Queue, type UpdateInfo } from "../api";
 import * as F from "../format";
 import { Icon, categoryIcon, fileIcon } from "../icons";
 import { ContextMenu, MenuBar, type MenuEntry, type MenuRoot } from "../components/Menu";
@@ -138,7 +138,6 @@ function MainView({ live }: { live: Live }) {
   const [find, setFind] = useState<{ open: boolean; text: string; msg: string }>({ open: false, text: "", msg: "" });
   const [modal, setModal] = useState<null | { kind: "delete"; ids: string[] } | { kind: "columns" } | { kind: "deleteDone" }>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const [license, setLicense] = useState<LicenseStatus | null>(null);
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updating, setUpdating] = useState<{ done: number; total: number | null } | null>(null);
   const [updateErr, setUpdateErr] = useState("");
@@ -154,10 +153,8 @@ function MainView({ live }: { live: Live }) {
     if (pref<boolean>("dropTarget", false)) api.openWindow("drop");
   }, []);
   useEffect(() => {
-    api.licenseStatus().then(setLicense);
     api.pendingUpdate().then(setUpdate);
     const un = onCore((e) => {
-      if (e.type === "license") setLicense(e.license);
       if (e.type === "update_available") setUpdate(e.update);
       if (e.type === "update_progress") setUpdating({ done: e.done, total: e.total });
     });
@@ -475,7 +472,6 @@ function MainView({ live }: { live: Live }) {
         { label: "Keyboard shortcuts", onClick: () => alert("Ctrl+N  Add download\nCtrl+F  Find\nF3  Find next\nDel  Delete\nEnter  Open / show progress\nCtrl+A  Select all") },
         { label: "Connect your browser…", onClick: () => api.openWindow("browser") },
         { label: "Check for updates…", onClick: checkUpdates },
-        { label: "License…", onClick: () => api.openWindow("license") },
         "sep",
         { label: "About SwiftHarryDM", onClick: () => api.openWindow("about") },
       ],
@@ -627,13 +623,6 @@ function MainView({ live }: { live: Live }) {
               <button className="btn small" title="Later" onClick={() => { setUpdate(null); setUpdateErr(""); }}><Icon name="close" size={12} /></button>
             </>
           )}
-        </div>
-      )}
-      {license && !license.allowed && (
-        <div className="topbanner warn">
-          <Icon name="warning" size={16} />
-          <span>{license.text}. Downloads are paused.</span>
-          <button className="btn small primary" onClick={() => api.openWindow("license")}>Open license</button>
         </div>
       )}
       <div className={`body${showSidebar ? "" : " nosidebar"}`} style={{ ["--sidebar-w" as string]: `${sidebarW}px` }}>
@@ -804,11 +793,6 @@ function MainView({ live }: { live: Live }) {
         <span>{active} active</span>
         <span>{totalSpeed > 0 ? `Total ${F.speed(totalSpeed)}` : ""}</span>
         <span className="grow" />
-        {license && (
-          <span style={{ cursor: "pointer" }} className={license.allowed ? "" : "warn"} onClick={() => api.openWindow("license")} title="License">
-            {license.text}
-          </span>
-        )}
         {live.quota.limit > 0 && (
           <span className={live.quota.blocked ? "warn" : ""} title={`Quota: ${settings.quota_mb} MB every ${settings.quota_hours} h`}>
             Quota {F.size(live.quota.used)} / {F.size(live.quota.limit)}

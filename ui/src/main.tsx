@@ -14,7 +14,6 @@ import Links from "./windows/Links";
 import Properties from "./windows/Properties";
 import { About, Countdown, Unknown } from "./windows/Small";
 import Pairing from "./windows/Pairing";
-import License from "./windows/License";
 import Browser from "./windows/Browser";
 import Drop from "./windows/Drop";
 
@@ -33,7 +32,6 @@ const WINDOWS: Record<string, () => JSX.Element | null> = {
   about: About,
   countdown: Countdown,
   pairing: Pairing,
-  license: License,
   browser: Browser,
   drop: Drop,
 };
@@ -52,7 +50,6 @@ const TITLES: Record<string, string> = {
   about: "About SwiftHarryDM",
   countdown: "SwiftHarryDM",
   pairing: "Connect browser extension",
-  license: "License",
   browser: "Connect your browser",
   drop: "Drop target",
 };

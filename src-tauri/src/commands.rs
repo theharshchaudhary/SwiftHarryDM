@@ -42,17 +42,8 @@ fn mode(m: &str) -> StartMode {
     }
 }
 
-fn allowed(app: &AppHandle) -> R<()> {
-    if crate::upkeep::downloads_allowed(app) {
-        Ok(())
-    } else {
-        Err(crate::upkeep::NOT_ALLOWED.into())
-    }
-}
-
 #[tauri::command]
-pub fn submit(app: AppHandle, st: State<AppState>, spec: JobSpec, mode: String) -> R<String> {
-    allowed(&app)?;
+pub fn submit(st: State<AppState>, spec: JobSpec, mode: String) -> R<String> {
     let interactive = spec.source == "ui" || spec.source == "clipboard" || spec.source == "extension";
     let m = self::mode(&mode);
     let id = st.mgr.submit(spec, m)?;
@@ -63,8 +54,7 @@ pub fn submit(app: AppHandle, st: State<AppState>, spec: JobSpec, mode: String) 
 }
 
 #[tauri::command]
-pub fn submit_many(app: AppHandle, st: State<AppState>, specs: Vec<JobSpec>, mode: String) -> R<Vec<String>> {
-    allowed(&app)?;
+pub fn submit_many(st: State<AppState>, specs: Vec<JobSpec>, mode: String) -> R<Vec<String>> {
     let m = self::mode(&mode);
     let mut ids = vec![];
     let mut errors = vec![];
@@ -87,8 +77,7 @@ pub fn pause(st: State<AppState>, ids: Vec<String>) {
 }
 
 #[tauri::command]
-pub fn resume(app: AppHandle, st: State<AppState>, ids: Vec<String>) -> R<()> {
-    allowed(&app)?;
+pub fn resume(st: State<AppState>, ids: Vec<String>) -> R<()> {
     for id in &ids {
         match st.mgr.get(id).map(|s| s.state) {
             Some(JobState::Failed) => st.mgr.retry(id),
@@ -113,8 +102,7 @@ pub fn remove(st: State<AppState>, ids: Vec<String>, delete_files: bool) {
 
 /// Add the same addresses again as new downloads (a fresh copy, numbered if the file exists).
 #[tauri::command]
-pub fn redownload(app: AppHandle, st: State<AppState>, ids: Vec<String>) -> R<Vec<String>> {
-    allowed(&app)?;
+pub fn redownload(st: State<AppState>, ids: Vec<String>) -> R<Vec<String>> {
     let mut out = vec![];
     for id in ids {
         let Some(s) = st.mgr.get(&id) else { continue };
@@ -417,8 +405,7 @@ pub fn deny_pairing(st: State<AppState>, pairing_id: String) {
 
 /// Accept a download the extension sent, with the edits made in the file-info window.
 #[tauri::command]
-pub fn resolve_request(app: AppHandle, st: State<AppState>, rid: String, overrides: swiftdm_core::api::Overrides) -> R<String> {
-    allowed(&app)?;
+pub fn resolve_request(st: State<AppState>, rid: String, overrides: swiftdm_core::api::Overrides) -> R<String> {
     let h = st.api.lock().unwrap().clone().map_err(|e| format!("The browser connection is not running: {e}"))?;
     h.resolve(&rid, overrides)
 }

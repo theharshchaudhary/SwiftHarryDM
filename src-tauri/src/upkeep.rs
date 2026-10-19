@@ -1,10 +1,9 @@
-//! Keeping the app and its parts current, and the license: one-click signed app updates,
-//! on-demand video components, weekly yt-dlp updates, and the license check.
+//! Keeping the app and its parts current: one-click signed app updates, on-demand video
+//! components and weekly yt-dlp updates.
 use std::time::Duration;
 
 use serde::Serialize;
 use serde_json::json;
-use swiftdm_core::licensing::{LicenseService, LicenseStatus};
 use swiftdm_core::media::tools;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_updater::UpdaterExt;
@@ -12,77 +11,6 @@ use tauri_plugin_updater::UpdaterExt;
 use crate::AppState;
 
 type R<T> = Result<T, String>;
-
-// ---------------------------------------------------------------------- license
-
-pub fn license() -> LicenseService {
-    LicenseService::new(swiftdm_core::VERSION)
-}
-
-/// Developers can run debug builds without the license server (tests use this).
-fn license_skipped() -> bool {
-    cfg!(debug_assertions) && std::env::var_os("SWIFTDM_SKIP_LICENSE").is_some()
-}
-
-pub async fn refresh_license(app: &AppHandle) -> LicenseStatus {
-    let st = if license_skipped() {
-        LicenseStatus { text: "License check skipped (developer build)".into(), allowed: true, action: None, detail: String::new() }
-    } else {
-        license().check().await
-    };
-    *app.state::<AppState>().license.lock().unwrap() = Some(st.clone());
-    let _ = app.emit("core", json!({ "type": "license", "license": st }));
-    st
-}
-
-/// Check at start (asking for a key if needed) and twice a day.
-pub async fn license_loop(app: AppHandle) {
-    let first = refresh_license(&app).await;
-    if matches!(first.action.as_deref(), Some("ask_key" | "hardware_changed" | "machine_mismatch")) {
-        let _ = crate::windows::open(&app, "license", &[]);
-    }
-    loop {
-        tokio::time::sleep(Duration::from_secs(12 * 3600)).await;
-        refresh_license(&app).await;
-    }
-}
-
-pub fn downloads_allowed(app: &AppHandle) -> bool {
-    app.state::<AppState>().license.lock().unwrap().as_ref().map(|l| l.allowed).unwrap_or(true)
-}
-
-pub const NOT_ALLOWED: &str = "Downloads are paused until a license or trial is active. Open Help > License to continue.";
-
-#[tauri::command]
-pub fn license_status(st: State<AppState>) -> Option<LicenseStatus> {
-    st.license.lock().unwrap().clone()
-}
-
-#[tauri::command]
-pub async fn license_check(app: AppHandle) -> LicenseStatus {
-    refresh_license(&app).await
-}
-
-#[tauri::command]
-pub async fn license_activate(app: AppHandle, key: String) -> LicenseStatus {
-    let st = license().activate(&key).await;
-    if st.allowed {
-        refresh_license(&app).await;
-    }
-    st
-}
-
-/// After a hardware change: forget the stored license so it can be activated again.
-#[tauri::command]
-pub async fn license_reset(app: AppHandle) -> LicenseStatus {
-    license().clear();
-    refresh_license(&app).await
-}
-
-#[tauri::command]
-pub fn license_info() -> serde_json::Value {
-    license().info()
-}
 
 // ---------------------------------------------------------------------- video components
 

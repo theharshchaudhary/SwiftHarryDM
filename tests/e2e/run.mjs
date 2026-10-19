@@ -94,10 +94,8 @@ async function setup() {
     join(work, "home", "settings3.json"),
     JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false }),
   );
-  // SWIFTDM_SKIP_LICENSE only works in debug builds: tests must not depend on the license server.
   const proc = start(APP_EXE, [], {
     SWIFTDM_HOME: join(work, "home"),
-    SWIFTDM_SKIP_LICENSE: "1",
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP_PORT}`,
   });
   let output = "";
@@ -210,7 +208,6 @@ const scenarios = {
       ["batch", {}, "Batch download", "Replace * with"],
       ["links", { source: "typed", urls: JSON.stringify(["https://a.example/1.zip"]) }, "Choose files to download", "a.example"],
       ["about", {}, "About SwiftHarryDM", "Version"],
-      ["license", {}, "License", "License check skipped"],
       ["browser", {}, "Connect your browser", "extension"],
       ["options", { tab: "video" }, "Options", "yt-dlp"],
     ];
@@ -241,7 +238,7 @@ const scenarios = {
     // A second start with /d <url> /n hands the download to the running app, no window.
     const url = URL_("/p/alt.pdf");
     const before = (await main.invoke("get_state")).jobs.filter((j) => j.url === url).length;
-    const second = spawn(APP_EXE, ["/d", url, "/n"], { env: { ...process.env, SWIFTDM_HOME: join(work, "home"), SWIFTDM_SKIP_LICENSE: "1" } });
+    const second = spawn(APP_EXE, ["/d", url, "/n"], { env: { ...process.env, SWIFTDM_HOME: join(work, "home") } });
     await new Promise((res) => second.on("exit", res));
     const job = await until(async () => {
       const jobs = (await main.invoke("get_state")).jobs.filter((j) => j.url === url);

@@ -12,11 +12,10 @@ crates/swiftdm-core     Everything except the user interface (tested headlessly)
   api                   Loopback API for the browser extension (axum)
   capture, batch,       Browser take-over rules, numbered series and URL lists,
   search, wildcard      Find, * patterns
-  licensing             License and trial checks
 crates/swiftdm-testkit  Fault-injecting HTTP server for tests; sdm-observe scenario server
 src-tauri               Desktop shell (Tauri 2): commands, event bridge, windows, tray,
                         clipboard monitor, notifications, power actions, native messaging
-                        host, updates, license
+                        host, updates
 ui                      React + TypeScript windows (one page, the window kind is injected)
 extension               Chrome/Edge extension (Manifest V3)
 tests/e2e               End-to-end tests of the built app and the extension in Chrome
@@ -61,7 +60,7 @@ the app takes one, the extension cancels it in the browser and sends it with its
 
 Every window loads the same page; the shell injects the window kind and its parameters
 before the page runs. Windows subscribe to one `core` event stream (job changes, progress,
-queue, quota, license and update events) after reading a full snapshot.
+queue, quota and update events) after reading a full snapshot.
 
 ## Updates
 
