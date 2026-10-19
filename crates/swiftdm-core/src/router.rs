@@ -28,8 +28,14 @@ fn direct_file() -> &'static Regex {
     R.get_or_init(|| Regex::new(r"(?i)/download/.+\.(?:zip|7z|rar|iso|exe|msi|pdf|tar|gz)(?:\?|$)").unwrap())
 }
 
+/// HLS and DASH stream playlists (caught from a page's player by the extension).
+fn stream_manifest() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"(?i)^https?://[^?#]+\.(?:m3u8|mpd)(?:[?#]|$)").unwrap())
+}
+
 pub fn is_media_url(url: &str) -> bool {
-    media_hosts().is_match(url) && !direct_file().is_match(url)
+    (media_hosts().is_match(url) && !direct_file().is_match(url)) || stream_manifest().is_match(url)
 }
 
 pub fn route(spec: &JobSpec) -> &'static str {
@@ -61,6 +67,9 @@ mod tests {
         assert_eq!(route(&s("https://example.com/files/setup.exe")), "http");
         assert_eq!(route(&s("https://notyoutube.com/x")), "http");
         assert_eq!(route(&s("https://archive.org/download/x/file.zip")), "http");
+        assert_eq!(route(&s("https://cdn.example/live/master.m3u8?token=1")), "media");
+        assert_eq!(route(&s("https://cdn.example/v/manifest.MPD")), "media");
+        assert_eq!(route(&s("https://cdn.example/v/notes.m3u8.txt")), "http");
         let mut a = s("https://cdn.example/v.mp4");
         a.media = Some(MediaOptions::preset("mp3"));
         assert_eq!(route(&a), "media");

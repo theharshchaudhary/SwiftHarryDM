@@ -285,6 +285,7 @@ const scenarios = {
       assert(left.length === 0, `the browser's own download was cancelled and removed (${left})`);
 
       // Alt+click keeps the download in the browser.
+      await until(() => chrome.evalIn(tab, "!!document.getElementById('alt') || location.href").then((v) => v === true || (() => { throw new Error('links tab is at ' + v); })()), 10000, 250, 'the links page');
       await chrome.evalIn(tab, "document.getElementById('alt').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, altKey: true }))");
       await sleep(400);
       await chrome.evalIn(tab, "document.getElementById('alt').click()");
@@ -311,6 +312,33 @@ const scenarios = {
       assert((await vinfo.text()).includes("Sent from your browser"), "the chosen video format reaches the app");
       await vinfo.click("Cancel");
       await chrome.closeTab(vtab);
+
+      // On a site the video downloader does not know, the panel offers the HLS stream the
+      // player loaded, and the toolbar badge counts it.
+      const htab = await chrome.tab(URL_("/p/hls.html"));
+      const streams = await until(async () => {
+        const all = await chrome.worker("chrome.storage.session.get(null)");
+        return Object.values(all).find((l) => Array.isArray(l) && l.some((x) => x.kind === "hls")) ?? null;
+      }, 15000, 300, "the player's stream to be noticed");
+      assert(!streams.some((x) => x.url.endsWith(".ts")), "stream fragments are not listed");
+      await until(async () => {
+        await chrome.evalIn(htab, "document.getElementById('v').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))");
+        return chrome.evalIn(htab, `!!document.querySelector('swiftharrydm-overlay') && ${shadow}.querySelector('.pill').style.display === 'flex'`);
+      }, 15000, 300, "the Download this video button on the stream page");
+      await chrome.evalIn(htab, `${shadow}.querySelector('.pill').click()`);
+      const picked = await until(
+        () => chrome.evalIn(htab, `(() => { const s = ${shadow}.querySelector('.format-select'); return s.value.startsWith('s:') ? s.selectedOptions[0].textContent : null; })()`),
+        120000, 500, "the stream to be offered and selected");
+      assert(picked.includes("HLS"), `the HLS stream is offered (${picked})`);
+      await chrome.shot(htab, join(SHOTS, "chrome-stream-panel.png"));
+      await chrome.evalIn(htab, `${shadow}.querySelector('.download-now-btn').click()`);
+      const sinfo = await app.window("Download file info", 20000);
+      const sText = await sinfo.text();
+      const sUrl = await sinfo.eval("document.querySelector('.grid2 input').value");
+      assert(sText.includes("Sent from your browser") && sUrl.endsWith("/v/stream.m3u8"), `the stream reaches the app (${sUrl})`);
+      await sinfo.shot(join(SHOTS, "stream-info.png"));
+      await sinfo.click("Cancel");
+      await chrome.closeTab(htab);
 
       // "Download all links": the app shows the link chooser.
       // Like the context menu: the extension has no "tabs" permission, so tab URLs are hidden;

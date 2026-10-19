@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const toActiveTab = (msg) => chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, msg).catch(() => {});
+        if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, msg, { frameId: 0 }).catch(() => {});
         window.close();
     });
     $('videoBtn').addEventListener('click', () => toActiveTab({ action: 'downloadPageMedia' }));

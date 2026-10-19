@@ -20,6 +20,7 @@ class BackgroundManager {
         this.createContextMenu();
         this.setupMessageListener();
         this.setupCapture();
+        this.setupStreams();
         this.autoPair();
     }
 
@@ -189,6 +190,67 @@ class BackgroundManager {
         }
     }
 
+    // ------------------------------------------------------------ streams the page's player loads
+    // Like a network monitor: video and audio responses (HLS and DASH playlists, media files)
+    // are remembered per tab, so the panel can offer them on any site, even ones the app's
+    // video downloader does not know. Kept in session storage, which survives the service
+    // worker being stopped.
+    setupStreams() {
+        const filter = { urls: ['<all_urls>'], types: ['main_frame', 'media', 'xmlhttprequest', 'other'] };
+        chrome.webRequest.onHeadersReceived.addListener((d) => {
+            this.noteResponse(d).catch(() => {});
+        }, filter, ['responseHeaders']);
+        chrome.tabs.onRemoved.addListener((tabId) => chrome.storage.session.remove(`streams:${tabId}`));
+    }
+
+    classify(d) {
+        if (d.tabId < 0 || (d.statusCode !== 200 && d.statusCode !== 206)) return null;
+        let url;
+        try {
+            url = new URL(d.url);
+        } catch (e) {
+            return null;
+        }
+        if (!/^https?:$/.test(url.protocol) || /(^|\.)googlevideo\.com$/.test(url.hostname)) return null; // YouTube: the app handles the page
+        const header = (name) => (d.responseHeaders || []).find((h) => h.name.toLowerCase() === name)?.value || '';
+        const type = header('content-type').split(';')[0].trim().toLowerCase();
+        const path = url.pathname.toLowerCase();
+        let kind = null;
+        if (/mpegurl/.test(type) || path.endsWith('.m3u8')) kind = 'hls';
+        else if (type === 'application/dash+xml' || path.endsWith('.mpd')) kind = 'dash';
+        else if (/^(video|audio)\//.test(type) && type !== 'video/mp2t' && !/\.(ts|m4s|aac|vtt)$/.test(path)) kind = 'file';
+        if (!kind) return null;
+        // Size: the whole file for range responses, else the body length.
+        const range = header('content-range').match(/\/(\d+)$/);
+        const size = range ? Number(range[1]) : Number(header('content-length')) || null;
+        if (kind === 'file' && size !== null && size < 100 * 1024) return null; // icons, sound effects
+        return { url: d.url, kind, type, size, time: Date.now() };
+    }
+
+    async noteResponse(d) {
+        const key = `streams:${d.tabId}`;
+        if (d.type === 'main_frame') {
+            await chrome.storage.session.remove(key);
+            chrome.action.setBadgeText({ tabId: d.tabId, text: '' }).catch(() => {});
+            return;
+        }
+        const s = this.classify(d);
+        if (!s) return;
+        const list = (await chrome.storage.session.get(key))[key] || [];
+        if (list.some((x) => x.url === s.url)) return;
+        list.push(s);
+        const trimmed = list.slice(-15);
+        await chrome.storage.session.set({ [key]: trimmed });
+        chrome.action.setBadgeBackgroundColor({ tabId: d.tabId, color: '#2c5f8a' }).catch(() => {});
+        chrome.action.setBadgeText({ tabId: d.tabId, text: String(trimmed.length) }).catch(() => {});
+    }
+
+    async streams(tabId) {
+        if (tabId === undefined) return { success: true, streams: [] };
+        const key = `streams:${tabId}`;
+        return { success: true, streams: (await chrome.storage.session.get(key))[key] || [] };
+    }
+
     async sendLinks(urls, pageUrl) {
         const unique = [...new Set(urls.filter((u) => /^https?:/i.test(u)))].slice(0, 5000);
         if (!unique.length) {
@@ -227,6 +289,8 @@ class BackgroundManager {
         if (d.pageUrl) body.pageUrl = d.pageUrl;
         if (d.type) body.type = String(d.type).slice(0, 32);
         if (d.formatId) body.formatId = d.formatId;
+        const cookies = await this.cookiesFor(d.url);
+        if (cookies) body.cookies = cookies;
         const r = await this.request('/api/download', { method: 'POST', body });
         if (r.status === 401) {
             this.notify('Pair SwiftHarryDM first', 'Click the SwiftHarryDM toolbar icon and connect to the app.');
@@ -273,6 +337,7 @@ class BackgroundManager {
                 listJobs: () => this.jobs(),
                 sendLinks: () => this.sendLinks(req.urls || [], req.pageUrl),
                 mediaInfo: () => this.mediaInfo(req.url),
+                getStreams: () => this.streams(sender.tab && sender.tab.id),
                 bypassNext: async () => {
                     if (req.url) this.bypass.set(req.url, Date.now());
                     return { success: true };
@@ -290,10 +355,11 @@ const backgroundManager = new BackgroundManager();
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab || tab.id === undefined) return;
-    const toTab = (msg) => chrome.tabs.sendMessage(tab.id, msg).catch(() => {});
+    // Page actions go to the top frame only; a clicked element's action goes to its frame.
+    const toTab = (msg, frameId = 0) => chrome.tabs.sendMessage(tab.id, msg, { frameId }).catch(() => {});
     if (info.menuItemId === 'download-with-swiftharry') {
         if (info.mediaType === 'video' || info.mediaType === 'audio') {
-            toTab({ action: 'contextMenuDownload', context: info });
+            toTab({ action: 'contextMenuDownload', context: info }, info.frameId || 0);
         } else if (info.linkUrl) {
             // A plain link: the app shows its download window for it.
             backgroundManager.handleDownload({ url: info.linkUrl, title: info.selectionText || '', instantDownload: true, pageUrl: info.pageUrl });
@@ -301,6 +367,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     } else if (info.menuItemId === 'download-page-media') {
         toTab({ action: 'downloadPageMedia' });
     } else if (info.menuItemId === 'download-all-links' || info.menuItemId === 'download-selected-links') {
-        toTab({ action: 'collectLinks', selectionOnly: info.menuItemId === 'download-selected-links' });
+        toTab({ action: 'collectLinks', selectionOnly: info.menuItemId === 'download-selected-links' }, info.frameId || 0);
     }
 });

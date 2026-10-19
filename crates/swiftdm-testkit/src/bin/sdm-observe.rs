@@ -72,6 +72,18 @@ async fn main() {
         b = srv.base
     );
     add("/p/video.html", Resource::new(Body::raw(video_page.into_bytes())).content_type("text/html; charset=utf-8"), None);
+    // A player that loads an HLS stream, like most video sites (and unknown to yt-dlp).
+    add(
+        "/v/stream.m3u8",
+        Resource::new(Body::raw(b"#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\nseg0.ts\n#EXT-X-ENDLIST\n".to_vec()))
+            .content_type("application/vnd.apple.mpegurl"),
+        None,
+    );
+    add("/v/seg0.ts", Resource::new(Body::gen("seg0", 512 * 1024)).content_type("video/mp2t"), None);
+    let hls_page = "<!doctype html><html><head><meta charset=utf-8><title>Stream page</title></head><body>\
+         <h1>A streamed video</h1><video id=v width=480 height=270 controls></video>\
+         <script>fetch('/v/stream.m3u8').then(r => r.text()).then(() => fetch('/v/seg0.ts'));</script></body></html>";
+    add("/p/hls.html", Resource::new(Body::raw(hls_page.as_bytes().to_vec())).content_type("text/html; charset=utf-8"), None);
     std::fs::write(out.join("expected.json"), serde_json::to_string_pretty(&expected).unwrap()).unwrap();
     println!("ready {}", srv.base);
     loop {

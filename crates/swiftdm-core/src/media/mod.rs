@@ -107,9 +107,40 @@ impl MediaEngine {
         a
     }
 
-    async fn json(&self, url: &str, selector: Option<&str>, cancel: &CancelToken) -> Result<Value, EngineError> {
+    /// Per-download arguments: the page the video came from, and the browser's cookies for
+    /// the video's site (as a cookie file limited to that site, never a global header).
+    fn job_args(job: &Job) -> Vec<String> {
+        let mut a = vec![];
+        if let Some(r) = &job.spec.referer {
+            a.push("--referer".into());
+            a.push(r.clone());
+        }
+        if let (Some(cookies), Some(host)) = (&job.spec.cookies, url::Url::parse(&job.spec.url).ok().and_then(|u| u.host_str().map(str::to_string))) {
+            let dir = crate::appdata::app_dir().join("tmp");
+            let file = dir.join(format!("{}.cookies.txt", job.id));
+            let mut body = String::from("# Netscape HTTP Cookie File\n");
+            for pair in cookies.split(';').map(str::trim).filter(|p| !p.is_empty()) {
+                if let Some((name, value)) = pair.split_once('=') {
+                    let clean = |s: &str| s.replace(['\t', '\r', '\n'], "");
+                    body.push_str(&format!(".{host}\tTRUE\t/\tFALSE\t0\t{}\t{}\n", clean(name.trim()), clean(value.trim())));
+                }
+            }
+            if std::fs::create_dir_all(&dir).is_ok() && std::fs::write(&file, body).is_ok() {
+                a.push("--cookies".into());
+                a.push(file.to_string_lossy().into_owned());
+            }
+        }
+        a
+    }
+
+    fn forget_cookies(job: &Job) {
+        let _ = std::fs::remove_file(crate::appdata::app_dir().join("tmp").join(format!("{}.cookies.txt", job.id)));
+    }
+
+    async fn json(&self, url: &str, selector: Option<&str>, extra: &[String], cancel: &CancelToken) -> Result<Value, EngineError> {
         let mut cmd = vec![self.ytdlp()?];
         cmd.extend(self.common());
+        cmd.extend(extra.iter().cloned());
         cmd.push("-J".into());
         if let Some(sel) = selector {
             cmd.push("-f".into());
@@ -152,7 +183,7 @@ impl MediaEngine {
 
     /// Title and available formats, for the quality picker.
     pub async fn inspect(&self, url: &str) -> Result<MediaInfo, String> {
-        let info = self.json(url, None, &CancelToken::new()).await.map_err(|e| match e {
+        let info = self.json(url, None, &[], &CancelToken::new()).await.map_err(|e| match e {
             EngineError::Fail(e) => e.0.message,
             EngineError::Stop(_) => "Cancelled.".into(),
         })?;
@@ -200,6 +231,26 @@ impl MediaEngine {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn cookies_go_to_a_file_for_the_video_site_only() {
+        let home = tempfile::tempdir().unwrap();
+        std::env::set_var("SWIFTDM_HOME", home.path());
+        let mut spec = crate::models::JobSpec::new("https://cdn.example.com/v/master.m3u8", "C:\\D");
+        spec.referer = Some("https://example.com/watch".into());
+        spec.cookies = Some("sid=abc; pref=x\ty\nInjected=1".into());
+        let job = crate::models::Job::new("c0ffee00000000000000000000000000".into(), spec);
+        let a = super::MediaEngine::job_args(&job);
+        assert_eq!(&a[..2], &["--referer".to_string(), "https://example.com/watch".to_string()]);
+        let file = a.iter().skip_while(|x| *x != "--cookies").nth(1).unwrap().clone();
+        let body = std::fs::read_to_string(&file).unwrap();
+        let lines: Vec<&str> = body.lines().filter(|l| !l.starts_with('#')).collect();
+        assert_eq!(lines.len(), 2, "{body}");
+        assert!(lines.iter().all(|l| l.starts_with(".cdn.example.com\tTRUE\t/\tFALSE\t0\t")));
+        assert!(lines[1].ends_with("\tpref\txyInjected=1"), "tabs and newlines are removed: {body}");
+        super::MediaEngine::forget_cookies(&job);
+        assert!(!std::path::Path::new(&file).exists());
+    }
+
+    #[test]
     fn keeps_unknown_codecs_and_drops_storyboards() {
         let f = |v: serde_json::Value| !(v["vcodec"].as_str() == Some("none") && v["acodec"].as_str() == Some("none"));
         assert!(f(serde_json::json!({ "vcodec": null })));
@@ -217,7 +268,7 @@ impl Engine for MediaEngine {
     async fn probe(&self, job: &Job, ctx: &RunCtx) -> EResult<ProbeResult> {
         let opts = Self::options(job);
         let sel = formats::build(&opts);
-        let info = self.json(&job.spec.url, Some(&sel.selector), &ctx.cancel).await?;
+        let info = self.json(&job.spec.url, Some(&sel.selector), &Self::job_args(job), &ctx.cancel).await?;
         let single = [info.clone()];
         let chosen: &[Value] = info["requested_formats"].as_array().map(|v| v.as_slice()).unwrap_or(&single);
         if chosen.iter().any(|f| f["has_drm"].as_bool() == Some(true)) {
@@ -271,10 +322,7 @@ impl Engine for MediaEngine {
         cmd.push("--paths".into());
         cmd.push(format!("temp:{tmp}"));
         cmd.extend(s(&["--continue", "--no-overwrites", "--newline", "--progress", "--progress-template", PROGRESS_TEMPLATE, "--progress-template", POSTPROCESS_TEMPLATE, "--print", FILE_TEMPLATE, "--no-simulate"]));
-        if let Some(r) = &job.spec.referer {
-            cmd.push("--referer".into());
-            cmd.push(r.clone());
-        }
+        cmd.extend(Self::job_args(job));
         if let Some(l) = job.spec.speed_limit.filter(|l| *l > 0) {
             cmd.push("--limit-rate".into());
             cmd.push(l.to_string());
@@ -358,6 +406,7 @@ impl Engine for MediaEngine {
     }
 
     fn discard(&self, job: &Job) {
+        Self::forget_cookies(job);
         for d in [job.temp_path.clone(), Some(Self::temp_dir_for(job))].into_iter().flatten() {
             let _ = std::fs::remove_dir_all(long_path(&d));
         }

@@ -168,11 +168,12 @@
         body.append(select);
         const hint = el('div', 'hint', 'Loading the formats from SwiftHarryDM…');
         body.append(hint);
+        const streams = [];
         const row = el('div', 'row');
         const now = el('button', 'btn primary download-now-btn', 'Download');
         const later = el('button', 'btn', 'Download later');
-        now.addEventListener('click', () => submit(item, select.value, true));
-        later.addEventListener('click', () => submit(item, select.value, false));
+        now.addEventListener('click', () => submit(item, select.value, true, streams));
+        later.addEventListener('click', () => submit(item, select.value, false, streams));
         row.append(now, later);
         body.append(row);
         panel.append(head, body);
@@ -181,7 +182,36 @@
         panel.style.top = `${Math.max(8, top)}px`;
         panel.style.left = `${left}px`;
         r.append(panel);
-        fillFormats(select, hint, item.url);
+        fill(select, hint, item.url, streams);
+    }
+
+    const STREAM_LABEL = { hls: 'HLS stream', dash: 'DASH stream', file: 'Media file' };
+    const size = (n) => (n ? (n >= 1 << 30 ? `${(n / (1 << 30)).toFixed(2)} GB` : `${Math.round(n / (1 << 20))} MB`) : '');
+
+    /** Exact formats from the app, plus the streams this page's player loaded. */
+    async function fill(select, hint, url, streams) {
+        const [formatsOk, s] = await Promise.all([fillFormats(select, hint, url), send({ action: 'getStreams' })]);
+        const list = s && s.success ? s.streams : [];
+        if (!list.length) return;
+        streams.push(...list);
+        const group = el('optgroup');
+        group.label = 'Streams on this page';
+        list.forEach((st, i) => {
+            let name = '';
+            try {
+                name = decodeURIComponent(new URL(st.url).pathname.split('/').pop() || '');
+            } catch (e) {
+                name = '';
+            }
+            const o = el('option', null, [STREAM_LABEL[st.kind] || 'Stream', name, st.kind === 'file' ? size(st.size) : ''].filter(Boolean).join(' \u00b7 '));
+            o.value = `s:${i}`;
+            group.append(o);
+        });
+        select.append(group);
+        if (!formatsOk) {
+            select.value = 's:0';
+            hint.textContent = 'This site is not known to the video downloader; the stream the player loaded is selected.';
+        }
     }
 
     async function fillFormats(select, hint, url) {
@@ -189,10 +219,9 @@
         const formats = r && r.success && r.info ? r.info.formats : [];
         if (!formats.length) {
             hint.textContent = r && r.error ? `Formats unavailable: ${r.error}` : 'Choose a quality; SwiftHarryDM picks the matching format.';
-            return;
+            return false;
         }
         hint.textContent = formats.length === 1 ? '1 format available.' : `${formats.length} formats available.`;
-        const size = (n) => (n ? (n >= 1 << 30 ? `${(n / (1 << 30)).toFixed(2)} GB` : `${Math.round(n / (1 << 20))} MB`) : '');
         const group = el('optgroup');
         group.label = 'Exact formats';
         for (const f of formats.slice(0, 60)) {
@@ -202,12 +231,18 @@
             group.append(o);
         }
         select.append(group);
+        return true;
     }
 
-    async function submit(item, choice, instant) {
+    async function submit(item, choice, instant, streams) {
         closePanel();
-        const data = { ...item, format: 'best', instantDownload: instant };
-        if (choice.startsWith('f:')) data.formatId = choice.slice(2);
+        let data = { ...item, format: 'best', instantDownload: instant };
+        if (choice.startsWith('s:')) {
+            // A stream the player loaded: playlists go to the video downloader, files to the
+            // fast segmented engine.
+            const st = streams[Number(choice.slice(2))];
+            data = { url: st.url, title: item.title, pageUrl: location.href, format: 'best', instantDownload: instant, type: st.kind === 'file' ? null : 'video' };
+        } else if (choice.startsWith('f:')) data.formatId = choice.slice(2);
         else data.format = choice;
         const r = await send({ action: 'downloadMedia', data });
         if (r && r.success) toast(`Sent to SwiftHarryDM: ${r.message || ''}`);
@@ -249,8 +284,15 @@
             case 'downloadPageMedia':
             case 'showMediaDetection': {
                 const items = allMedia();
-                if (!items.length) toast('No video or audio found on this page.', true);
-                else openPanel(items[0], null);
+                if (items.length) {
+                    openPanel(items[0], null);
+                    break;
+                }
+                // Players inside other frames, or audio without an element: offer the streams seen.
+                send({ action: 'getStreams' }).then((r) => {
+                    if (r && r.success && r.streams.length) openPanel({ url: cleanUrl(location.href), title: document.title || 'Video', type: 'video', pageUrl: location.href }, null);
+                    else toast('No video or audio found on this page.', true);
+                });
                 break;
             }
         }

@@ -23,6 +23,9 @@ The installer is under 5 MB. Updates install with one click.
 **Video and audio**
 - Save videos and audio from YouTube and many other sites: best quality, 4K to 360p,
   MP4, MKV, MP3 or M4A, or an exact format from the list.
+- On sites the video downloader does not know, the extension catches the streams the page's
+  player loads (HLS, DASH or media files) and offers them in the same panel; the toolbar
+  badge shows how many were found.
 - Protected (DRM) videos, playlists and live streams are not downloaded.
 - The video components (yt-dlp and FFmpeg) are downloaded once when first needed, verified,
   and kept up to date automatically.
