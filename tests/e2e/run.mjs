@@ -176,6 +176,13 @@ const scenarios = {
     await done.shot(join(SHOTS, "complete.png"));
     await done.click("Close");
     await assertSha("report 2026.pdf", "/s6/get");
+
+    // The same address again: IDM's duplicate choices.
+    const again = await addThroughUi(app, main, URL_("/s6/get"));
+    await until(async () => (await again.text()).includes("already in your list"), 10000, 200, "the duplicate dialog");
+    await again.eval(`[...document.querySelectorAll('label')].find(l => l.textContent.includes('Show the finished file')).querySelector('input').click()`);
+    await again.click("OK");
+    await completeFor(app, "report 2026.pdf", 10000).then((w) => w.click("Close"));
   },
 
   async starts_while_info_is_open(app) {

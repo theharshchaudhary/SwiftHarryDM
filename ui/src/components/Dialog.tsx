@@ -65,3 +65,21 @@ export function Num({ value, onChange, min, max, width = 80, disabled }: { value
 export function Loading() {
   return <div style={{ padding: 20 }} className="muted">Loading…</div>;
 }
+
+/** A small dialog over the current window (Escape or a click outside closes it). */
+export function Modal({ title, children, foot, onClose }: { title: string; children: ReactNode; foot: ReactNode; onClose: () => void }) {
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [onClose]);
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.25)", display: "grid", placeItems: "center", zIndex: 80 }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: "var(--bg)", borderRadius: 8, boxShadow: "var(--shadow)", width: 460, maxWidth: "92vw", overflow: "hidden", border: "1px solid var(--border-strong)" }} role="dialog" aria-label={title}>
+        <div style={{ padding: "12px 16px", fontWeight: 600, borderBottom: "1px solid var(--border)" }}>{title}</div>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>{children}</div>
+        <div className="dlg-foot">{foot}</div>
+      </div>
+    </div>
+  );
+}

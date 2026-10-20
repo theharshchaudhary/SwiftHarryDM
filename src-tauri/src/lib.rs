@@ -366,7 +366,8 @@ fn handle_args(app: &AppHandle, args: &[String]) {
     spec.filename = value("/f");
     spec.source = "ui".into();
     let mode = if later { swiftdm_core::manager::StartMode::Later } else { swiftdm_core::manager::StartMode::Now };
-    if let Err(e) = state.mgr.submit(spec, mode) {
+    // /n asks nothing, so "ask" for a duplicate link means a numbered name.
+    if let Err(e) = state.mgr.submit_or_reuse(spec, mode, &s.duplicate_policy) {
         notify(app, "Download not started", &e);
     }
 }

@@ -332,8 +332,9 @@ async fn download(State(st): State<Arc<Inner>>, h: HeaderMap, body: Bytes) -> Re
     };
     if st.mgr.settings().get().trust_extension {
         let (spec, mode) = st.spec_for(&req, &Overrides::default());
-        return match st.mgr.submit(spec, mode) {
-            Ok(id) => {
+        let policy = st.mgr.settings().get().duplicate_policy;
+        return match st.mgr.submit_or_reuse(spec, mode, &policy) {
+            Ok((id, _)) => {
                 if mode == StartMode::Now {
                     st.hooks.started(&id);
                 }

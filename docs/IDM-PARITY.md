@@ -13,7 +13,7 @@ SwiftHarryDM should have, written and drawn by us (no IDM text, code or images a
 - [ ] Download File Info: Zip preview (list the archive's files before downloading, read by ranges)
 - [x] Download File Info: "Download later" offers the queue choice (option: show queue selection panel)
 - [x] Download File Info: opens in front of the browser and takes the keyboard
-- [ ] Duplicate link dialog: numbered name / overwrite / show complete or resume; remember choice
+- [x] Duplicate link dialog: numbered name / overwrite / show complete or resume; remember choice
 - [ ] Twice-cancelled automatic download: offer to add the site or the address to exceptions
 - [ ] Download complete: Open, Open with, Open folder, Close, "Don't show again", drag the file out
 - [ ] Download progress: tabs Download status / Speed limiter / Options on completion, hide-tab buttons, hide details

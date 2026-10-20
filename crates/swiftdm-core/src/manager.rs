@@ -385,6 +385,34 @@ impl Manager {
         *self.shared.quota.read().unwrap()
     }
 
+    /// `submit`, following IDM's duplicate-link choices when the address is already in the
+    /// list: "number" (and "ask", when there is no one to ask) adds it under a numbered name,
+    /// "overwrite" replaces the existing download and its file, "resume" uses the existing
+    /// download (resumed if unfinished). Returns the download's id and whether it is the
+    /// existing one.
+    pub fn submit_or_reuse(&self, mut spec: JobSpec, mode: StartMode, policy: &str) -> Result<(String, bool), String> {
+        let dups = self.find_duplicates(&spec.url);
+        match (dups.first(), policy) {
+            (Some(d), "resume") => {
+                if d.state != JobState::Completed && mode == StartMode::Now {
+                    self.resume(&d.id);
+                    self.retry(&d.id);
+                }
+                Ok((d.id.clone(), true))
+            }
+            (Some(d), "overwrite") => {
+                if spec.filename.is_none() {
+                    spec.filename = d.final_path.as_deref().and_then(|p| Path::new(p).file_name()).map(|n| n.to_string_lossy().into_owned());
+                }
+                for d in &dups {
+                    self.remove(&d.id, true);
+                }
+                self.submit(spec, mode).map(|id| (id, false))
+            }
+            _ => self.submit(spec, mode).map(|id| (id, false)),
+        }
+    }
+
     /// Downloads with the same address (as typed or after redirects) that were not cancelled,
     /// so the UI can offer the duplicate-link choices.
     pub fn find_duplicates(&self, url: &str) -> Vec<JobSnapshot> {

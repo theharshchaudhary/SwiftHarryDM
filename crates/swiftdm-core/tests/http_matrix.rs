@@ -403,6 +403,31 @@ async fn cookies_and_site_logins_are_scoped() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn duplicate_link_choices() {
+    let e = env().await;
+    let b = Body::gen("dup", 256 * 1024);
+    let url = e.srv.add("/dup.bin", Resource::new(b.clone()).etag("\"d\""));
+    let first = e.run(&url, 30).await;
+    ok(&first, &b);
+    let add = |policy: &str| e.m.submit_or_reuse(JobSpec::new(url.as_str(), &e.dest), StartMode::Now, policy).unwrap();
+    // "resume": the existing (finished) download is used, nothing is added.
+    assert_eq!(add("resume"), (first.id.clone(), true));
+    // "number": a second copy under a numbered name.
+    let (n, existing) = add("number");
+    assert!(!existing);
+    let s = e.m.wait_for(&n, DONE, Duration::from_secs(30)).await.unwrap();
+    ok(&s, &b);
+    assert_eq!(e.files(), vec!["dup (1).bin", "dup.bin"]);
+    // "overwrite": the existing downloads and their files are replaced by one new download.
+    let (o, _) = add("overwrite");
+    let s = e.m.wait_for(&o, DONE, Duration::from_secs(30)).await.unwrap();
+    ok(&s, &b);
+    e.m.sync().await;
+    assert_eq!(e.m.find_duplicates(&url).len(), 1);
+    assert_eq!(e.files(), vec!["dup.bin"]);
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn relocate_while_downloading_and_after_completion() {
     // IDM starts downloading while "Download File Info" is open; the folder and name chosen
     // there are applied afterwards.

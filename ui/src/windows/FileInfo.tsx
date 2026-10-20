@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, windowParams, type Job, type MediaInfo, type UrlInfo } from "../api";
 import * as F from "../format";
-import { Check, Dialog, Loading } from "../components/Dialog";
+import { Check, Dialog, Loading, Modal } from "../components/Dialog";
 import { ComponentsBanner, useComponents } from "../components/Components";
 import { Icon, categoryIcon } from "../icons";
 import { useLive, useTheme } from "../store";
@@ -30,6 +30,41 @@ const PRESETS: [string, string][] = [
 const AUDIO = new Set(["mp3", "m4a"]);
 
 /** "Download File Info": confirm name, category and folder (or video quality), then start now or later. */
+/** IDM's "Duplicate download link" choices. */
+function DuplicateDialog({ job, onChoose, onCancel }: { job: Job; onChoose: (p: "number" | "overwrite" | "resume", remember: boolean) => void; onCancel: () => void }) {
+  const [pick, setPick] = useState<"number" | "overwrite" | "resume">("number");
+  const [keep, setKeep] = useState(false);
+  const opts: [typeof pick, string][] = [
+    ["number", "Add it again with a numbered file name"],
+    ["overwrite", "Add it again and replace the existing file"],
+    ["resume", job.state === "COMPLETED" ? "Show the finished file instead" : "Resume the existing download instead"],
+  ];
+  return (
+    <Modal
+      title="This address is already in your list"
+      onClose={onCancel}
+      foot={
+        <>
+          <button className="btn primary" autoFocus onClick={() => onChoose(pick, keep)}>OK</button>
+          <button className="btn" onClick={onCancel}>Cancel</button>
+        </>
+      }
+    >
+      <div>
+        <b>{F.fileName(job)}</b> <span className="muted">({F.statusText(job)})</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {opts.map(([k, l]) => (
+          <label key={k} className="row">
+            <input type="radio" checked={pick === k} onChange={() => setPick(k)} /> {l}
+          </label>
+        ))}
+      </div>
+      <Check checked={keep} onChange={setKeep}>Remember my choice (Options › Downloads)</Check>
+    </Modal>
+  );
+}
+
 /** How far the download that started while this window is open has got. */
 function EarlyProgress({ id }: { id: string }) {
   const live = useLive();
@@ -66,6 +101,8 @@ export default function FileInfo() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [remember, setRemember] = useState(false);
+  // IDM's duplicate-link choice, made once per window (or taken from Options).
+  const [dupDone, setDupDone] = useState(false);
   // Like IDM, the file starts downloading while this window is open; the choices made here
   // are applied when "Start download" or "Download later" is pressed.
   const [early, setEarly] = useState<{ id: string; dir: string; file: string } | null>(null);
@@ -151,7 +188,7 @@ export default function FileInfo() {
 
   // Start early once the address is known to be a file (not a video page) and nothing needs
   // asking first (a duplicate the user must decide about).
-  const dupAsk = dups.length > 0 && settings?.duplicate_policy === "ask";
+  const dupAsk = dups.length > 0 && !dupDone;
   useEffect(() => {
     if (!settings?.start_while_info || early || earlyRef.current || probing || probeErr || !info || info.is_web_page || isMedia || dupAsk || !path) return;
     const [dir, file] = splitPath(path);
@@ -172,6 +209,30 @@ export default function FileInfo() {
       }
     })();
   }, [settings?.start_while_info, early, probing, probeErr, info, isMedia, dupAsk, path, rid, url, category, params]);
+
+  // A choice saved in Options is applied without asking.
+  useEffect(() => {
+    const p = settings?.duplicate_policy;
+    if (!dups.length || dupDone || !p || p === "ask") return;
+    applyDuplicate(p);
+  }, [dups, dupDone, settings?.duplicate_policy]);
+
+  const applyDuplicate = async (p: "number" | "overwrite" | "resume") => {
+    const d = dups[0];
+    if (p === "resume") {
+      decided.current = true;
+      if (rid) await api.rejectRequest(rid);
+      if (d.state === "COMPLETED") await api.openWindow("complete", { id: d.id });
+      else {
+        await api.resume([d.id]);
+        await api.openWindow("progress", { id: d.id });
+      }
+      api.closeSelf();
+      return;
+    }
+    if (p === "overwrite") await api.remove(dups.map((x) => x.id), true);
+    setDupDone(true);
+  };
 
   if (!live || !settings) return <Loading />;
 
@@ -273,7 +334,6 @@ export default function FileInfo() {
     return info?.size != null ? `${F.size(info.size)} (${info.size.toLocaleString()} bytes)` : "Unknown (the server did not say)";
   })();
 
-  const dup = dups[0];
   return (
     <Dialog
       left={
@@ -317,22 +377,14 @@ export default function FileInfo() {
           <div>Sent from your browser{params.get("referer") ? <> by <b>{F.host(params.get("referer"))}</b></> : null}. Check the details and choose how to download it.</div>
         </div>
       )}
-      {dup && settings.duplicate_policy === "ask" && (
-        <div className="banner warn">
-          <Icon name="warning" size={18} />
-          <div style={{ flex: 1 }}>
-            <div><b>This address is already in your list</b> ({F.statusText(dup)}).</div>
-            <div className="row" style={{ marginTop: 6, flexWrap: "wrap" }}>
-              {dup.state === "COMPLETED" ? (
-                <button className="btn small" onClick={() => { api.openWindow("complete", { id: dup.id }); api.closeSelf(); }}>Show the finished file</button>
-              ) : (
-                <button className="btn small" onClick={() => { api.resume([dup.id]); api.openWindow("progress", { id: dup.id }); api.closeSelf(); }}>Resume the existing download</button>
-              )}
-              <span className="hint">or continue below to add it again under a numbered name.</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {dupAsk && settings.duplicate_policy === "ask" && <DuplicateDialog job={dups[0]} onChoose={async (p, keep) => {
+        if (keep) await api.saveSettings({ ...settings, duplicate_policy: p });
+        await applyDuplicate(p);
+      }} onCancel={async () => {
+        decided.current = true;
+        if (rid) await api.rejectRequest(rid);
+        api.closeSelf();
+      }} />}
       <div className="grid2">
         <span>Address</span>
         <input type="text" value={url} onChange={(e) => setUrl(e.target.value.trim())} />
