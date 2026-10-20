@@ -90,6 +90,14 @@ pub fn resume(st: State<AppState>, ids: Vec<String>) -> R<()> {
     Ok(())
 }
 
+/// Try failed downloads again.
+#[tauri::command]
+pub fn retry(st: State<AppState>, ids: Vec<String>) {
+    for id in ids {
+        st.mgr.retry(&id);
+    }
+}
+
 #[tauri::command]
 pub fn cancel(st: State<AppState>, ids: Vec<String>) {
     ids.iter().for_each(|id| st.mgr.cancel(id));

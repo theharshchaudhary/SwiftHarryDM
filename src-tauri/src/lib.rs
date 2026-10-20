@@ -126,7 +126,11 @@ async fn pump_events(app: AppHandle) {
                         open_logged(&app, "countdown", &[("action".into(), after.as_str().into()), ("what".into(), what)]);
                     }
                 }
-                if s.state == JobState::Failed && changed && s.queue_id.is_none() {
+                // The server wants a login: ask for it, like IDM's "Connecting to the site".
+                if s.state == JobState::Failed && changed && s.error.as_ref().is_some_and(|e| e.http_status == Some(401)) {
+                    let realm = s.error.as_ref().map(|e| e.detail.clone()).unwrap_or_default();
+                    open_logged(&app, "login", &[("id".into(), s.id.clone()), ("realm".into(), realm)]);
+                } else if s.state == JobState::Failed && changed && s.queue_id.is_none() {
                     let why = s.error.as_ref().map(|e| e.message.clone()).unwrap_or_default();
                     notify(&app, "Download failed", &format!("{}\n{why}", file_label(s)));
                 }
@@ -475,6 +479,7 @@ pub fn run() {
             commands::set_description,
             commands::relocate,
             commands::hold,
+            commands::retry,
             commands::zip_preview,
             commands::count_cancel,
             commands::release,

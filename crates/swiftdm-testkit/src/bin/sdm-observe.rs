@@ -50,6 +50,10 @@ async fn main() {
     // A ZIP archive for the "Zip preview" (its file list is read with range requests).
     let zip = swiftdm_testkit::zip_archive(&[("readme.txt", b"hello"), ("photos/", b""), ("photos/beach.jpg", &[9u8; 4096])]);
     add("/z/sample.zip", Resource::new(Body::raw(zip)).etag("\"z\"").content_type("application/zip"), None);
+    // A file behind a login (user "ann", password "secret").
+    let mut secret = Resource::new(Body::gen("secret", 512 * 1024)).etag("\"sec\"");
+    secret.require_basic = Some("Basic YW5uOnNlY3JldA==".into());
+    add("/a/secret.bin", secret, None);
     add("/s7/flaky.bin", Resource::new(Body::gen("s7", 4 * MIB)).etag("\"s7\"").statuses(&[503, 503]), None);
     // Pages for browser tests: a page with download links, and a small PDF for "leave it to
     // the browser" (Alt+click) checks.

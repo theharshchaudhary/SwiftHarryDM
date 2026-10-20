@@ -94,7 +94,7 @@ export function fileName(j: Job): string {
 }
 
 /** Until the server names the file, show the last part of its address (not the whole URL). */
-function nameFromUrl(title: string): string {
+export function nameFromUrl(title: string): string {
   if (!/^https?:\/\//i.test(title)) return title;
   try {
     const u = new URL(title);

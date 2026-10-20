@@ -16,6 +16,7 @@ import { About, Countdown, Unknown } from "./windows/Small";
 import Pairing from "./windows/Pairing";
 import Browser from "./windows/Browser";
 import Drop from "./windows/Drop";
+import Login from "./windows/Login";
 
 // Every window loads this page; ?w= selects what it shows.
 const WINDOWS: Record<string, () => JSX.Element | null> = {
@@ -34,6 +35,7 @@ const WINDOWS: Record<string, () => JSX.Element | null> = {
   pairing: Pairing,
   browser: Browser,
   drop: Drop,
+  login: Login,
 };
 
 const TITLES: Record<string, string> = {
@@ -52,6 +54,7 @@ const TITLES: Record<string, string> = {
   pairing: "Connect browser extension",
   browser: "Connect your browser",
   drop: "Drop target",
+  login: "Login required",
 };
 
 const kind = windowParams().get("w") ?? "main";

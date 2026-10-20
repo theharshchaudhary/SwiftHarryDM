@@ -235,6 +235,8 @@ export default function FileInfo() {
         }
       } catch (e) {
         if (alive) setProbeErr(String(e));
+        // The server wants a login: ask now, like IDM, and check again once it is saved.
+        if (alive && /\(401\)/.test(String(e))) api.openWindow("login", { url });
       } finally {
         if (alive) setProbing(false);
       }
@@ -243,12 +245,14 @@ export default function FileInfo() {
       alive = false;
       clearTimeout(t);
     };
-  }, [url, comps.c?.ready]);
+    // Checked again after a login was entered for the site.
+  }, [url, comps.c?.ready, live?.settings.site_logins.length]);
 
   const settings = live?.settings;
   const isMedia = media != null || (probeErr !== "" && !!comps.c && !comps.c.ytdlp && /video|media|yt-dlp/i.test(probeErr));
   const needsComponents = isMedia && !!comps.c && !comps.c.ready;
-  const name = params.get("filename") || info?.file_name || "";
+  // When the check fails, the last part of the address is the name (the download still runs).
+  const name = params.get("filename") || info?.file_name || (probeErr && !isMedia ? F.nameFromUrl(url) : "");
   const folderFor = useMemo(
     () => (cat: string) => {
       if (!settings) return "";

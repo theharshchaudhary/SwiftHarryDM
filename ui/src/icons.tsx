@@ -152,6 +152,12 @@ const paths: Record<string, ReactElement> = {
       <path d="M12 10v4.5M12 17.2v.3" />
     </>
   ),
+  lock: (
+    <>
+      <rect x="5" y="11" width="14" height="9" rx="1.5" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 18, className }: { name: string; size?: number; className?: string }) {

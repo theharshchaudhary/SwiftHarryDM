@@ -48,6 +48,18 @@ pub fn next_redirect(current: &str, location: Option<&str>) -> Result<String, Sd
     Ok(next.to_string())
 }
 
+/// `realm="..."` of a WWW-Authenticate header.
+fn realm(h: &HeaderMap) -> Option<String> {
+    let v = h.get("www-authenticate")?.to_str().ok()?;
+    let i = v.to_lowercase().find("realm=")? + 6;
+    let rest = &v[i..];
+    let r = match rest.strip_prefix('"') {
+        Some(q) => q.split('"').next()?,
+        None => rest.split([',', ' ']).next()?,
+    };
+    Some(r.chars().take(200).collect())
+}
+
 fn retry_after(h: &HeaderMap) -> Option<f64> {
     let v = h.get("retry-after")?.to_str().ok()?.trim();
     if let Ok(s) = v.parse::<f64>() {
@@ -61,7 +73,11 @@ pub fn status_error(resp: &Response) -> SdmError {
     let code = resp.status().as_u16();
     let ra = retry_after(resp.headers());
     match code {
-        401 | 403 => SdmError::new(
+        401 => SdmError::new(ErrorCode::Forbidden, "The server asks for a user name and password (401).")
+            .status(code)
+            // The realm the server names, shown in the login window.
+            .detail(realm(resp.headers()).unwrap_or_default()),
+        403 => SdmError::new(
             ErrorCode::Forbidden,
             format!("The server denied access ({code}). The link may require a login or may have expired. Use \"Refresh download address\" with a new link."),
         )

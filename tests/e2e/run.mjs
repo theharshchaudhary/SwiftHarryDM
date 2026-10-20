@@ -226,6 +226,27 @@ const scenarios = {
     assert(!findFile(DL, "norange.bin") && !readdirSync(DL, { recursive: true }).some((f) => String(f).includes("sdmpart")), "no data left after Cancel");
   },
 
+  async login_when_asked(app) {
+    // IDM's "Connecting to the site": a server asks for a login; it is typed once and saved.
+    const main = await app.window("SwiftHarryDM");
+    await main.click("Add URL");
+    const add = await app.window("Add download");
+    await add.fill("#u", URL_("/a/secret.bin"));
+    await add.click("OK");
+    // Asked while the address is checked, as IDM does; then the file info is shown.
+    const login = await app.window("Login required", 30000);
+    await login.fill("input[type=text]", "ann");
+    await login.fill("input[type=password]", "secret");
+    await login.click("OK");
+    const info = await app.window("Download file info");
+    await until(async () => (await info.text()).includes("524,288 bytes"), 30000, 250, "the size, read with the login");
+    await info.click("Start download");
+    await completeFor(app, "secret.bin", 30000).then((w) => w.click("Close"));
+    await assertSha("secret.bin", "/a/secret.bin");
+    const s = (await main.invoke("get_state")).settings;
+    assert(s.site_logins.some((l) => l.username === "ann" && !JSON.stringify(l).includes("secret")), "the login is saved, encrypted");
+  },
+
   async pause_resume(app) {
     const main = await app.window("SwiftHarryDM");
     const s = await main.invoke("get_state");

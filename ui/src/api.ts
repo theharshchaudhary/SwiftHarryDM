@@ -213,13 +213,14 @@ export type CoreEvent =
 
 export type WindowKind =
   | "add" | "info" | "progress" | "complete" | "options" | "scheduler" | "batch"
-  | "properties" | "about" | "countdown" | "links" | "pairing" | "browser" | "drop";
+  | "properties" | "about" | "countdown" | "links" | "pairing" | "browser" | "drop" | "login";
 
 export const api = {
   state: () => invoke<AppState>("get_state"),
   submit: (spec: JobSpec, mode: StartMode) => invoke<string>("submit", { spec, mode }),
   submitMany: (specs: JobSpec[], mode: StartMode) => invoke<string[]>("submit_many", { specs, mode }),
   pause: (ids: string[]) => invoke<void>("pause", { ids }),
+  retry: (ids: string[]) => invoke<void>("retry", { ids }),
   resume: (ids: string[]) => invoke<void>("resume", { ids }),
   cancel: (ids: string[]) => invoke<void>("cancel", { ids }),
   remove: (ids: string[], deleteFiles: boolean) => invoke<void>("remove", { ids, deleteFiles }),

@@ -20,8 +20,8 @@ SwiftHarryDM should have, written and drawn by us (no IDM text, code or images a
 - [x] Download progress: per-file speed limit remembered across stop/resume
 - [x] Download progress: options on completion (show complete dialog, exit, turn off computer, force processes to close)
 - [x] Delete confirmation: "also delete downloaded files from disk", "Don't show again"; separate dialog for unfinished downloads
-- [ ] "IDM could not take over the download" notice with "Don't show again"
-- [ ] Authentication dialog when a server asks for a login, with "Save this password"
+- [x] "IDM could not take over the download" notice with "Don't show again"
+- [x] Authentication dialog when a server asks for a login, with "Save this password"
 
 ## 2. Main window
 

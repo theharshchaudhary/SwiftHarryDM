@@ -34,6 +34,7 @@ fn spec(kind: &str) -> Option<Spec> {
         "pairing" => s("Connect browser extension", 440.0, 300.0, false, Some("pid"), true),
         "browser" => s("Connect your browser", 600.0, 330.0, false, None, false),
         "drop" => s("Drop target", 88.0, 88.0, false, None, true),
+        "login" => s("Login required", 460.0, 270.0, false, Some("id"), false),
         _ => return None,
     })
 }
@@ -110,7 +111,7 @@ pub fn open(app: &AppHandle, kind: &str, params: &[(String, String)]) -> Result<
         return Ok(());
     }
     // Windows that answer something done in the browser open in front of it, like IDM's.
-    let to_front = matches!(kind, "info" | "links" | "pairing" | "complete" | "countdown");
+    let to_front = matches!(kind, "info" | "links" | "pairing" | "complete" | "countdown" | "login");
     if let Some(main) = app.get_webview_window("main") {
         if main.is_visible().unwrap_or(false) && !to_front {
             b = b.parent(&main).map_err(|e| e.to_string())?;
