@@ -32,6 +32,9 @@ pub struct AppState {
     pub after: Mutex<HashMap<String, AfterAction>>,
     /// Downloads started from the UI whose progress window should open once data flows.
     pub watch_progress: Mutex<HashSet<String>>,
+    /// Downloads started while "Download File Info" is still open: no progress or complete
+    /// window until the user decides there.
+    pub held: Mutex<HashSet<String>>,
     /// Last state seen per download, to detect transitions.
     seen: Mutex<HashMap<String, JobState>>,
     exiting: Mutex<bool>,
@@ -112,7 +115,7 @@ async fn pump_events(app: AppHandle) {
                     if settings.sound_on_complete {
                         system::beep();
                     }
-                    if settings.show_complete_dialog && s.queue_id.is_none() {
+                    if settings.show_complete_dialog && s.queue_id.is_none() && !state.held.lock().unwrap().contains(&s.id) {
                         open_logged(&app, "complete", &[("id".into(), s.id.clone())]);
                     }
                     let after = state.after.lock().unwrap().remove(&s.id).unwrap_or_default();
@@ -396,6 +399,7 @@ pub fn run() {
                 mgr,
                 after: Mutex::new(HashMap::new()),
                 watch_progress: Mutex::new(HashSet::new()),
+                held: Mutex::new(HashSet::new()),
                 seen: Mutex::new(HashMap::new()),
                 exiting: Mutex::new(false),
                 api: Mutex::new(Err("starting".into())),
@@ -463,6 +467,9 @@ pub fn run() {
             commands::delete_queue,
             commands::move_to_queue,
             commands::set_description,
+            commands::relocate,
+            commands::hold,
+            commands::release,
             commands::set_speed_limit,
             commands::set_priority,
             commands::set_job_after,

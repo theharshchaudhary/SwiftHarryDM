@@ -122,6 +122,9 @@ pub struct Overrides {
     /// "now" or "later".
     pub mode: Option<String>,
     pub queue_id: Option<String>,
+    /// Started early, while the file-info window is still open: no progress window yet.
+    #[serde(default)]
+    pub quiet: bool,
 }
 
 /// What the app does for the API (all calls must return quickly).
@@ -195,7 +198,7 @@ impl ApiHandle {
         let (spec, mode) = self.inner.spec_for(&req, &o);
         let id = self.inner.mgr.submit(spec, mode)?;
         self.inner.confirmations.lock().unwrap().insert(request_id.into(), Confirmation::Accepted(id.clone()));
-        if mode == StartMode::Now {
+        if mode == StartMode::Now && !o.quiet {
             self.inner.hooks.started(&id);
         }
         Ok(id)

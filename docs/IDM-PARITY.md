@@ -8,10 +8,10 @@ SwiftHarryDM should have, written and drawn by us (no IDM text, code or images a
 
 ## 1. Download flow
 
-- [ ] Download File Info: the download starts while the window is shown (IDM default), with an option to turn this off
-- [ ] Download File Info: "Remember this path for <category>" checkbox
+- [x] Download File Info: the download starts while the window is shown (IDM default), with an option to turn this off
+- [x] Download File Info: "Remember this path for <category>" checkbox
 - [ ] Download File Info: Zip preview (list the archive's files before downloading, read by ranges)
-- [ ] Download File Info: "Download later" offers the queue choice (option: show queue selection panel)
+- [x] Download File Info: "Download later" offers the queue choice (option: show queue selection panel)
 - [x] Download File Info: opens in front of the browser and takes the keyboard
 - [ ] Duplicate link dialog: numbered name / overwrite / show complete or resume; remember choice
 - [ ] Twice-cancelled automatic download: offer to add the site or the address to exceptions

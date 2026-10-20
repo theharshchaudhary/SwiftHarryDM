@@ -403,6 +403,30 @@ async fn cookies_and_site_logins_are_scoped() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn relocate_while_downloading_and_after_completion() {
+    // IDM starts downloading while "Download File Info" is open; the folder and name chosen
+    // there are applied afterwards.
+    let e = env().await;
+    let b = Body::gen("reloc", 12 * MIB);
+    let id = e.submit(&e.srv.add("/reloc.bin", Resource::new(b.clone()).etag("\"r\"").throttle(2 * MIB)));
+    e.m.wait_for(&id, &[S::Downloading], Duration::from_secs(10)).await;
+    tokio::time::sleep(Duration::from_millis(800)).await;
+    let other = std::path::Path::new(&e.dest).parent().unwrap().join("Elsewhere");
+    e.m.relocate(&id, other.to_str().unwrap(), Some("renamed.bin".into()));
+    let s = e.m.wait_for(&id, DONE, Duration::from_secs(60)).await.unwrap();
+    ok(&s, &b);
+    assert_eq!(s.final_path.as_deref(), Some(other.join("renamed.bin").to_str().unwrap()));
+    assert!(e.files().is_empty(), "nothing left in the first folder: {:?}", e.files());
+    // A finished file moves too.
+    let third = std::path::Path::new(&e.dest).parent().unwrap().join("Third");
+    e.m.relocate(&id, third.to_str().unwrap(), None);
+    e.m.sync().await;
+    let s = e.m.get(&id).unwrap();
+    assert_eq!(s.final_path.as_deref(), Some(third.join("renamed.bin").to_str().unwrap()));
+    assert!(third.join("renamed.bin").is_file() && !other.join("renamed.bin").exists());
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn overall_speed_limit_is_shared_fairly() {
     let mut st = Settings::default();
     st.speed_limit = 4 * MIB;

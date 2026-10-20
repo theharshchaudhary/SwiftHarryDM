@@ -124,30 +124,21 @@ pub fn open(app: &AppHandle, kind: &str, params: &[(String, String)]) -> Result<
     Ok(())
 }
 
-/// Put a window in front of the app the user is working in (the browser) and give it the
-/// keyboard. Windows refuses SetForegroundWindow to a background app, so for a moment this
-/// thread shares input with the foreground window's thread, as dialogs that must be seen do.
+/// Put a window in front of the app the user is working in (the browser). Being made topmost
+/// for a moment shows it above every other window even when Windows refuses to hand a
+/// background app the keyboard; then it asks for the keyboard as well.
 pub fn bring_to_front(w: &tauri::WebviewWindow) {
     use windows::Win32::Foundation::HWND;
-    use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
     use windows::Win32::UI::WindowsAndMessaging::{
-        BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow, SetWindowPos, HWND_NOTOPMOST, HWND_TOPMOST, SWP_NOMOVE, SWP_NOSIZE,
-        SWP_SHOWWINDOW,
+        SetForegroundWindow, SetWindowPos, HWND_NOTOPMOST, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
     };
     let Ok(h) = w.hwnd() else { return };
     let hwnd = HWND(h.0 as _);
     unsafe {
-        let me = GetCurrentThreadId();
-        let fg = GetWindowThreadProcessId(GetForegroundWindow(), None);
-        let attached = fg != 0 && fg != me && AttachThreadInput(me, fg, true).as_bool();
-        // Briefly topmost: shows the window above the browser even if focus is refused.
-        let _ = SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-        let _ = SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-        let _ = BringWindowToTop(hwnd);
+        let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOACTIVATE;
+        let _ = SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags);
+        let _ = SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
         let _ = SetForegroundWindow(hwnd);
-        if attached {
-            let _ = AttachThreadInput(me, fg, false);
-        }
     }
 }
 

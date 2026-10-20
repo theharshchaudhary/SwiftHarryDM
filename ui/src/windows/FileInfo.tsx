@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, windowParams, type Job, type MediaInfo, type UrlInfo } from "../api";
 import * as F from "../format";
-import { Dialog, Loading } from "../components/Dialog";
+import { Check, Dialog, Loading } from "../components/Dialog";
 import { ComponentsBanner, useComponents } from "../components/Components";
 import { Icon, categoryIcon } from "../icons";
 import { useLive, useTheme } from "../store";
@@ -30,6 +30,22 @@ const PRESETS: [string, string][] = [
 const AUDIO = new Set(["mp3", "m4a"]);
 
 /** "Download File Info": confirm name, category and folder (or video quality), then start now or later. */
+/** How far the download that started while this window is open has got. */
+function EarlyProgress({ id }: { id: string }) {
+  const live = useLive();
+  const p = live?.progressMap.get(id);
+  const j = live?.jobMap.get(id);
+  if (j?.state === "COMPLETED") return <span className="ok">Already finished. Choose where to keep it.</span>;
+  if (!p) return <span className="muted">Starting…</span>;
+  const pct = p.total ? Math.floor((p.downloaded / p.total) * 100) : null;
+  return (
+    <span className="muted">
+      {F.size(p.downloaded)}
+      {pct != null ? ` (${pct}%)` : ""} at {F.speed(p.speed)}
+    </span>
+  );
+}
+
 export default function FileInfo() {
   const live = useLive();
   useTheme(live?.settings.theme);
@@ -49,12 +65,22 @@ export default function FileInfo() {
   const [dups, setDups] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [remember, setRemember] = useState(false);
+  // Like IDM, the file starts downloading while this window is open; the choices made here
+  // are applied when "Start download" or "Download later" is pressed.
+  const [early, setEarly] = useState<{ id: string; dir: string; file: string } | null>(null);
+  const decided = useRef(false);
+  const earlyRef = useRef<string | null>(null);
   const comps = useComponents();
 
-  // A browser request that is closed without a decision counts as cancelled.
+  // Closed without a decision: a browser request counts as rejected, and a download that
+  // started early is removed with its partial data.
   useEffect(() => {
-    if (!rid) return;
-    const off = () => api.rejectRequest(rid);
+    const off = () => {
+      if (decided.current) return;
+      if (rid) api.rejectRequest(rid);
+      if (earlyRef.current) api.remove([earlyRef.current], true);
+    };
     window.addEventListener("beforeunload", off);
     return () => window.removeEventListener("beforeunload", off);
   }, [rid]);
@@ -123,6 +149,30 @@ export default function FileInfo() {
     if (name) setPath(joinPath(cat ? folderFor(cat) : settings.download_dir, name));
   }, [info, name, settings, folderFor, pathTouched, isMedia, quality]);
 
+  // Start early once the address is known to be a file (not a video page) and nothing needs
+  // asking first (a duplicate the user must decide about).
+  const dupAsk = dups.length > 0 && settings?.duplicate_policy === "ask";
+  useEffect(() => {
+    if (!settings?.start_while_info || early || earlyRef.current || probing || probeErr || !info || info.is_web_page || isMedia || dupAsk || !path) return;
+    const [dir, file] = splitPath(path);
+    earlyRef.current = "starting";
+    (async () => {
+      try {
+        const id = rid
+          ? await api.resolveRequest(rid, { dest_dir: dir, filename: file, category: category || null, mode: "now", quiet: true })
+          : await api.submit(
+              { url, dest_dir: dir, kind: "auto", filename: file, media: null, format_label: "best", referer: params.get("referer"), source: "info", category: category || null, description: null, queue_id: null },
+              "now",
+            );
+        earlyRef.current = id;
+        api.hold(id);
+        setEarly({ id, dir, file });
+      } catch {
+        earlyRef.current = null; // fall back to starting on "Start download"
+      }
+    })();
+  }, [settings?.start_while_info, early, probing, probeErr, info, isMedia, dupAsk, path, rid, url, category, params]);
+
   if (!live || !settings) return <Loading />;
 
   const changeCategory = (c: string) => {
@@ -155,6 +205,26 @@ export default function FileInfo() {
     }
     setBusy(true);
     try {
+      if (remember) {
+        // "Remember this path": the category's folder (or the main folder for General).
+        const s = { ...settings };
+        if (category) s.categories = s.categories.map((c) => (c.name === category ? { ...c, folder: dir } : c));
+        else s.download_dir = dir;
+        await api.saveSettings(s);
+      }
+      if (early) {
+        decided.current = true;
+        const id = early.id;
+        // "Later": stop first, so moving the file does not start it again.
+        if (mode === "later") await api.pause([id]);
+        if (dir !== early.dir || (!isMedia && file !== early.file)) await api.relocate(id, dir, isMedia ? null : file || null);
+        if (desc.trim()) await api.setDescription(id, desc.trim());
+        if (mode === "later") await api.moveToQueue([id], queueId);
+        // After the move has been applied, so a finished file is shown where it now is.
+        await api.release(id, mode === "now");
+        api.closeSelf();
+        return;
+      }
       if (rid) {
         await api.resolveRequest(rid, {
           dest_dir: dir,
@@ -226,7 +296,18 @@ export default function FileInfo() {
               ))}
             </select>
           </span>
-          <button className="btn" onClick={() => { if (rid) api.rejectRequest(rid); api.closeSelf(); }}>Cancel</button>
+          <button
+            className="btn"
+            onClick={async () => {
+              decided.current = true;
+              if (rid && !early) await api.rejectRequest(rid);
+              // Before closing: a closing window may drop calls still on their way.
+              if (earlyRef.current && earlyRef.current !== "starting") await api.remove([earlyRef.current], true).catch(() => {});
+              api.closeSelf();
+            }}
+          >
+            Cancel
+          </button>
         </>
       }
     >
@@ -296,7 +377,16 @@ export default function FileInfo() {
         <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} />
         <span>Size</span>
         <span className="muted">{sizeText}</span>
+        {early && (
+          <>
+            <span>Downloaded</span>
+            <EarlyProgress id={early.id} />
+          </>
+        )}
       </div>
+      <Check checked={remember} onChange={setRemember}>
+        Remember this folder for the “{category || "General"}” category
+      </Check>
       {isMedia && <ComponentsBanner />}
       {isMedia && media && <div className="hint">The file is named after the video. Protected (DRM) videos, playlists and live streams are not downloaded.</div>}
       {!isMedia && info?.is_web_page && !probing && (

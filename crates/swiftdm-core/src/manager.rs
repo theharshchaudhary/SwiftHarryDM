@@ -16,7 +16,7 @@ use crate::cancel::{CancelToken, StopReason};
 use crate::engine::{Engine, EngineError, Outcome, Reporter, RunCtx};
 use crate::errors::{from_io, ErrorCode, ErrorInfo, SdmError};
 use crate::events::{Event, EventHub};
-use crate::fs::collisions::{finalize_move, Reservations};
+use crate::fs::collisions::{finalize_move, move_path, Reservations};
 use crate::fs::names::sanitize_component;
 use crate::limiter::Limiter;
 use crate::models::{Job, JobPatch, JobSnapshot, JobSpec, JobState, ProgressSnapshot};
@@ -73,6 +73,8 @@ enum Cmd {
     SetDescription(String, Option<String>),
     SetSpeedLimit(String, Option<u64>),
     SetPriority(String, i32),
+    /// New folder and/or file name; resume afterwards if it was downloading.
+    Relocate(String, String, Option<String>),
     ApplyRefresh(String, String, crate::http::probe::HttpProbe, oneshot::Sender<Result<(), String>>),
     Update(String, JobPatch),
     Phase(String, String),
@@ -212,6 +214,7 @@ impl Manager {
             quota_blocked: false,
             quota_paused: HashSet::new(),
             job_limiters: HashMap::new(),
+            pending_relocate: HashMap::new(),
         };
         actor.recover()?;
         let mgr = Manager {
@@ -302,6 +305,13 @@ impl Manager {
         let _ = self.tx.send(Cmd::SetSpeedLimit(id.into(), limit.filter(|l| *l > 0)));
     }
     /// Higher priority starts first within its queue (used to reorder queue files).
+    /// Save a download to another folder and/or under another name, also while it downloads
+    /// (it is paused, its data moved, and resumed) or after it finished (the file is moved).
+    /// IDM starts downloading while "Download File Info" is open; this applies the choices
+    /// made there afterwards.
+    pub fn relocate(&self, id: &str, dir: &str, name: Option<String>) {
+        let _ = self.tx.send(Cmd::Relocate(id.into(), dir.into(), name));
+    }
     pub fn set_priority(&self, id: &str, priority: i32) {
         let _ = self.tx.send(Cmd::SetPriority(id.into(), priority));
     }
@@ -475,6 +485,8 @@ pub struct Actor {
     /// Downloads stopped by the quota (not queue members), resumed when it frees up.
     quota_paused: HashSet<String>,
     job_limiters: HashMap<String, Arc<Limiter>>,
+    /// Relocations waiting for a running download to stop: (folder, name, resume afterwards).
+    pending_relocate: HashMap<String, (String, Option<String>, bool)>,
 }
 
 impl Actor {
@@ -567,6 +579,7 @@ impl Actor {
                     self.jobs.insert(id, j);
                 }
             }
+            Cmd::Relocate(id, dir, name) => self.on_relocate(&id, dir, name),
             Cmd::SetPriority(id, p) => {
                 if let Some(mut j) = self.jobs.remove(&id) {
                     j.spec.priority = p;
@@ -805,6 +818,78 @@ impl Actor {
                 me.set_state(j, S::Queued, None, None, false);
             }
         });
+    }
+
+    fn on_relocate(&mut self, id: &str, dir: String, name: Option<String>) {
+        let Some(state) = self.jobs.get(id).map(|j| j.state) else { return };
+        if state.running() {
+            // Applied when the worker has stopped (see on_done). A download that was moving
+            // data continues afterwards; one already being paused stays paused.
+            let resume = matches!(state, S::Starting | S::Downloading | S::Postprocessing);
+            self.pending_relocate.insert(id.into(), (dir, name, resume));
+            if resume {
+                self.on_pause(id);
+            }
+            return;
+        }
+        self.with_job(id, |me, j| {
+            if let Err(e) = me.relocate_now(j, &dir, name) {
+                me.log(&j.id, "error", &format!("Could not move the download to {dir}: {e}"));
+            }
+        });
+    }
+
+    fn relocate_now(&mut self, j: &mut Job, dir: &str, name: Option<String>) -> std::io::Result<()> {
+        let dir = dir.trim().replace('/', "\\");
+        std::fs::create_dir_all(crate::fs::long_path(&dir))?;
+        let overwrite = self.overwrite();
+        if j.state == S::Completed {
+            let Some(fp) = j.final_path.clone() else { return Ok(()) };
+            let current = Path::new(&fp).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            let desired = sanitize_component(&name.unwrap_or(current));
+            if Path::new(&fp) == Path::new(&dir).join(&desired) {
+                return Ok(());
+            }
+            let n = self.res.reserve(&j.id, &dir, &desired, overwrite)?;
+            let dst = Path::new(&dir).join(&n);
+            move_path(Path::new(&fp), &dst)?;
+            self.res.release(&j.id);
+            j.final_path = Some(dst.to_string_lossy().into_owned());
+            j.reserved_name = Some(n.clone());
+            j.spec.filename = Some(n);
+            j.spec.dest_dir = dir;
+            self.save(j);
+            return Ok(());
+        }
+        let desired = name.or_else(|| j.spec.filename.clone()).or_else(|| j.reserved_name.clone());
+        self.res.release(&j.id);
+        j.spec.dest_dir = dir.clone();
+        j.reserved_name = None;
+        if let Some(n) = desired {
+            let n = sanitize_component(&n);
+            j.spec.filename = Some(n.clone());
+            j.reserved_name = self.res.reserve(&j.id, &dir, &n, overwrite).ok();
+        }
+        // Data already downloaded moves along (the HTTP part file or the video's work folder).
+        if let Some(t) = j.temp_path.clone() {
+            if crate::fs::long_path(&t).exists() {
+                let file = Path::new(&t).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                let new_name = if file.ends_with(".sdmpart") {
+                    format!(".{}.{}.sdmpart", j.reserved_name.as_deref().unwrap_or("download"), &j.id[..8])
+                } else {
+                    file
+                };
+                let dst = Path::new(&dir).join(new_name);
+                if dst != Path::new(&t) {
+                    move_path(Path::new(&t), &dst)?;
+                }
+                j.temp_path = Some(dst.to_string_lossy().into_owned());
+            } else {
+                j.temp_path = None;
+            }
+        }
+        self.save(j);
+        Ok(())
     }
 
     fn on_retry(&mut self, id: &str) {
@@ -1059,6 +1144,17 @@ impl Actor {
                 me.via_queue.remove(&j.id);
             }
         });
+        if let Some((dir, name, resume)) = self.pending_relocate.remove(id) {
+            let resume = resume && self.jobs.get(id).is_some_and(|j| j.state == S::Paused);
+            self.with_job(id, |me, j| {
+                if let Err(e) = me.relocate_now(j, &dir, name) {
+                    me.log(&j.id, "error", &format!("Could not move the download to {dir}: {e}"));
+                }
+            });
+            if resume {
+                self.on_resume(id);
+            }
+        }
         self.maybe_remove(id);
     }
 

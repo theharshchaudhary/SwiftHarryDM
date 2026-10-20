@@ -58,6 +58,8 @@ pub struct Settings {
     pub minimize_to_tray: bool,
     pub start_with_windows: bool,
     pub start_minimized: bool,
+    /// Like IDM: the download starts while "Download File Info" is shown.
+    pub start_while_info: bool,
     pub av_scan_enabled: bool,
     pub av_scan_command: String,
     pub sound_on_complete: bool,
@@ -110,6 +112,7 @@ impl Default for Settings {
             minimize_to_tray: true,
             start_with_windows: true,
             start_minimized: false,
+            start_while_info: true,
             av_scan_enabled: false,
             av_scan_command: r#""C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "{file}" -DisableRemediation"#
                 .into(),

@@ -178,6 +178,29 @@ const scenarios = {
     await assertSha("report 2026.pdf", "/s6/get");
   },
 
+  async starts_while_info_is_open(app) {
+    // Like IDM: the file downloads while "Download file info" is open; the folder chosen
+    // there is applied when Start is pressed. Cancel removes the download and its data.
+    const main = await app.window("SwiftHarryDM");
+    const info = await addThroughUi(app, main, URL_("/s1/big64.bin"));
+    await until(async () => /\d MB \(\d+%\)/.test(await info.text()), 20000, 250, "the early download to show progress");
+    const other = join(work, "elsewhere");
+    await info.fill("input.grow", join(other, "moved.bin"));
+    await info.click("Start download");
+    await completeFor(app, "moved.bin", 90000).then((w) => w.click("Close"));
+    assert(existsSync(join(other, "moved.bin")), "the file was saved in the folder chosen in the window");
+    assert((await sha256(join(other, "moved.bin"))) === expected()["/s1/big64.bin"].sha256, "moved.bin: SHA-256 differs");
+    assert(!findFile(DL, "big64.bin"), "nothing was left under the first name");
+
+    const before = (await main.invoke("get_state")).jobs.length;
+    const info2 = await addThroughUi(app, main, URL_("/s2/norange.bin"));
+    await until(async () => /\d MB/.test(await info2.text()), 20000, 250, "the second early download to start");
+    await info2.click("Cancel");
+    await until(async () => (await main.invoke("get_state")).jobs.length === before, 10000, 200, "the cancelled download to be removed");
+    await sleep(500);
+    assert(!findFile(DL, "norange.bin") && !readdirSync(DL, { recursive: true }).some((f) => String(f).includes("sdmpart")), "no data left after Cancel");
+  },
+
   async pause_resume(app) {
     const main = await app.window("SwiftHarryDM");
     const s = await main.invoke("get_state");

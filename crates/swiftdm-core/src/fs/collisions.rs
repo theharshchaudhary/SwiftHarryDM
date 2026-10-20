@@ -98,6 +98,36 @@ pub fn rename_noclobber(src: &Path, dst: &Path) -> io::Result<()> {
     })
 }
 
+/// Move a file or folder, also to another drive (copy, then delete the original). Fails if
+/// `dst` exists.
+pub fn move_path(src: &Path, dst: &Path) -> io::Result<()> {
+    match rename_noclobber(src, dst) {
+        Err(e) if e.raw_os_error() == Some(17) => {
+            // ERROR_NOT_SAME_DEVICE: another drive.
+            copy_all(src, dst)?;
+            if long_path(src).is_dir() {
+                std::fs::remove_dir_all(long_path(src))
+            } else {
+                std::fs::remove_file(long_path(src))
+            }
+        }
+        r => r,
+    }
+}
+
+fn copy_all(src: &Path, dst: &Path) -> io::Result<()> {
+    if long_path(src).is_dir() {
+        std::fs::create_dir_all(long_path(dst))?;
+        for e in std::fs::read_dir(long_path(src))? {
+            let e = e?;
+            copy_all(&src.join(e.file_name()), &dst.join(e.file_name()))?;
+        }
+        Ok(())
+    } else {
+        std::fs::copy(long_path(src), long_path(dst)).map(|_| ())
+    }
+}
+
 /// Move a finished temp artifact to its final name and return the final path.
 pub fn finalize_move(
     src: &Path,

@@ -86,6 +86,7 @@ export interface Settings {
   minimize_to_tray: boolean;
   start_with_windows: boolean;
   start_minimized: boolean;
+  start_while_info: boolean;
   av_scan_enabled: boolean;
   av_scan_command: string;
   sound_on_complete: boolean;
@@ -180,6 +181,7 @@ export interface Overrides {
   description?: string | null;
   mode?: StartMode;
   queue_id?: string | null;
+  quiet?: boolean;
 }
 
 export type Series =
@@ -225,6 +227,9 @@ export const api = {
   deleteQueue: (id: string) => invoke<void>("delete_queue", { id }),
   moveToQueue: (ids: string[], queueId: string | null) => invoke<void>("move_to_queue", { ids, queueId }),
   setDescription: (id: string, description: string | null) => invoke<void>("set_description", { id, description }),
+  relocate: (id: string, dir: string, name: string | null) => invoke<void>("relocate", { id, dir, name }),
+  hold: (id: string) => invoke<void>("hold", { id }),
+  release: (id: string, show: boolean) => invoke<void>("release", { id, show }),
   setSpeedLimit: (id: string, limit: number | null) => invoke<void>("set_speed_limit", { id, limit }),
   setPriority: (id: string, priority: number) => invoke<void>("set_priority", { id, priority }),
   setJobAfter: (id: string, action: AfterAction) => invoke<void>("set_job_after", { id, action }),

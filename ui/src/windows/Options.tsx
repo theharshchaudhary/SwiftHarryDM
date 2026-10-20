@@ -153,6 +153,7 @@ function Downloads({ s, set }: P) {
         <legend>Windows</legend>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <Check checked={s.show_download_info_dialog} onChange={(v) => set({ show_download_info_dialog: v })}>Show the “Download file info” window before a download starts</Check>
+          <Check checked={s.start_while_info} disabled={!s.show_download_info_dialog} onChange={(v) => set({ start_while_info: v })}>Start downloading while the “Download file info” window is open</Check>
           <Check checked={s.show_progress_window} onChange={(v) => set({ show_progress_window: v })}>Show a progress window for each download I start</Check>
           <Check checked={s.show_complete_dialog} onChange={(v) => set({ show_complete_dialog: v })}>Show the “Download complete” window</Check>
         </div>

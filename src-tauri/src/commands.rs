@@ -164,6 +164,45 @@ pub fn move_to_queue(st: State<AppState>, ids: Vec<String>, queue_id: Option<Str
     ids.iter().for_each(|id| st.mgr.move_to_queue(id, queue_id.clone()));
 }
 
+/// Apply the folder and name chosen in "Download File Info" to a download that started while
+/// the window was open (or any download: it is moved, also when finished).
+#[tauri::command]
+pub fn relocate(st: State<AppState>, id: String, dir: String, name: Option<String>) {
+    st.mgr.relocate(&id, &dir, name);
+}
+
+/// A download started while "Download File Info" is open: hold its windows back.
+#[tauri::command]
+pub fn hold(st: State<AppState>, id: String) {
+    st.held.lock().unwrap().insert(id);
+}
+
+/// The user decided in "Download File Info": show what IDM shows from here on (the complete
+/// window if it already finished, otherwise the progress window). Async: windows must not be
+/// created on the main thread from a synchronous command (WebView2 deadlocks).
+#[tauri::command]
+pub async fn release(app: AppHandle, st: State<'_, AppState>, id: String, show: bool) -> R<()> {
+    release_now(&app, &st, id, show);
+    Ok(())
+}
+
+fn release_now(app: &AppHandle, st: &AppState, id: String, show: bool) {
+    st.held.lock().unwrap().remove(&id);
+    if !show {
+        return;
+    }
+    let s = st.mgr.settings().get();
+    match st.mgr.get(&id).map(|j| j.state) {
+        Some(swiftdm_core::models::JobState::Completed) if s.show_complete_dialog => {
+            let _ = crate::windows::open(app, "complete", &[("id".into(), id)]);
+        }
+        Some(state) if !state.terminal() && s.show_progress_window => {
+            let _ = crate::windows::open(app, "progress", &[("id".into(), id)]);
+        }
+        _ => {}
+    }
+}
+
 #[tauri::command]
 pub fn set_description(st: State<AppState>, id: String, description: Option<String>) {
     st.mgr.set_description(&id, description);
