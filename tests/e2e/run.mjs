@@ -275,7 +275,7 @@ const scenarios = {
       ["options", {}, "Options", "Connection"],
       ["scheduler", {}, "Scheduler", "Start this queue automatically"],
       ["batch", {}, "Batch download", "Replace * with"],
-      ["links", { source: "typed", urls: JSON.stringify(["https://a.example/1.zip"]) }, "Choose files to download", "a.example"],
+      ["links", { source: "typed", urls: JSON.stringify(["https://a.example/1.zip"]) }, "Choose files to download", "1.zip"],
       ["about", {}, "About SwiftHarryDM", "Version"],
       ["browser", {}, "Connect your browser", "extension"],
       ["options", { tab: "video" }, "Options", "yt-dlp"],

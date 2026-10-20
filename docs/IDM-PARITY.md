@@ -25,8 +25,10 @@ SwiftHarryDM should have, written and drawn by us (no IDM text, code or images a
 
 ## 2. Main window
 
+- [x] Download All Links window: types and sizes checked in the background, hide web pages / images / repeated files, link texts as descriptions, save by category / one category / one folder, rename with a pattern, check / uncheck all
+
 - [ ] Menus with IDM's structure: Tasks, File, Downloads, View, Help (items listed in the menu resource)
-- [ ] Tasks: Export / Import to and from the IDM export file (`.ef2`) and text file; export dialog (queue / selected / all)
+- [x] Tasks: Export / Import to and from the IDM export file (`.ef2`) and text file; export dialog (queue / selected / all)
 - [ ] File: Stop download, Remove, Download now, Redownload
 - [ ] Downloads: Pause all, Stop all, Delete all completed, Find, Find next, Scheduler, Start/Stop queue submenus, Speed limiter submenu, Options
 - [ ] View: Hide categories; Arrange files by order of addition, name, size, status, time left, rate, last try, description, save path, referer, parent web page

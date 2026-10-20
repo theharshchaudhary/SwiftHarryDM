@@ -136,7 +136,9 @@ function MainView({ live }: { live: Live }) {
   const [openQueues, setOpenQueues] = useState(() => pref("openQueues", true));
   const [ctx, setCtx] = useState<{ x: number; y: number; items: MenuEntry[] } | null>(null);
   const [find, setFind] = useState<{ open: boolean; text: string; msg: string }>({ open: false, text: "", msg: "" });
-  const [modal, setModal] = useState<null | { kind: "delete"; ids: string[] } | { kind: "columns" } | { kind: "deleteDone" }>(null);
+  const [modal, setModal] = useState<
+    null | { kind: "delete"; ids: string[] } | { kind: "columns" } | { kind: "deleteDone" } | { kind: "export"; format: "txt" | "ef2" }
+  >(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updating, setUpdating] = useState<{ done: number; total: number | null } | null>(null);
@@ -260,13 +262,18 @@ function MainView({ live }: { live: Live }) {
     scheduler: (q?: string) => api.openWindow("scheduler", q ? { queue: q } : {}),
     open: (j: Job) => (j.state === "COMPLETED" ? api.openFile(j.id) : api.openWindow("progress", { id: j.id })),
     properties: (j: Job) => api.openWindow("properties", { id: j.id }),
-    exportList: async (ids: string[] | null) => {
-      const n = await api.exportList(ids);
+    exportList: async (ids: string[] | null, format: "txt" | "ef2" = "txt") => {
+      const n = await api.exportList(ids, format);
       if (n > 0) alert(`Exported ${n} addresses.`);
     },
     importList: async () => {
-      const urls = await api.importList();
-      if (urls.length) api.openWindow("links", { source: "import", urls: JSON.stringify(urls) });
+      const list = await api.importList().catch((e) => {
+        alert(String(e));
+        return [];
+      });
+      if (!list.length) return;
+      const referers = Object.fromEntries(list.filter((e) => e.referer).map((e) => [e.url, e.referer]));
+      api.openWindow("links", { source: "import", urls: JSON.stringify(list.map((e) => e.url)), referers: JSON.stringify(referers) });
     },
     toggleLimiter: async (on: boolean) => {
       const last = pref<number>("lastLimit", 500 * 1024);
@@ -382,7 +389,7 @@ function MainView({ live }: { live: Live }) {
     },
     { label: "Delete", hint: "Del", disabled: !selected.length, onClick: act.del },
     "sep",
-    { label: "Export selected…", disabled: !selected.length, onClick: () => act.exportList(selIds) },
+    { label: "Export selected…", disabled: !selected.length, onClick: () => act.exportList(selIds, "ef2") },
     { label: "Properties", disabled: !one, onClick: () => one && act.properties(one) },
     ];
   };
@@ -401,11 +408,17 @@ function MainView({ live }: { live: Live }) {
         {
           label: "Export",
           submenu: [
-            { label: "All downloads to text file…", onClick: () => act.exportList(null) },
-            { label: "Selected downloads to text file…", disabled: !selected.length, onClick: () => act.exportList(selIds) },
+            { label: "To IDM export file…", onClick: () => setModal({ kind: "export", format: "ef2" }) },
+            { label: "To text file…", onClick: () => setModal({ kind: "export", format: "txt" }) },
           ],
         },
-        { label: "Import from text file…", onClick: act.importList },
+        {
+          label: "Import",
+          submenu: [
+            { label: "From IDM export file…", onClick: act.importList },
+            { label: "From text file…", onClick: act.importList },
+          ],
+        },
         "sep",
         { label: "Exit", onClick: () => api.exitApp() },
       ],
@@ -811,6 +824,18 @@ function MainView({ live }: { live: Live }) {
       {ctx && <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} />}
       {modal?.kind === "delete" && <DeleteModal live={live} ids={modal.ids} onClose={() => setModal(null)} />}
       {modal?.kind === "deleteDone" && <DeleteDoneModal live={live} onClose={() => setModal(null)} />}
+      {modal?.kind === "export" && (
+        <ExportModal
+          format={modal.format}
+          live={live}
+          selected={selIds}
+          onExport={(ids) => {
+            setModal(null);
+            act.exportList(ids, modal.format);
+          }}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal?.kind === "columns" && <ColumnsModal cols={cols} setCols={setCols} onReset={() => { setCols(DEFAULT_COLS); setWidths({}); }} onClose={() => setModal(null)} />}
     </div>
   );
@@ -827,6 +852,29 @@ function TB({ icon, label, onClick, disabled, title, cls, drop }: { icon: string
 }
 
 // ------------------------------------------------------------------ modals inside the main window
+/** IDM's "Export download list": the download queue, the selected files, or all files. */
+function ExportModal({ format, live, selected, onExport, onClose }: { format: "txt" | "ef2"; live: Live; selected: string[]; onExport: (ids: string[] | null) => void; onClose: () => void }) {
+  const [what, setWhat] = useState<"queue" | "selected" | "all">(selected.length ? "selected" : "all");
+  const queueIds = live.jobs.filter((j) => j.queue_id === "main").map((j) => j.id);
+  return (
+    <Modal
+      title={format === "ef2" ? "Export to an IDM export file" : "Export to a text file"}
+      onClose={onClose}
+      foot={
+        <>
+          <button className="btn primary" autoFocus onClick={() => onExport(what === "all" ? null : what === "queue" ? queueIds : selected)}>OK</button>
+          <button className="btn" onClick={onClose}>Cancel</button>
+        </>
+      }
+    >
+      <label className="row"><input type="radio" checked={what === "queue"} disabled={!queueIds.length} onChange={() => setWhat("queue")} /> The download queue ({queueIds.length})</label>
+      <label className="row"><input type="radio" checked={what === "selected"} disabled={!selected.length} onChange={() => setWhat("selected")} /> The selected files ({selected.length})</label>
+      <label className="row"><input type="radio" checked={what === "all"} onChange={() => setWhat("all")} /> All files ({live.jobs.length})</label>
+      {format === "ef2" && <div className="hint">IDM and SwiftHarryDM can both import this file; it keeps each download’s web page.</div>}
+    </Modal>
+  );
+}
+
 function DeleteModal({ live, ids, onClose }: { live: Live; ids: string[]; onClose: () => void }) {
   const [files, setFiles] = useState(false);
   const [quiet, setQuiet] = useState(false);

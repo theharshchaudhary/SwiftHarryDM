@@ -30,7 +30,7 @@ impl ApiHooks for Hooks {
     fn confirm(&self, request_id: &str, req: &DownloadRequest) {
         self.confirms.lock().unwrap().push((request_id.into(), req.clone()));
     }
-    fn links(&self, urls: Vec<String>, _page: Option<String>) {
+    fn links(&self, urls: Vec<String>, _page: Option<String>, _texts: std::collections::HashMap<String, String>) {
         self.links.lock().unwrap().push(urls);
     }
     fn started(&self, job_id: &str) {

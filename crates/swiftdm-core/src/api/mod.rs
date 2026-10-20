@@ -135,7 +135,8 @@ pub trait ApiHooks: Send + Sync {
     /// Ask the user about a download; answer with `ApiHandle::resolve` or `reject`.
     fn confirm(&self, request_id: &str, req: &DownloadRequest);
     /// Several links from a page: let the user choose.
-    fn links(&self, urls: Vec<String>, page_url: Option<String>);
+    /// `texts`: the links' visible texts (IDM: "use link texts as descriptions").
+    fn links(&self, urls: Vec<String>, page_url: Option<String>, texts: HashMap<String, String>);
     /// A download from the extension was added and starts now.
     fn started(&self, job_id: &str);
 }
@@ -408,8 +409,18 @@ async fn links(State(st): State<Arc<Inner>>, h: HeaderMap, body: Bytes) -> Respo
         return err(StatusCode::BAD_REQUEST, "no downloadable links");
     }
     let page = web_url(v.get("pageUrl").and_then(Value::as_str).map(str::to_string));
+    let texts: HashMap<String, String> = v
+        .get("texts")
+        .and_then(Value::as_object)
+        .map(|m| {
+            m.iter()
+                .filter(|(k, _)| urls.contains(k))
+                .filter_map(|(k, t)| t.as_str().map(|t| (k.clone(), t.split_whitespace().collect::<Vec<_>>().join(" ").chars().take(200).collect())))
+                .collect()
+        })
+        .unwrap_or_default();
     let n = urls.len();
-    st.hooks.links(urls, page);
+    st.hooks.links(urls, page, texts);
     (StatusCode::ACCEPTED, Json(json!({ "success": true, "count": n }))).into_response()
 }
 

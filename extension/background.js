@@ -249,7 +249,7 @@ class BackgroundManager {
         return { success: true, streams: (await chrome.storage.session.get(key))[key] || [] };
     }
 
-    async sendLinks(urls, pageUrl) {
+    async sendLinks(urls, pageUrl, texts) {
         const unique = [...new Set(urls.filter((u) => /^https?:/i.test(u)))].slice(0, 5000);
         if (!unique.length) {
             this.notify('SwiftHarryDM', 'No links were found.');
@@ -257,6 +257,7 @@ class BackgroundManager {
         }
         const body = { urls: unique };
         if (pageUrl && /^https?:/i.test(pageUrl)) body.pageUrl = pageUrl;
+        if (texts) body.texts = Object.fromEntries(unique.filter((u) => texts[u]).map((u) => [u, texts[u]]));
         const r = await this.request('/api/links', { method: 'POST', body });
         if (!r.ok) {
             this.notify('Links not sent', r.status === 401 ? 'Connect the extension to SwiftHarryDM first.' : (r.data.error || `HTTP ${r.status}`));
@@ -338,7 +339,7 @@ class BackgroundManager {
                 pairConfirm: () => this.pairConfirm(req.pairingId, req.code),
                 unpair: () => this.unpair(),
                 listJobs: () => this.jobs(),
-                sendLinks: () => this.sendLinks(req.urls || [], req.pageUrl),
+                sendLinks: () => this.sendLinks(req.urls || [], req.pageUrl, req.texts),
                 mediaInfo: () => this.mediaInfo(req.url),
                 getStreams: () => this.streams(sender.tab && sender.tab.id),
                 bypassNext: async () => {

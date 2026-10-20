@@ -54,8 +54,11 @@ impl ApiHooks for Hooks {
         self.open("info", p);
     }
 
-    fn links(&self, urls: Vec<String>, page_url: Option<String>) {
+    fn links(&self, urls: Vec<String>, page_url: Option<String>, texts: std::collections::HashMap<String, String>) {
         let mut p = vec![("source".to_string(), "extension".to_string()), ("urls".into(), serde_json::to_string(&urls).unwrap())];
+        if !texts.is_empty() {
+            p.push(("texts".into(), serde_json::to_string(&texts).unwrap()));
+        }
         if let Some(r) = page_url {
             p.push(("referer".into(), r));
         }

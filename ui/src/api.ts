@@ -177,6 +177,9 @@ export interface Components { ytdlp: string | null; ffmpeg: boolean; ffprobe: bo
 export interface UpdateInfo { version: string; notes: string | null }
 export interface ExtensionSetup { mode: "store" | "manual"; folder: string | null; browser_found: boolean }
 
+/** One address of an IDM export file (or a text list: no referer). */
+export interface Ef2Entry { url: string; referer: string | null; user_agent: string | null }
+
 export interface ZipEntry { name: string; size: number; packed: number; is_dir: boolean }
 
 export interface Overrides {
@@ -259,8 +262,8 @@ export const api = {
   openPath: (path: string) => invoke<void>("open_path", { path }),
   pickFolder: (initial: string | null) => invoke<string | null>("pick_folder", { initial }),
   pickFile: (initial: string | null) => invoke<string | null>("pick_file", { initial }),
-  exportList: (ids: string[] | null) => invoke<number>("export_list", { ids }),
-  importList: () => invoke<string[]>("import_list"),
+  exportList: (ids: string[] | null, format: "txt" | "ef2") => invoke<number>("export_list", { ids, format }),
+  importList: () => invoke<Ef2Entry[]>("import_list"),
   openWindow: (kind: WindowKind, params: Record<string, string> = {}) => invoke<void>("open_window", { kind, params }),
   closeSelf: () => invoke<void>("close_self"),
   closeWindow: (label: string) => invoke<void>("close_window", { label }),

@@ -359,30 +359,40 @@ pub async fn pick_file(app: AppHandle, initial: Option<String>) -> Option<String
 
 /// Save download addresses to a text file, one per line. Returns how many were written.
 #[tauri::command]
-pub async fn export_list(app: AppHandle, st: State<'_, AppState>, ids: Option<Vec<String>>) -> R<usize> {
+pub async fn export_list(app: AppHandle, st: State<'_, AppState>, ids: Option<Vec<String>>, format: Option<String>) -> R<usize> {
     let jobs = st.mgr.snapshot();
-    let urls: Vec<String> = match ids {
-        Some(ids) => ids.iter().filter_map(|id| jobs.iter().find(|j| &j.id == id)).map(|j| j.url.clone()).collect(),
-        None => jobs.iter().map(|j| j.url.clone()).collect(),
+    let picked: Vec<&swiftdm_core::models::JobSnapshot> = match &ids {
+        Some(ids) => ids.iter().filter_map(|id| jobs.iter().find(|j| &j.id == id)).collect(),
+        None => jobs.iter().collect(),
     };
+    // IDM's export file keeps each download's web page; a text file is one address per line.
+    let ef2 = format.as_deref() == Some("ef2");
+    let (name, filter, exts): (&str, &str, &[&str]) = if ef2 { ("downloads.ef2", "IDM export file", &["ef2"]) } else { ("downloads.txt", "Text files", &["txt"]) };
     let Some(path) = app
         .dialog()
         .file()
         .set_title("Export download list")
-        .set_file_name("downloads.txt")
-        .add_filter("Text files", &["txt"])
+        .set_file_name(name)
+        .add_filter(filter, exts)
         .blocking_save_file()
         .and_then(|p| p.into_path().ok())
     else {
         return Ok(0);
     };
-    std::fs::write(&path, urls.join("\r\n") + "\r\n").map_err(|e| format!("Could not write {}: {e}", path.display()))?;
-    Ok(urls.len())
+    let body = if ef2 {
+        let list: Vec<swiftdm_core::ef2::Ef2Entry> =
+            picked.iter().map(|j| swiftdm_core::ef2::Ef2Entry { url: j.url.clone(), referer: j.referer.clone(), user_agent: None }).collect();
+        swiftdm_core::ef2::write(&list)
+    } else {
+        picked.iter().map(|j| j.url.as_str()).collect::<Vec<_>>().join("\r\n") + "\r\n"
+    };
+    std::fs::write(&path, body).map_err(|e| format!("Could not write {}: {e}", path.display()))?;
+    Ok(picked.len())
 }
 
 /// Read web addresses from a text (or HTML) file the user picks.
 #[tauri::command]
-pub async fn import_list(app: AppHandle) -> R<Vec<String>> {
+pub async fn import_list(app: AppHandle) -> R<Vec<swiftdm_core::ef2::Ef2Entry>> {
     let Some(path): Option<PathBuf> = app
         .dialog()
         .file()
@@ -397,11 +407,17 @@ pub async fn import_list(app: AppHandle) -> R<Vec<String>> {
     if bytes.len() > 32 << 20 {
         return Err("The file is too large to import.".into());
     }
-    let urls = batch::extract_urls(&String::from_utf8_lossy(&bytes));
-    if urls.is_empty() {
+    let text = String::from_utf8_lossy(&bytes);
+    // IDM export files keep each address's web page (referrer).
+    let is_ef2 = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("ef2")) || text.trim_start().starts_with('<');
+    let mut list = if is_ef2 { swiftdm_core::ef2::parse(&text) } else { vec![] };
+    if list.is_empty() {
+        list = batch::extract_urls(&text).into_iter().map(|url| swiftdm_core::ef2::Ef2Entry { url, ..Default::default() }).collect();
+    }
+    if list.is_empty() {
         return Err("No web addresses were found in that file.".into());
     }
-    Ok(urls)
+    Ok(list)
 }
 
 /// Async on purpose: creating a webview from a synchronous command deadlocks WebView2.

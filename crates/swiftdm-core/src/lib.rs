@@ -8,6 +8,7 @@ pub mod cancel;
 pub mod capture;
 pub mod categories;
 pub mod engine;
+pub mod ef2;
 pub mod errors;
 pub mod events;
 pub mod fs;

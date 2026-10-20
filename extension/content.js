@@ -250,13 +250,22 @@
     }
 
     // ------------------------------------------------------------------ commands from the extension
+    /** Links on the page (or in the selection), with their visible texts. */
     function links(selectionOnly) {
         let anchors = [...document.querySelectorAll('a[href]')];
         if (selectionOnly) {
             const sel = getSelection();
             anchors = anchors.filter((a) => sel && sel.rangeCount && sel.containsNode(a, true));
         }
-        return anchors.map((a) => a.href).filter((h) => /^https?:/i.test(h));
+        const texts = {};
+        const urls = [];
+        for (const a of anchors) {
+            if (!/^https?:/i.test(a.href)) continue;
+            urls.push(a.href);
+            const t = (a.innerText || a.title || '').trim();
+            if (t && !texts[a.href]) texts[a.href] = t.slice(0, 200);
+        }
+        return { urls, texts };
     }
 
     function allMedia() {
@@ -268,7 +277,7 @@
     chrome.runtime.onMessage.addListener((req) => {
         switch (req.action) {
             case 'collectLinks':
-                send({ action: 'sendLinks', urls: links(!!req.selectionOnly), pageUrl: location.href });
+                send({ action: 'sendLinks', ...links(!!req.selectionOnly), pageUrl: location.href });
                 break;
             case 'contextMenuDownload': {
                 const c = req.context || {};
