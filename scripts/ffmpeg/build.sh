@@ -4,7 +4,8 @@
 # Only what the app and yt-dlp use is enabled: reading MP4/WebM/MKV/MPEG-TS/audio files,
 # joining video and audio without re-encoding, cleaning up HLS/DASH downloads, writing
 # MP4/M4A/MKV/WebM/MP3, converting audio to MP3 (LAME) or AAC, and ffprobe for checks.
-# No network, no hardware acceleration, no video decoding or scaling. LGPL (no GPL parts).
+# No network, no hardware acceleration, no scaling; the only video decoder is VP9 (its stream
+# details are needed to put VP9 into MP4). LGPL (no GPL parts).
 #
 # Usage (Linux or Docker):  OUT=/out bash scripts/ffmpeg/build.sh
 #   docker run --rm -v "$PWD/scripts/ffmpeg:/src:ro" -v "$PWD/tools/ffmpeg-slim:/out" ubuntu:24.04 bash /src/build.sh
@@ -74,7 +75,7 @@ CONFIGURE=(
   --enable-muxer=mp4,mov,ipod,matroska,webm,mp3,mpegts,adts,ogg,opus,flac,wav,null,webvtt,srt
   --enable-parser=h264,hevc,aac,aac_latm,av1,vp8,vp9,opus,vorbis,mpegaudio,flac,ac3
   --enable-bsf=aac_adtstoasc,h264_mp4toannexb,hevc_mp4toannexb,extract_extradata,vp9_superframe,vp9_superframe_split,av1_frame_merge,av1_frame_split,null,setts
-  --enable-decoder=aac,aac_latm,mp3,mp3float,opus,vorbis,flac,ac3,eac3,pcm_s16le,pcm_s24le,pcm_f32le,webvtt,subrip
+  --enable-decoder=vp9,aac,aac_latm,mp3,mp3float,opus,vorbis,flac,ac3,eac3,pcm_s16le,pcm_s24le,pcm_f32le,webvtt,subrip
   --enable-encoder=libmp3lame,aac,flac,pcm_s16le,webvtt,subrip,mov_text
   --enable-filter=aresample,aformat,anull,null,format,abuffer,abuffersink,buffer,buffersink,atrim,trim,asetpts,setpts,volume
 )
