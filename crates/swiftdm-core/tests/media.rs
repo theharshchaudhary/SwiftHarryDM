@@ -111,17 +111,17 @@ async fn temporary_errors_are_retried() {
 #[tokio::test(flavor = "multi_thread")]
 async fn lists_formats_for_the_picker() {
     let _e = env();
-    let info = engine().inspect("https://fake.test/ok").await.unwrap();
+    let info = engine().inspect("https://fake.test/ok", None).await.unwrap();
     assert_eq!(info.title, "Fake Video");
     let heights: Vec<Option<u32>> = info.formats.iter().map(|f| f.height).collect();
     assert_eq!(heights, vec![Some(720), Some(360), None]);
-    assert!(engine().inspect("https://fake.test/private").await.unwrap_err().contains("private"));
+    assert!(engine().inspect("https://fake.test/private", None).await.unwrap_err().contains("private"));
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn missing_tool_is_reported() {
     let e = MediaEngine::new(Tools::default());
-    assert!(e.inspect("https://fake.test/ok").await.unwrap_err().contains("yt-dlp was not found"));
+    assert!(e.inspect("https://fake.test/ok", None).await.unwrap_err().contains("yt-dlp was not found"));
 }
 
 fn walk(dir: &str) -> Vec<String> {

@@ -132,8 +132,6 @@ class BackgroundManager {
 
     async cookiesFor(url) {
         try {
-            const ok = await chrome.permissions.contains({ permissions: ['cookies'], origins: ['<all_urls>'] });
-            if (!ok) return null;
             const list = await chrome.cookies.getAll({ url });
             const header = list.map((c) => `${c.name}=${c.value}`).join('; ');
             return header ? header.slice(0, 16 * 1024) : null;
@@ -270,7 +268,12 @@ class BackgroundManager {
     /** Title and real formats of a video, from the app (API 3). */
     async mediaInfo(url) {
         if (!(await this.findAppPort()) || this.apiVersion < 3) return { success: false };
-        const r = await this.request('/api/media/info', { method: 'POST', body: { url }, timeoutMs: 120000 });
+        // With the site's cookies, like the browser itself: YouTube asks visitors without them
+        // to prove they are not a bot.
+        const body = { url };
+        const cookies = await this.cookiesFor(url);
+        if (cookies) body.cookies = cookies;
+        const r = await this.request('/api/media/info', { method: 'POST', body, timeoutMs: 120000 });
         return r.ok ? { success: true, info: r.data.info } : { success: false, error: r.data.error };
     }
 

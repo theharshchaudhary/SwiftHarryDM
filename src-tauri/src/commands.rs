@@ -219,6 +219,8 @@ pub fn save_settings(app: AppHandle, st: State<AppState>, settings: Settings) ->
         if let Err(e) = r {
             tracing::warn!("autostart change failed: {e}");
         }
+        // Remembered for the installer, so an update does not turn it back on.
+        let _ = crate::browser::set_reg(r"Software\SwiftHarryDM", Some("StartWithWindows"), if saved.start_with_windows { "1" } else { "0" });
     }
     let _ = app.emit("core", json!({ "type": "settings_changed", "settings": saved }));
     Ok(saved)
@@ -426,7 +428,7 @@ pub fn is_media_url(url: String) -> bool {
 #[tauri::command]
 pub async fn inspect_media(st: State<'_, AppState>, url: String) -> R<swiftdm_core::media::MediaInfo> {
     let url = swiftdm_core::manager::validate_url(&url)?;
-    st.media.inspect(&url).await
+    st.media.inspect(&url, None).await
 }
 
 #[tauri::command]

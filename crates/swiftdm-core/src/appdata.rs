@@ -31,9 +31,9 @@ pub fn tools_dir() -> PathBuf {
     d
 }
 
+/// The user's Downloads folder, like IDM (categories add Video, Music, ... below it).
 pub fn default_download_dir() -> PathBuf {
     dirs::download_dir()
         .or_else(|| dirs::home_dir().map(|h| h.join("Downloads")))
         .unwrap_or_else(std::env::temp_dir)
-        .join("SwiftHarryDM")
 }

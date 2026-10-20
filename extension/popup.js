@@ -78,13 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.get('swiftdmCapture').then(({ swiftdmCapture }) => { capture.checked = swiftdmCapture !== false; });
     capture.addEventListener('change', () => chrome.storage.local.set({ swiftdmCapture: capture.checked }));
 
-    const want = { permissions: ['cookies'], origins: ['<all_urls>'] };
-    const cookiesOn = () => { $('cookiesBtn').textContent = 'Site cookies are sent with taken-over downloads'; };
-    chrome.permissions.contains(want).then((ok) => ok && cookiesOn());
-    $('cookiesBtn').addEventListener('click', async () => {
-        if (await chrome.permissions.request(want)) cookiesOn();
-    });
-
     refresh();
     const timer = setInterval(refresh, 3000);
     addEventListener('unload', () => clearInterval(timer));

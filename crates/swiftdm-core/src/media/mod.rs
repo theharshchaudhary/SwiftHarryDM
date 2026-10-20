@@ -115,26 +115,14 @@ impl MediaEngine {
             a.push("--referer".into());
             a.push(r.clone());
         }
-        if let (Some(cookies), Some(host)) = (&job.spec.cookies, url::Url::parse(&job.spec.url).ok().and_then(|u| u.host_str().map(str::to_string))) {
-            let dir = crate::appdata::app_dir().join("tmp");
-            let file = dir.join(format!("{}.cookies.txt", job.id));
-            let mut body = String::from("# Netscape HTTP Cookie File\n");
-            for pair in cookies.split(';').map(str::trim).filter(|p| !p.is_empty()) {
-                if let Some((name, value)) = pair.split_once('=') {
-                    let clean = |s: &str| s.replace(['\t', '\r', '\n'], "");
-                    body.push_str(&format!(".{host}\tTRUE\t/\tFALSE\t0\t{}\t{}\n", clean(name.trim()), clean(value.trim())));
-                }
-            }
-            if std::fs::create_dir_all(&dir).is_ok() && std::fs::write(&file, body).is_ok() {
-                a.push("--cookies".into());
-                a.push(file.to_string_lossy().into_owned());
-            }
+        if let Some(cookies) = &job.spec.cookies {
+            a.extend(cookie_args(&job.spec.url, cookies, &job.id));
         }
         a
     }
 
     fn forget_cookies(job: &Job) {
-        let _ = std::fs::remove_file(crate::appdata::app_dir().join("tmp").join(format!("{}.cookies.txt", job.id)));
+        forget_cookie_file(&job.id);
     }
 
     async fn json(&self, url: &str, selector: Option<&str>, extra: &[String], cancel: &CancelToken) -> Result<Value, EngineError> {
@@ -182,8 +170,14 @@ impl MediaEngine {
     }
 
     /// Title and available formats, for the quality picker.
-    pub async fn inspect(&self, url: &str) -> Result<MediaInfo, String> {
-        let info = self.json(url, None, &[], &CancelToken::new()).await.map_err(|e| match e {
+    /// With the browser's cookies for the site when the extension sent them (sites such as
+    /// YouTube ask visitors without them to prove they are not a bot).
+    pub async fn inspect(&self, url: &str, cookies: Option<&str>) -> Result<MediaInfo, String> {
+        let name = format!("inspect-{}", uuid::Uuid::new_v4().simple());
+        let extra = cookies.map(|c| cookie_args(url, c, &name)).unwrap_or_default();
+        let r = self.json(url, None, &extra, &CancelToken::new()).await;
+        forget_cookie_file(&name);
+        let info = r.map_err(|e| match e {
             EngineError::Fail(e) => e.0.message,
             EngineError::Stop(_) => "Cancelled.".into(),
         })?;
@@ -228,6 +222,30 @@ impl MediaEngine {
     }
 }
 
+/// The browser's cookies for the video's site, as a cookie file limited to that site (never a
+/// global header). `name` keeps the files of parallel requests apart.
+fn cookie_args(url: &str, cookies: &str, name: &str) -> Vec<String> {
+    let Some(host) = url::Url::parse(url).ok().and_then(|u| u.host_str().map(str::to_string)) else { return vec![] };
+    let dir = crate::appdata::app_dir().join("tmp");
+    let file = dir.join(format!("{name}.cookies.txt"));
+    let mut body = String::from("# Netscape HTTP Cookie File\n");
+    for pair in cookies.split(';').map(str::trim).filter(|p| !p.is_empty()) {
+        if let Some((n, v)) = pair.split_once('=') {
+            let clean = |s: &str| s.replace(['\t', '\r', '\n'], "");
+            body.push_str(&format!(".{host}\tTRUE\t/\tFALSE\t0\t{}\t{}\n", clean(n.trim()), clean(v.trim())));
+        }
+    }
+    if std::fs::create_dir_all(&dir).is_ok() && std::fs::write(&file, body).is_ok() {
+        vec!["--cookies".into(), file.to_string_lossy().into_owned()]
+    } else {
+        vec![]
+    }
+}
+
+fn forget_cookie_file(name: &str) {
+    let _ = std::fs::remove_file(crate::appdata::app_dir().join("tmp").join(format!("{name}.cookies.txt")));
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -268,7 +286,11 @@ impl Engine for MediaEngine {
     async fn probe(&self, job: &Job, ctx: &RunCtx) -> EResult<ProbeResult> {
         let opts = Self::options(job);
         let sel = formats::build(&opts);
-        let info = self.json(&job.spec.url, Some(&sel.selector), &Self::job_args(job), &ctx.cancel).await?;
+        let mut extra = Self::job_args(job);
+        if let Some(sort) = &sel.sort {
+            extra.extend(["-S".to_string(), sort.clone()]);
+        }
+        let info = self.json(&job.spec.url, Some(&sel.selector), &extra, &ctx.cancel).await?;
         let single = [info.clone()];
         let chosen: &[Value] = info["requested_formats"].as_array().map(|v| v.as_slice()).unwrap_or(&single);
         if chosen.iter().any(|f| f["has_drm"].as_bool() == Some(true)) {

@@ -23,7 +23,7 @@ fn allowed_ids() -> Vec<&'static str> {
     v
 }
 
-fn set_reg(key: &str, name: Option<&str>, value: &str) -> windows::core::Result<()> {
+pub fn set_reg(key: &str, name: Option<&str>, value: &str) -> windows::core::Result<()> {
     let wide: Vec<u16> = value.encode_utf16().chain(std::iter::once(0)).collect();
     let bytes = unsafe { std::slice::from_raw_parts(wide.as_ptr() as *const u8, wide.len() * 2) };
     let name = name.map(HSTRING::from);

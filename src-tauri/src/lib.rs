@@ -258,19 +258,6 @@ fn save_main_window(app: &AppHandle) {
 }
 
 /// Put the main window back where it was, if that place is still on a screen.
-/// Start with Windows (on by default, like IDM): make the Windows startup entry match the
-/// setting, so it also points at this copy after an update or a move. Launched at sign-in
-/// with --minimized, the app waits in the notification area.
-fn sync_autostart(app: &tauri::AppHandle) {
-    use tauri_plugin_autostart::ManagerExt;
-    let want = app.state::<AppState>().mgr.settings().get().start_with_windows;
-    let l = app.autolaunch();
-    let r = if want { l.enable() } else if l.is_enabled().unwrap_or(false) { l.disable() } else { Ok(()) };
-    if let Err(e) = r {
-        tracing::warn!("start with Windows: {e}");
-    }
-}
-
 fn restore_main_window(w: &tauri::WebviewWindow) {
     let Some(p) = std::fs::read(placement_file()).ok().and_then(|b| serde_json::from_slice::<Placement>(&b).ok()) else { return };
     let on_screen = w.available_monitors().unwrap_or_default().iter().any(|m| {
@@ -434,7 +421,6 @@ pub fn run() {
             tauri::async_runtime::spawn(upkeep::ytdlp_loop(h.clone()));
             if !cfg!(debug_assertions) {
                 tauri::async_runtime::spawn(upkeep::update_loop(h.clone()));
-                sync_autostart(app.handle());
             }
             if let Some(main) = app.get_webview_window("main") {
                 restore_main_window(&main);

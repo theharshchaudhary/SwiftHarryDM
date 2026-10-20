@@ -30,6 +30,22 @@ pub struct Selection {
     pub audio_only: bool,
     pub max_height: Option<u32>,
     pub audio_codec: Option<&'static str>,
+    /// yt-dlp format sorting (-S) used when choosing the formats at probe time.
+    pub sort: Option<String>,
+}
+
+/// Video comes out as MP4, like IDM: among formats of the wanted quality, H.264 video and AAC
+/// audio are preferred (they play everywhere); if a quality only exists as VP9 or AV1 (YouTube
+/// above 1080p), that is kept and put into an MP4 file without re-encoding.
+fn mp4_out() -> Vec<String> {
+    args(&["--merge-output-format", "mp4", "--remux-video", "mp4"])
+}
+
+fn mp4_sort(height: Option<u32>) -> Option<String> {
+    Some(match height {
+        Some(h) => format!("res:{h},vcodec:h264,acodec:aac"),
+        None => "res,vcodec:h264,acodec:aac".into(),
+    })
 }
 
 /// "<=?" keeps formats whose height is unknown (e.g. direct links) instead of rejecting them.
@@ -44,33 +60,34 @@ fn args(a: &[&str]) -> Vec<String> {
 pub fn build(o: &MediaOptions) -> Selection {
     if let Some(id) = &o.format_id {
         // An exact format picked in the format list: take it, plus the best audio if it is video-only.
-        return Selection { selector: format!("{id}+ba/{id}"), postprocess: args(&["--merge-output-format", "mp4/mkv"]), audio_only: false, max_height: None, audio_codec: None };
+        return Selection { selector: format!("{id}+ba/{id}"), postprocess: mp4_out(), audio_only: false, max_height: None, audio_codec: None, sort: Some("acodec:aac".into()) };
     }
     match o.preset.as_str() {
-        "mp3" => Selection { selector: "ba/b".into(), postprocess: args(&["-x", "--audio-format", "mp3", "--audio-quality", "0"]), audio_only: true, max_height: None, audio_codec: Some("mp3") },
-        "m4a" => Selection { selector: "ba[ext=m4a]/ba/b".into(), postprocess: args(&["-x", "--audio-format", "m4a"]), audio_only: true, max_height: None, audio_codec: Some("aac") },
+        "mp3" => Selection { selector: "ba/b".into(), postprocess: args(&["-x", "--audio-format", "mp3", "--audio-quality", "0"]), audio_only: true, max_height: None, audio_codec: Some("mp3"), sort: None },
+        "m4a" => Selection { selector: "ba[ext=m4a]/ba/b".into(), postprocess: args(&["-x", "--audio-format", "m4a"]), audio_only: true, max_height: None, audio_codec: Some("aac"), sort: None },
         p if p.chars().all(|c| c.is_ascii_digit()) && !p.is_empty() => {
             let height: u32 = p.parse().unwrap_or(1080);
             let f = h(Some(height));
-            Selection { selector: format!("bv*{f}+ba/b{f}"), postprocess: args(&["--merge-output-format", "mp4/mkv"]), audio_only: false, max_height: Some(height), audio_codec: None }
+            Selection { selector: format!("bv*{f}+ba/b{f}"), postprocess: mp4_out(), audio_only: false, max_height: Some(height), audio_codec: None, sort: mp4_sort(Some(height)) }
         }
         "mp4" => {
             let f = h(o.max_height);
             Selection {
                 selector: format!("bv*{f}[vcodec^=avc1]+ba[acodec^=mp4a]/bv*{f}[ext=mp4]+ba[ext=m4a]/b{f}[ext=mp4]/bv*{f}+ba/b{f}"),
-                postprocess: args(&["--merge-output-format", "mp4", "--remux-video", "mp4"]),
+                postprocess: mp4_out(),
                 audio_only: false,
                 max_height: o.max_height,
                 audio_codec: None,
+                sort: None,
             }
         }
         "mkv" => {
             let f = h(o.max_height);
-            Selection { selector: format!("bv*{f}+ba/b{f}"), postprocess: args(&["--merge-output-format", "mkv"]), audio_only: false, max_height: o.max_height, audio_codec: None }
+            Selection { selector: format!("bv*{f}+ba/b{f}"), postprocess: args(&["--merge-output-format", "mkv"]), audio_only: false, max_height: o.max_height, audio_codec: None, sort: None }
         }
         _ => {
             let f = h(o.max_height);
-            Selection { selector: format!("bv*{f}+ba/b{f}"), postprocess: args(&["--merge-output-format", "mp4/mkv"]), audio_only: false, max_height: o.max_height, audio_codec: None }
+            Selection { selector: format!("bv*{f}+ba/b{f}"), postprocess: mp4_out(), audio_only: false, max_height: o.max_height, audio_codec: None, sort: mp4_sort(o.max_height) }
         }
     }
 }
@@ -82,6 +99,10 @@ mod tests {
     fn presets() {
         assert_eq!(build(&MediaOptions::preset("1080")).selector, "bv*[height<=?1080]+ba/b[height<=?1080]");
         assert_eq!(build(&MediaOptions::preset("best")).selector, "bv*+ba/b");
+        // Video presets come out as MP4, preferring H.264 + AAC at the chosen height.
+        let p = build(&MediaOptions::preset("1080"));
+        assert_eq!(p.sort.as_deref(), Some("res:1080,vcodec:h264,acodec:aac"));
+        assert!(p.postprocess.windows(2).any(|w| w == ["--merge-output-format", "mp4"]));
         let a = build(&MediaOptions::preset("mp3"));
         assert!(a.audio_only && a.audio_codec == Some("mp3") && a.postprocess.contains(&"mp3".to_string()));
         assert!(build(&MediaOptions::preset("mp4")).selector.contains("avc1"));

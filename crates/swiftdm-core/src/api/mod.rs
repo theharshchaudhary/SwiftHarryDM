@@ -441,11 +441,18 @@ async fn media_info(State(st): State<Arc<Inner>>, h: HeaderMap, body: Bytes) -> 
         return err(StatusCode::UNAUTHORIZED, "not paired");
     }
     let Some(engine) = st.media.clone() else { return err(StatusCode::SERVICE_UNAVAILABLE, "video downloads are not available") };
-    let Some(url) = parse_json(&body).and_then(|v| v.get("url").and_then(Value::as_str).map(str::to_string)) else {
+    let v = parse_json(&body).unwrap_or(Value::Null);
+    let Some(url) = v.get("url").and_then(Value::as_str).map(str::to_string) else {
         return err(StatusCode::BAD_REQUEST, "url required");
     };
     let Ok(url) = validate_url(&url) else { return err(StatusCode::BAD_REQUEST, "not a web address") };
-    match engine.inspect(&url).await {
+    // The browser's cookies for the site (YouTube asks visitors without them to prove they
+    // are not a bot). Never shown or logged.
+    let cookies = match opt_str(&v, "cookies", 16 * 1024) {
+        Ok(c) => c,
+        Err(e) => return err(StatusCode::BAD_REQUEST, &e),
+    };
+    match engine.inspect(&url, cookies.as_deref()).await {
         Ok(info) => Json(json!({ "success": true, "info": info })).into_response(),
         Err(e) => err(StatusCode::UNPROCESSABLE_ENTITY, &e),
     }

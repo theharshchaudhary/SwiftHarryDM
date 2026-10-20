@@ -76,7 +76,8 @@ pub fn open(app: &AppHandle, kind: &str, params: &[(String, String)]) -> Result<
     if let Some(w) = app.get_webview_window(&label) {
         let _ = w.unminimize();
         let _ = w.show();
-        let _ = w.set_focus();
+        let w2 = w.clone();
+        let _ = app.run_on_main_thread(move || bring_to_front(&w2));
         return Ok(());
     }
     let mut query = format!("w={}", encode(kind));
@@ -108,13 +109,46 @@ pub fn open(app: &AppHandle, kind: &str, params: &[(String, String)]) -> Result<
         b.build().map_err(|e| e.to_string())?;
         return Ok(());
     }
+    // Windows that answer something done in the browser open in front of it, like IDM's.
+    let to_front = matches!(kind, "info" | "links" | "pairing" | "complete" | "countdown");
     if let Some(main) = app.get_webview_window("main") {
-        if main.is_visible().unwrap_or(false) && kind != "countdown" && kind != "complete" {
+        if main.is_visible().unwrap_or(false) && !to_front {
             b = b.parent(&main).map_err(|e| e.to_string())?;
         }
     }
-    b.build().map_err(|e| e.to_string())?;
+    let w = b.build().map_err(|e| e.to_string())?;
+    if to_front {
+        let w2 = w.clone();
+        let _ = app.run_on_main_thread(move || bring_to_front(&w2));
+    }
     Ok(())
+}
+
+/// Put a window in front of the app the user is working in (the browser) and give it the
+/// keyboard. Windows refuses SetForegroundWindow to a background app, so for a moment this
+/// thread shares input with the foreground window's thread, as dialogs that must be seen do.
+pub fn bring_to_front(w: &tauri::WebviewWindow) {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow, SetWindowPos, HWND_NOTOPMOST, HWND_TOPMOST, SWP_NOMOVE, SWP_NOSIZE,
+        SWP_SHOWWINDOW,
+    };
+    let Ok(h) = w.hwnd() else { return };
+    let hwnd = HWND(h.0 as _);
+    unsafe {
+        let me = GetCurrentThreadId();
+        let fg = GetWindowThreadProcessId(GetForegroundWindow(), None);
+        let attached = fg != 0 && fg != me && AttachThreadInput(me, fg, true).as_bool();
+        // Briefly topmost: shows the window above the browser even if focus is refused.
+        let _ = SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        let _ = SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        let _ = BringWindowToTop(hwnd);
+        let _ = SetForegroundWindow(hwnd);
+        if attached {
+            let _ = AttachThreadInput(me, fg, false);
+        }
+    }
 }
 
 pub fn close(app: &AppHandle, label: &str) {
