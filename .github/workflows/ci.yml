@@ -36,5 +36,7 @@ jobs:
           cargo build -p swiftdm-testkit --bin sdm-observe
           ui\node_modules\.bin\tauri build --debug --no-bundle
         shell: cmd
+      - name: yt-dlp for the video tests (pinned, checksum-verified)
+        run: node scripts/fetch-tools.mjs
       - name: End-to-end tests (app and extension in Chrome)
         run: node tests/e2e/run.mjs
