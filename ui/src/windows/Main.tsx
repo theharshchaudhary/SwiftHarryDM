@@ -250,7 +250,11 @@ function MainView({ live }: { live: Live }) {
     resume: () => api.resume(selected.filter(F.canResume).map((j) => j.id)),
     stop: () => api.pause(selected.filter(F.canStop).map((j) => j.id)),
     stopAll: () => api.pauseAll(),
-    del: () => selIds.length && setModal({ kind: "delete", ids: selIds }),
+    del: () => {
+      if (!selIds.length) return;
+      if (live.settings.confirm_delete) setModal({ kind: "delete", ids: selIds });
+      else api.remove(selIds, false);
+    },
     deleteDone: () => setModal({ kind: "deleteDone" }),
     options: (tab?: string) => api.openWindow("options", tab ? { tab } : {}),
     scheduler: (q?: string) => api.openWindow("scheduler", q ? { queue: q } : {}),
@@ -825,6 +829,7 @@ function TB({ icon, label, onClick, disabled, title, cls, drop }: { icon: string
 // ------------------------------------------------------------------ modals inside the main window
 function DeleteModal({ live, ids, onClose }: { live: Live; ids: string[]; onClose: () => void }) {
   const [files, setFiles] = useState(false);
+  const [quiet, setQuiet] = useState(false);
   const jobs = ids.map((id) => live.jobMap.get(id)).filter(Boolean) as Job[];
   const unfinished = jobs.filter((j) => j.state !== "COMPLETED").length;
   return (
@@ -833,7 +838,15 @@ function DeleteModal({ live, ids, onClose }: { live: Live; ids: string[]; onClos
       onClose={onClose}
       foot={
         <>
-          <button className="btn primary" autoFocus onClick={() => { api.remove(ids, files); onClose(); }}>
+          <button
+            className="btn primary"
+            autoFocus
+            onClick={() => {
+              api.remove(ids, files);
+              if (quiet) api.saveSettings({ ...live.settings, confirm_delete: false });
+              onClose();
+            }}
+          >
             Delete
           </button>
           <button className="btn" onClick={onClose}>Cancel</button>
@@ -849,6 +862,9 @@ function DeleteModal({ live, ids, onClose }: { live: Live; ids: string[]; onClos
           Also delete the downloaded files from disk
         </Check>
       )}
+      <Check checked={quiet} onChange={setQuiet}>
+        Don’t ask again (Options › Downloads)
+      </Check>
     </Modal>
   );
 }

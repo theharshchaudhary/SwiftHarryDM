@@ -151,13 +151,18 @@ async function completeFor(app, name, timeout = 90000) {
 }
 
 async function apiBase() {
-  for (const p of [5001, 5002]) {
-    try {
-      const r = await fetch(`http://127.0.0.1:${p}/health`);
-      if ((await r.json()).app === "SwiftHarryDM") return `http://127.0.0.1:${p}`;
-    } catch {
-      /* next */
+  // The API starts a moment after the window.
+  const end = Date.now() + 15000;
+  while (Date.now() < end) {
+    for (const p of [5001, 5002]) {
+      try {
+        const r = await fetch(`http://127.0.0.1:${p}/health`);
+        if ((await r.json()).app === "SwiftHarryDM") return `http://127.0.0.1:${p}`;
+      } catch {
+        /* next */
+      }
     }
+    await sleep(300);
   }
   throw new Error("the extension API is not listening");
 }
@@ -174,6 +179,10 @@ const scenarios = {
     await info.click("Start download");
     const done = await completeFor(app, "report 2026.pdf", 30000);
     await done.shot(join(SHOTS, "complete.png"));
+    // Dragging the file out uses the drag plugin; a malformed call must reach it (an argument
+    // error), not be refused as unknown or not allowed.
+    const dragErr = await done.eval(`window.__TAURI_INTERNALS__.invoke("plugin:drag|start_drag", { item: 1, image: 1 }).then(() => "ok", (e) => String(e))`);
+    assert(!/not allowed|not found|unknown/i.test(dragErr), `drag-out is available (${dragErr})`);
     await done.click("Close");
     await assertSha("report 2026.pdf", "/s6/get");
 
@@ -303,6 +312,25 @@ const scenarios = {
     const done = await completeFor(app, "flaky.bin");
     await done.click("Close");
     await assertSha("flaky.bin", "/s7/flaky.bin");
+
+    // Cancelled twice: IDM offers to stop taking over this address.
+    const twiceUrl = URL_("/s3/cut.bin"); // not used by any other step
+    for (const round of [1, 2]) {
+      await until(async () => !(await app.hasWindow("Download file info")), 10000, 200, "earlier windows to close");
+      if (process.env.SDM_DEBUG) console.log(`    round ${round} jobs: ${JSON.stringify((await (await app.window("SwiftHarryDM")).invoke("get_state")).jobs.map((j) => [j.url.slice(-12), j.state, j.source]))}`);
+      const [st] = await call("POST", "/api/download", { url: twiceUrl, fileName: "cut.bin", mode: "now" }, v2.token);
+      assert(st === 202, `request ${round} waits for confirmation`);
+      const w = await app.window("Download file info");
+      await until(async () => !(await w.text()).includes("Checking the address"), 30000);
+      await w.click("Cancel");
+      if (round === 2) {
+        await until(async () => (await w.text()).includes("cancelled this download twice"), 10000, 200, "the cancelled-twice offer");
+        await w.click("OK");
+      }
+      await until(async () => !(await app.hasWindow("Download file info")), 10000, 200, "the window to close");
+    }
+    const settings = (await (await app.window("SwiftHarryDM")).invoke("get_state")).settings;
+    assert(settings.capture_skip_urls.includes(twiceUrl), "the address was added to the exceptions");
   },
 
   async real_chrome_extension(app) {
@@ -327,7 +355,8 @@ const scenarios = {
       const tab = await chrome.tab(URL_("/p/links.html"));
       await chrome.evalIn(tab, "document.getElementById('report').click()");
       const info = await app.window("Download file info", 20000);
-      assert((await info.text()).includes("Sent from your browser"), "the captured download opens the info window");
+      const infoText = await until(async () => { const t = await info.text(); return t.includes("Loading") ? null : t; }, 10000, 200, "the info window to load");
+      assert(infoText.includes("Sent from your browser"), `the captured download opens the info window (${infoText.slice(0, 300)})`);
       await info.shot(join(SHOTS, "chrome-capture.png"));
       await until(async () => !(await info.text()).includes("Checking the address"), 30000);
       await info.click("Start download");
@@ -363,6 +392,7 @@ const scenarios = {
       const vinfo = await app.window("Download file info", 20000);
       assert((await vinfo.text()).includes("Sent from your browser"), "the chosen video format reaches the app");
       await vinfo.click("Cancel");
+      await until(async () => !(await app.hasWindow("Download file info")), 10000, 200, "the video window to close");
       await chrome.closeTab(vtab);
 
       // On a site the video downloader does not know, the panel offers the HLS stream the

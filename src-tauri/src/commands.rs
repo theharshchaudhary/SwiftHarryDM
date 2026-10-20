@@ -171,6 +171,18 @@ pub fn relocate(st: State<AppState>, id: String, dir: String, name: Option<Strin
     st.mgr.relocate(&id, &dir, name);
 }
 
+/// Count a cancelled browser download; returns how often this address was cancelled.
+#[tauri::command]
+pub fn count_cancel(st: State<AppState>, url: String) -> u32 {
+    let mut c = st.cancels.lock().unwrap();
+    if c.len() > 500 {
+        c.clear();
+    }
+    let n = c.entry(url).or_insert(0);
+    *n += 1;
+    *n
+}
+
 /// A download started while "Download File Info" is open: hold its windows back.
 #[tauri::command]
 pub fn hold(st: State<AppState>, id: String) {
@@ -391,7 +403,7 @@ pub fn close_self(window: WebviewWindow) {
 }
 
 #[tauri::command]
-pub fn power_action(app: AppHandle, action: AfterAction) -> R<()> {
+pub fn power_action(app: AppHandle, st: State<AppState>, action: AfterAction) -> R<()> {
     match action {
         AfterAction::None => Ok(()),
         AfterAction::Exit => {
@@ -400,7 +412,7 @@ pub fn power_action(app: AppHandle, action: AfterAction) -> R<()> {
         }
         AfterAction::Sleep => system::suspend(false),
         AfterAction::Hibernate => system::suspend(true),
-        AfterAction::Shutdown => system::shutdown(),
+        AfterAction::Shutdown => system::shutdown(st.mgr.settings().get().force_close_apps),
     }
 }
 

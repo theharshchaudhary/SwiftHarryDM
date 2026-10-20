@@ -60,6 +60,12 @@ pub struct Settings {
     pub start_minimized: bool,
     /// Like IDM: the download starts while "Download File Info" is shown.
     pub start_while_info: bool,
+    /// Shutting down after downloads closes programs that would hold it up.
+    pub force_close_apps: bool,
+    /// Ask before removing downloads from the list (IDM's "Confirm deletion").
+    pub confirm_delete: bool,
+    /// After the same browser download is cancelled twice, offer to stop taking it over.
+    pub offer_exception_on_cancel: bool,
     pub av_scan_enabled: bool,
     pub av_scan_command: String,
     pub sound_on_complete: bool,
@@ -113,6 +119,9 @@ impl Default for Settings {
             start_with_windows: true,
             start_minimized: false,
             start_while_info: true,
+            force_close_apps: false,
+            confirm_delete: true,
+            offer_exception_on_cancel: true,
             av_scan_enabled: false,
             av_scan_command: r#""C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "{file}" -DisableRemediation"#
                 .into(),

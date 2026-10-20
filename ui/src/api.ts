@@ -1,5 +1,5 @@
 // Typed bridge to the Rust side. Types mirror crates/swiftdm-core (serde field names).
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type JobState =
@@ -87,6 +87,9 @@ export interface Settings {
   start_with_windows: boolean;
   start_minimized: boolean;
   start_while_info: boolean;
+  force_close_apps: boolean;
+  confirm_delete: boolean;
+  offer_exception_on_cancel: boolean;
   av_scan_enabled: boolean;
   av_scan_command: string;
   sound_on_complete: boolean;
@@ -228,7 +231,10 @@ export const api = {
   moveToQueue: (ids: string[], queueId: string | null) => invoke<void>("move_to_queue", { ids, queueId }),
   setDescription: (id: string, description: string | null) => invoke<void>("set_description", { id, description }),
   relocate: (id: string, dir: string, name: string | null) => invoke<void>("relocate", { id, dir, name }),
+  /** Drag a file out of the window into Explorer or another program. */
+  dragFile: (path: string, image: string) => invoke<void>("plugin:drag|start_drag", { item: [path], image, options: { mode: "copy" }, onEvent: new Channel() }),
   hold: (id: string) => invoke<void>("hold", { id }),
+  countCancel: (url: string) => invoke<number>("count_cancel", { url }),
   release: (id: string, show: boolean) => invoke<void>("release", { id, show }),
   setSpeedLimit: (id: string, limit: number | null) => invoke<void>("set_speed_limit", { id, limit }),
   setPriority: (id: string, priority: number) => invoke<void>("set_priority", { id, priority }),

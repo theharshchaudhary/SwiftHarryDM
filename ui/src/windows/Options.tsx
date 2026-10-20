@@ -142,6 +142,9 @@ function Types({ s, set }: P) {
         <textarea rows={3} style={{ width: "100%" }} className="mono" value={lines(s.capture_skip_urls)} onChange={(e) => set({ capture_skip_urls: unlines(e.target.value) })} />
         <div className="hint">One pattern per line, with * as a wildcard, e.g. https://*.example.com/*.exe</div>
       </div>
+      <Check checked={s.offer_exception_on_cancel} onChange={(v) => set({ offer_exception_on_cancel: v })}>
+        When I cancel the same browser download twice, offer to add it to these lists
+      </Check>
     </>
   );
 }
@@ -156,6 +159,7 @@ function Downloads({ s, set }: P) {
           <Check checked={s.start_while_info} disabled={!s.show_download_info_dialog} onChange={(v) => set({ start_while_info: v })}>Start downloading while the “Download file info” window is open</Check>
           <Check checked={s.show_progress_window} onChange={(v) => set({ show_progress_window: v })}>Show a progress window for each download I start</Check>
           <Check checked={s.show_complete_dialog} onChange={(v) => set({ show_complete_dialog: v })}>Show the “Download complete” window</Check>
+          <Check checked={s.confirm_delete} onChange={(v) => set({ confirm_delete: v })}>Ask before removing downloads from the list</Check>
         </div>
         <div className="hint" style={{ marginTop: 6 }}>Downloads started by a queue never open windows.</div>
       </fieldset>
@@ -165,6 +169,7 @@ function Downloads({ s, set }: P) {
           [
             ["ask", "Ask me"],
             ["number", "Add it again with a numbered file name"],
+            ["overwrite", "Add it again and replace the existing file"],
             ["resume", "Resume or show the existing download"],
           ] as const
         ).map(([k, l]) => (

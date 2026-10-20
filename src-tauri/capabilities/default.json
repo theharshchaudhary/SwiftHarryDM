@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "App windows may call the app's own commands and listen to its events.",
   "windows": ["*"],
-  "permissions": ["core:default", "core:window:allow-set-size", "core:window:allow-set-title", "core:window:allow-start-dragging", "core:window:allow-set-position", "core:window:allow-outer-position", "core:menu:default"]
+  "permissions": ["core:default", "core:window:allow-set-size", "core:window:allow-set-title", "core:window:allow-start-dragging", "core:window:allow-set-position", "core:window:allow-outer-position", "core:menu:default", "drag:default"]
 }

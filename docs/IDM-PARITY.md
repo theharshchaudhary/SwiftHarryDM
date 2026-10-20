@@ -14,12 +14,12 @@ SwiftHarryDM should have, written and drawn by us (no IDM text, code or images a
 - [x] Download File Info: "Download later" offers the queue choice (option: show queue selection panel)
 - [x] Download File Info: opens in front of the browser and takes the keyboard
 - [x] Duplicate link dialog: numbered name / overwrite / show complete or resume; remember choice
-- [ ] Twice-cancelled automatic download: offer to add the site or the address to exceptions
-- [ ] Download complete: Open, Open with, Open folder, Close, "Don't show again", drag the file out
-- [ ] Download progress: tabs Download status / Speed limiter / Options on completion, hide-tab buttons, hide details
-- [ ] Download progress: per-file speed limit remembered across stop/resume
-- [ ] Download progress: options on completion (show complete dialog, exit, turn off computer, force processes to close)
-- [ ] Delete confirmation: "also delete downloaded files from disk", "Don't show again"; separate dialog for unfinished downloads
+- [x] Twice-cancelled automatic download: offer to add the site or the address to exceptions
+- [x] Download complete: Open, Open with, Open folder, Close, "Don't show again", drag the file out
+- [x] Download progress: tabs Download status / Speed limiter / Options on completion, hide-tab buttons, hide details
+- [x] Download progress: per-file speed limit remembered across stop/resume
+- [x] Download progress: options on completion (show complete dialog, exit, turn off computer, force processes to close)
+- [x] Delete confirmation: "also delete downloaded files from disk", "Don't show again"; separate dialog for unfinished downloads
 - [ ] "IDM could not take over the download" notice with "Don't show again"
 - [ ] Authentication dialog when a server asks for a login, with "Save this password"
 

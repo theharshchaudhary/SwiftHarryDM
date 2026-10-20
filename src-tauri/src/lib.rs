@@ -35,6 +35,8 @@ pub struct AppState {
     /// Downloads started while "Download File Info" is still open: no progress or complete
     /// window until the user decides there.
     pub held: Mutex<HashSet<String>>,
+    /// How often each browser download was cancelled in "Download File Info" (this session).
+    pub cancels: Mutex<HashMap<String, u32>>,
     /// Last state seen per download, to detect transitions.
     seen: Mutex<HashMap<String, JobState>>,
     exiting: Mutex<bool>,
@@ -382,6 +384,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // Drag a finished file out of the "Download complete" window, like IDM.
+        .plugin(tauri_plugin_drag::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         // The Run entry's name must match the uninstaller's cleanup (windows/hooks.nsh).
@@ -401,6 +405,7 @@ pub fn run() {
                 after: Mutex::new(HashMap::new()),
                 watch_progress: Mutex::new(HashSet::new()),
                 held: Mutex::new(HashSet::new()),
+                cancels: Mutex::new(HashMap::new()),
                 seen: Mutex::new(HashMap::new()),
                 exiting: Mutex::new(false),
                 api: Mutex::new(Err("starting".into())),
@@ -470,6 +475,7 @@ pub fn run() {
             commands::set_description,
             commands::relocate,
             commands::hold,
+            commands::count_cancel,
             commands::release,
             commands::set_speed_limit,
             commands::set_priority,

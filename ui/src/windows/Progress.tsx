@@ -219,6 +219,9 @@ function DoneTab({ job }: { job: Job }) {
           </div>
         ))}
       </fieldset>
+      <Check checked={live.settings.force_close_apps} onChange={(v) => api.saveSettings({ ...live.settings, force_close_apps: v })}>
+        When shutting down, close programs that would hold it up (unsaved work in them is lost)
+      </Check>
       <div className="hint">Power actions show a 30-second warning first, which you can cancel.</div>
     </div>
   );

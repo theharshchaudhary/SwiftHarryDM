@@ -53,9 +53,15 @@ pub fn beep() {
     }
 }
 
-pub fn shutdown() -> Result<(), String> {
+/// Turn the computer off. `force` closes programs that would otherwise hold up the shutdown
+/// (IDM's "Force processes to terminate"); they may lose unsaved work.
+pub fn shutdown(force: bool) -> Result<(), String> {
+    let mut args = vec!["/s", "/t", "0"];
+    if force {
+        args.push("/f");
+    }
     Command::new("shutdown.exe")
-        .args(["/s", "/t", "0"])
+        .args(args)
         .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .map(|_| ())

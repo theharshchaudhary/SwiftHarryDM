@@ -14,6 +14,9 @@ function splitPath(p: string): [string, string] {
   return i < 0 ? ["", p] : [p.slice(0, i), p.slice(i + 1)];
 }
 
+/** A download started while the window is open. */
+type Early = { id: string; dir: string; file: string };
+
 const PRESETS: [string, string][] = [
   ["best", "Best quality"],
   ["2160", "2160p (4K)"],
@@ -30,6 +33,49 @@ const PRESETS: [string, string][] = [
 const AUDIO = new Set(["mp3", "m4a"]);
 
 /** "Download File Info": confirm name, category and folder (or video quality), then start now or later. */
+/** IDM: "You have cancelled this download twice" — stop taking over this site or address. */
+function TwiceCancelled({ url, onClose }: { url: string; onClose: () => void }) {
+  const live = useLive();
+  const host = F.host(url);
+  const [site, setSite] = useState(false);
+  const [addr, setAddr] = useState(true);
+  const [quiet, setQuiet] = useState(false);
+  if (!live) return null;
+  const s = live.settings;
+  return (
+    <Modal
+      title="Cancelled twice"
+      onClose={onClose}
+      foot={
+        <>
+          <button
+            className="btn primary"
+            autoFocus
+            onClick={async () => {
+              await api.saveSettings({
+                ...s,
+                capture_skip_sites: site && !s.capture_skip_sites.includes(host) ? [...s.capture_skip_sites, host] : s.capture_skip_sites,
+                capture_skip_urls: addr && !s.capture_skip_urls.includes(url) ? [...s.capture_skip_urls, url] : s.capture_skip_urls,
+                offer_exception_on_cancel: !quiet,
+              });
+              onClose();
+            }}
+          >
+            OK
+          </button>
+          <button className="btn" onClick={onClose}>Cancel</button>
+        </>
+      }
+    >
+      <div>You have cancelled this download twice. If SwiftHarryDM takes it over by mistake, the browser can keep it from now on:</div>
+      <Check checked={site} onChange={setSite}>Don’t take over downloads from this site: <b>{host}</b></Check>
+      <Check checked={addr} onChange={setAddr}>Don’t take over this address</Check>
+      <div className="hint">Both lists are on Options › File types.</div>
+      <Check checked={quiet} onChange={setQuiet}>Don’t show this again</Check>
+    </Modal>
+  );
+}
+
 /** IDM's "Duplicate download link" choices. */
 function DuplicateDialog({ job, onChoose, onCancel }: { job: Job; onChoose: (p: "number" | "overwrite" | "resume", remember: boolean) => void; onCancel: () => void }) {
   const [pick, setPick] = useState<"number" | "overwrite" | "resume">("number");
@@ -103,11 +149,16 @@ export default function FileInfo() {
   const [remember, setRemember] = useState(false);
   // IDM's duplicate-link choice, made once per window (or taken from Options).
   const [dupDone, setDupDone] = useState(false);
+  const [twice, setTwice] = useState(false);
   // Like IDM, the file starts downloading while this window is open; the choices made here
   // are applied when "Start download" or "Download later" is pressed.
-  const [early, setEarly] = useState<{ id: string; dir: string; file: string } | null>(null);
+  const [early, setEarly] = useState<Early | null>(null);
   const decided = useRef(false);
-  const earlyRef = useRef<string | null>(null);
+  // The early start, while it is being set up and after: every decision waits for it, so a
+  // quick Cancel or Start never leaves a download behind or answers the browser twice.
+  const earlyStart = useRef<Promise<Early | null> | null>(null);
+  const settled = async () => (earlyStart.current ? await earlyStart.current : null);
+  const [dupsChecked, setDupsChecked] = useState(false);
   const comps = useComponents();
 
   // Closed without a decision: a browser request counts as rejected, and a download that
@@ -116,7 +167,7 @@ export default function FileInfo() {
     const off = () => {
       if (decided.current) return;
       if (rid) api.rejectRequest(rid);
-      if (earlyRef.current) api.remove([earlyRef.current], true);
+      settled().then((e) => e && api.remove([e.id], true));
     };
     window.addEventListener("beforeunload", off);
     return () => window.removeEventListener("beforeunload", off);
@@ -131,7 +182,11 @@ export default function FileInfo() {
     setMedia(null);
     setInfo(null);
     const t = setTimeout(async () => {
-      api.findDuplicates(url).then((d) => alive && setDups(d));
+      api.findDuplicates(url).then((d) => {
+        if (!alive) return;
+        setDups(d);
+        setDupsChecked(true);
+      });
       try {
         if (await api.isMediaUrl(url)) {
           const m = await api.inspectMedia(url);
@@ -190,10 +245,9 @@ export default function FileInfo() {
   // asking first (a duplicate the user must decide about).
   const dupAsk = dups.length > 0 && !dupDone;
   useEffect(() => {
-    if (!settings?.start_while_info || early || earlyRef.current || probing || probeErr || !info || info.is_web_page || isMedia || dupAsk || !path) return;
+    if (!settings?.start_while_info || earlyStart.current || decided.current || probing || probeErr || !info || info.is_web_page || isMedia || !dupsChecked || dupAsk || !path) return;
     const [dir, file] = splitPath(path);
-    earlyRef.current = "starting";
-    (async () => {
+    earlyStart.current = (async () => {
       try {
         const id = rid
           ? await api.resolveRequest(rid, { dest_dir: dir, filename: file, category: category || null, mode: "now", quiet: true })
@@ -201,14 +255,15 @@ export default function FileInfo() {
               { url, dest_dir: dir, kind: "auto", filename: file, media: null, format_label: "best", referer: params.get("referer"), source: "info", category: category || null, description: null, queue_id: null },
               "now",
             );
-        earlyRef.current = id;
         api.hold(id);
-        setEarly({ id, dir, file });
+        const e = { id, dir, file };
+        setEarly(e);
+        return e;
       } catch {
-        earlyRef.current = null; // fall back to starting on "Start download"
+        return null; // nothing started: "Start download" starts it as usual
       }
     })();
-  }, [settings?.start_while_info, early, probing, probeErr, info, isMedia, dupAsk, path, rid, url, category, params]);
+  }, [settings?.start_while_info, probing, probeErr, info, isMedia, dupsChecked, dupAsk, path, rid, url, category, params]);
 
   // A choice saved in Options is applied without asking.
   useEffect(() => {
@@ -273,8 +328,9 @@ export default function FileInfo() {
         else s.download_dir = dir;
         await api.saveSettings(s);
       }
+      decided.current = true;
+      const early = await settled();
       if (early) {
-        decided.current = true;
         const id = early.id;
         // "Later": stop first, so moving the file does not start it again.
         if (mode === "later") await api.pause([id]);
@@ -360,9 +416,16 @@ export default function FileInfo() {
             className="btn"
             onClick={async () => {
               decided.current = true;
-              if (rid && !early) await api.rejectRequest(rid);
-              // Before closing: a closing window may drop calls still on their way.
-              if (earlyRef.current && earlyRef.current !== "starting") await api.remove([earlyRef.current], true).catch(() => {});
+              // Wait for an early start still being set up, then undo it (before closing: a
+              // closing window may drop calls still on their way).
+              const e = await settled();
+              if (rid && !e) await api.rejectRequest(rid);
+              if (e) await api.remove([e.id], true).catch(() => {});
+              // A browser download cancelled a second time: offer IDM's exceptions.
+              if (rid && settings.offer_exception_on_cancel && !twice && (await api.countCancel(url)) >= 2) {
+                setTwice(true);
+                return;
+              }
               api.closeSelf();
             }}
           >
@@ -377,6 +440,7 @@ export default function FileInfo() {
           <div>Sent from your browser{params.get("referer") ? <> by <b>{F.host(params.get("referer"))}</b></> : null}. Check the details and choose how to download it.</div>
         </div>
       )}
+      {twice && <TwiceCancelled url={url} onClose={() => api.closeSelf()} />}
       {dupAsk && settings.duplicate_policy === "ask" && <DuplicateDialog job={dups[0]} onChoose={async (p, keep) => {
         if (keep) await api.saveSettings({ ...settings, duplicate_policy: p });
         await applyDuplicate(p);
