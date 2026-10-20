@@ -186,6 +186,15 @@ const scenarios = {
     await done.click("Close");
     await assertSha("report 2026.pdf", "/s6/get");
 
+    // Zip preview: the archive's files are listed before downloading.
+    const z = await addThroughUi(app, main, URL_("/z/sample.zip"));
+    await z.click("Preview the files in this ZIP…");
+    await until(async () => (await z.text()).includes("photos/beach.jpg"), 10000, 200, "the ZIP's file list");
+    assert((await z.text()).includes("2 files"), "the preview counts the files");
+    await z.click("OK");
+    await z.click("Cancel");
+    await until(async () => !(await app.hasWindow("Download file info")), 10000, 200, "the ZIP window to close");
+
     // The same address again: IDM's duplicate choices.
     const again = await addThroughUi(app, main, URL_("/s6/get"));
     await until(async () => (await again.text()).includes("already in your list"), 10000, 200, "the duplicate dialog");

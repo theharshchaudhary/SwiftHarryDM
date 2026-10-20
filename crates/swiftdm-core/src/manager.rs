@@ -335,6 +335,13 @@ impl Manager {
         })
     }
 
+    /// IDM's "Zip preview": the files inside a ZIP archive on a server, read with range
+    /// requests (no download).
+    pub async fn zip_preview(&self, url: &str, total: u64, cookies: Option<String>) -> Result<Vec<crate::http::zip_preview::ZipEntry>, String> {
+        let url = validate_url(url)?;
+        crate::http::zip_preview::preview(&url, &self.settings.get(), cookies, total).await
+    }
+
     pub fn schedule_tick(&self, minute: u32, weekday: usize) {
         let _ = self.tx.send(Cmd::ScheduleTick(minute, weekday));
     }

@@ -177,6 +177,8 @@ export interface Components { ytdlp: string | null; ffmpeg: boolean; ffprobe: bo
 export interface UpdateInfo { version: string; notes: string | null }
 export interface ExtensionSetup { mode: "store" | "manual"; folder: string | null; browser_found: boolean }
 
+export interface ZipEntry { name: string; size: number; packed: number; is_dir: boolean }
+
 export interface Overrides {
   dest_dir?: string | null;
   filename?: string | null;
@@ -235,6 +237,7 @@ export const api = {
   dragFile: (path: string, image: string) => invoke<void>("plugin:drag|start_drag", { item: [path], image, options: { mode: "copy" }, onEvent: new Channel() }),
   hold: (id: string) => invoke<void>("hold", { id }),
   countCancel: (url: string) => invoke<number>("count_cancel", { url }),
+  zipPreview: (url: string, total: number) => invoke<ZipEntry[]>("zip_preview", { url, total }),
   release: (id: string, show: boolean) => invoke<void>("release", { id, show }),
   setSpeedLimit: (id: string, limit: number | null) => invoke<void>("set_speed_limit", { id, limit }),
   setPriority: (id: string, priority: number) => invoke<void>("set_priority", { id, priority }),

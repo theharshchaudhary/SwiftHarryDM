@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, windowParams, type Job, type MediaInfo, type UrlInfo } from "../api";
+import { api, windowParams, type Job, type MediaInfo, type UrlInfo, type ZipEntry } from "../api";
 import * as F from "../format";
 import { Check, Dialog, Loading, Modal } from "../components/Dialog";
 import { ComponentsBanner, useComponents } from "../components/Components";
@@ -72,6 +72,38 @@ function TwiceCancelled({ url, onClose }: { url: string; onClose: () => void }) 
       <Check checked={addr} onChange={setAddr}>Don’t take over this address</Check>
       <div className="hint">Both lists are on Options › File types.</div>
       <Check checked={quiet} onChange={setQuiet}>Don’t show this again</Check>
+    </Modal>
+  );
+}
+
+/** IDM's "Zip preview": the archive's files, read from the server without downloading it. */
+function ZipList({ entries, onClose }: { entries: ZipEntry[] | string; onClose: () => void }) {
+  return (
+    <Modal title="Files in this ZIP" onClose={onClose} foot={<button className="btn primary" autoFocus onClick={onClose}>OK</button>}>
+      {typeof entries === "string" ? (
+        <div className="err">{entries}</div>
+      ) : entries.length === 0 ? (
+        <div className="muted">Reading the archive’s list of files…</div>
+      ) : (
+        <>
+          <div style={{ maxHeight: 300, overflow: "auto", border: "1px solid var(--border)", borderRadius: 4 }}>
+            <table className="list" style={{ width: "100%" }}>
+              <thead>
+                <tr><th style={{ textAlign: "left" }}>Name</th><th style={{ textAlign: "right" }}>Size</th></tr>
+              </thead>
+              <tbody>
+                {entries.map((e, i) => (
+                  <tr key={i}>
+                    <td>{e.name}</td>
+                    <td style={{ textAlign: "right" }}>{e.is_dir ? "" : F.size(e.size)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="hint">{entries.filter((e) => !e.is_dir).length} files, {F.size(entries.reduce((a, e) => a + e.size, 0))} when unpacked.</div>
+        </>
+      )}
     </Modal>
   );
 }
@@ -150,6 +182,7 @@ export default function FileInfo() {
   // IDM's duplicate-link choice, made once per window (or taken from Options).
   const [dupDone, setDupDone] = useState(false);
   const [twice, setTwice] = useState(false);
+  const [zip, setZip] = useState<ZipEntry[] | string | null>(null);
   // Like IDM, the file starts downloading while this window is open; the choices made here
   // are applied when "Start download" or "Download later" is pressed.
   const [early, setEarly] = useState<Early | null>(null);
@@ -500,6 +533,20 @@ export default function FileInfo() {
           </>
         )}
       </div>
+      {!isMedia && info?.resumable && info.size != null && /\.zip$/i.test(splitPath(path)[1] || name) && (
+        <div>
+          <button
+            className="btn small"
+            onClick={() => {
+              setZip([]);
+              api.zipPreview(info.final_url, info.size!).then(setZip, (e) => setZip(String(e)));
+            }}
+          >
+            Preview the files in this ZIP…
+          </button>
+        </div>
+      )}
+      {zip !== null && <ZipList entries={zip} onClose={() => setZip(null)} />}
       <Check checked={remember} onChange={setRemember}>
         Remember this folder for the “{category || "General"}” category
       </Check>

@@ -597,3 +597,15 @@ async fn per_download_speed_limit_changes_while_running() {
     e.m.set_speed_limit(&id, None);
     ok(&e.m.wait_for(&id, DONE, Duration::from_secs(90)).await.unwrap(), &b);
 }
+
+/// Needs the internet: `cargo test -p swiftdm-core --test http_matrix -- --ignored zip`.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore]
+async fn zip_preview_of_a_real_archive() {
+    let url = "https://www.python.org/ftp/python/3.12.0/python-3.12.0-embed-amd64.zip";
+    let s = Settings { proxy_mode: ProxyMode::None, ..Settings::default() };
+    let total = swiftdm_core::http::probe::probe_url(url, &s, &swiftdm_core::cancel::CancelToken::new(), None).await.unwrap().total.unwrap();
+    let files = swiftdm_core::http::zip_preview::preview(url, &s, None, total).await.unwrap();
+    assert!(files.iter().any(|f| f.name == "python.exe" && f.size > 50_000), "{files:?}");
+    println!("{} files, e.g. {:?}", files.len(), &files[..3]);
+}

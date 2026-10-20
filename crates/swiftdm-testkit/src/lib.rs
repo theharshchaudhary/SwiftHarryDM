@@ -576,3 +576,36 @@ async fn handle_conn(mut sock: TcpStream, st: Arc<State>, conn: u64) -> std::io:
         }
     }
 }
+
+/// A minimal ZIP archive: one stored (uncompressed) file per (name, content), with its
+/// central directory, for tests of the ZIP preview.
+pub fn zip_archive(files: &[(&str, &[u8])]) -> Vec<u8> {
+    let (mut out, mut dir) = (vec![], vec![]);
+    for (name, data) in files {
+        let at = out.len() as u32;
+        out.extend([0x50, 0x4b, 0x03, 0x04, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        out.extend((data.len() as u32).to_le_bytes());
+        out.extend((data.len() as u32).to_le_bytes());
+        out.extend((name.len() as u16).to_le_bytes());
+        out.extend([0, 0]);
+        out.extend(name.as_bytes());
+        out.extend(*data);
+        dir.extend([0x50, 0x4b, 0x01, 0x02, 20, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        dir.extend((data.len() as u32).to_le_bytes());
+        dir.extend((data.len() as u32).to_le_bytes());
+        dir.extend((name.len() as u16).to_le_bytes());
+        dir.extend([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        dir.extend(at.to_le_bytes());
+        dir.extend(name.as_bytes());
+    }
+    let dir_at = out.len() as u32;
+    let n = files.len() as u16;
+    out.extend(&dir);
+    out.extend([0x50, 0x4b, 0x05, 0x06, 0, 0, 0, 0]);
+    out.extend(n.to_le_bytes());
+    out.extend(n.to_le_bytes());
+    out.extend((dir.len() as u32).to_le_bytes());
+    out.extend(dir_at.to_le_bytes());
+    out.extend([0, 0]);
+    out
+}

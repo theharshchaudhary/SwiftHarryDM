@@ -171,6 +171,12 @@ pub fn relocate(st: State<AppState>, id: String, dir: String, name: Option<Strin
     st.mgr.relocate(&id, &dir, name);
 }
 
+/// The files inside a ZIP archive before downloading it (IDM's "Zip preview").
+#[tauri::command]
+pub async fn zip_preview(st: State<'_, AppState>, url: String, total: u64) -> R<Vec<swiftdm_core::http::zip_preview::ZipEntry>> {
+    st.mgr.zip_preview(&url, total, None).await
+}
+
 /// Count a cancelled browser download; returns how often this address was cancelled.
 #[tauri::command]
 pub fn count_cancel(st: State<AppState>, url: String) -> u32 {

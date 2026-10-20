@@ -475,6 +475,7 @@ pub fn run() {
             commands::set_description,
             commands::relocate,
             commands::hold,
+            commands::zip_preview,
             commands::count_cancel,
             commands::release,
             commands::set_speed_limit,

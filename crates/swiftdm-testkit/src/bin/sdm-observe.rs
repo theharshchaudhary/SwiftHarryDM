@@ -47,6 +47,9 @@ async fn main() {
             .disposition("attachment; filename=\"report 2026.pdf\""),
         None,
     );
+    // A ZIP archive for the "Zip preview" (its file list is read with range requests).
+    let zip = swiftdm_testkit::zip_archive(&[("readme.txt", b"hello"), ("photos/", b""), ("photos/beach.jpg", &[9u8; 4096])]);
+    add("/z/sample.zip", Resource::new(Body::raw(zip)).etag("\"z\"").content_type("application/zip"), None);
     add("/s7/flaky.bin", Resource::new(Body::gen("s7", 4 * MIB)).etag("\"s7\"").statuses(&[503, 503]), None);
     // Pages for browser tests: a page with download links, and a small PDF for "leave it to
     // the browser" (Alt+click) checks.
