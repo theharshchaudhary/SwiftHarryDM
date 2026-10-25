@@ -322,7 +322,7 @@ impl Manager {
         let s = self.settings.get();
         let p = crate::http::probe::probe_url(&url, &s, &CancelToken::new(), cookies).await.map_err(|e| e.0.message)?;
         let name = crate::fs::names::choose_filename(None, p.content_disposition.as_deref(), Some(&p.final_url), p.content_type.as_deref());
-        let (folder, category) = s.folder_for(&name);
+        let (folder, category) = s.folder_for(&name, Some(&p.final_url));
         Ok(UrlInfo {
             file_name: name,
             size: p.total,

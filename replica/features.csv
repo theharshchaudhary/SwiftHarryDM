@@ -14,7 +14,7 @@ Video quality picker,video,must,yes,yes,
 Merge separate audio and video into MP4,video,must,yes,yes,FFmpeg shipped
 Convert TS to MP4,video,must,yes,partial,verify on HLS-only sites
 Keep yt-dlp updated automatically,video,must,yes,yes,weekly verified update
-Refuse DRM-protected streams with a clear message,video,must,yes,partial,
+Refuse DRM-protected streams with a clear message,video,must,yes,yes,media/mod.rs refuses has_drm formats
 Download panel for selected links,browser,could,yes,no,
 Context menu items configurable from the app,browser,should,yes,no,
 Keys to force or prevent takeover,browser,should,yes,no,
@@ -39,12 +39,12 @@ Delete confirmation with delete from disk,flow,must,yes,yes,
 Login prompt on 401 with save password,flow,should,yes,yes,
 Main list with columns and sorting,main window,must,yes,yes,
 Categories tree with auto-placement,main window,must,yes,yes,
-Category add edit delete with types sites folder,main window,must,yes,partial,dialog lacks sites filter
+Category add edit delete with types sites folder,main window,must,yes,yes,sites filter added 2026-10-25
 Q column with queue icons,main window,should,yes,no,
 Drag downloads onto a queue in the tree,main window,could,yes,no,
-Menus Tasks File Downloads View Help,main window,must,yes,partial,View and Help done; File and Downloads items open
-File menu: stop remove download now redownload,main window,must,yes,partial,
-Downloads menu: pause all stop all delete completed,main window,must,yes,partial,
+Menus Tasks File Downloads View Help,main window,must,yes,yes,verified in Main.tsx
+File menu: stop remove download now redownload,main window,must,yes,yes,"File menu = the row menu: open, resume, stop, download again, move to queue, delete, properties"
+Downloads menu: pause all stop all delete completed,main window,must,yes,yes,"stop all, resume all, delete completed, find, scheduler, queues, limiter"
 View: hide categories arrange by,main window,should,yes,yes,
 Toolbar customize,main window,could,yes,yes,
 Columns dialog,main window,should,yes,partial,
@@ -63,11 +63,11 @@ Command line /d /p /f /n /a,system,should,yes,yes,
 Command line /s /q,system,could,yes,no,
 Warning when running as administrator,system,could,yes,no,
 App update check,system,must,yes,yes,
-Options General tab,options,must,yes,partial,
-Options File types tab,options,must,yes,partial,
+Options General tab,options,must,yes,yes,"startup, tray, clipboard, resume; browser list and Keys are separate rows"
+Options File types tab,options,must,yes,yes,"types, min size, site and address exceptions, twice-cancelled"
 Options Connection tab with per-server exceptions,options,should,yes,partial,exceptions table missing
 Download quotas,options,should,yes,yes,
-Options Save to tab with temp dir,options,must,yes,partial,
+Options Save to tab with temp dir,options,must,yes,yes,no temp dir: ODM writes straight into the preallocated file
 Options Downloads tab (dialog toggles UA antivirus),options,should,yes,partial,
 Run antivirus on finished files,options,should,yes,partial,
 Proxy none system PAC manual SOCKS,options,should,yes,partial,SOCKS5 done; PAC and per-protocol missing
@@ -75,11 +75,11 @@ Site logins,options,should,yes,yes,
 Sounds per event,options,could,yes,no,
 Global speed limiter,limits,must,yes,yes,
 Main download queue,scheduler,must,yes,yes,
-Custom queues,scheduler,must,yes,partial,
-Schedule start and stop times and days,scheduler,must,yes,partial,
+Custom queues,scheduler,must,yes,yes,"Scheduler: new queue, edit, delete"
+Schedule start and stop times and days,scheduler,must,yes,yes,scheduler.rs Schedule
 Retries per file and failed file to end of queue,scheduler,should,yes,no,
 Files at the same time per queue,scheduler,should,yes,partial,
-Queue done actions with shutdown countdown,scheduler,must,yes,partial,countdown dialog missing
+Queue done actions with shutdown countdown,scheduler,must,yes,yes,AfterAction + Countdown window; open-a-file action missing
 Synchronization queues re-download changed files,scheduler,should,yes,no,
 Site grabber wizard,grabber,should,yes,no,new subsystem
 Grabber explore and download window,grabber,should,yes,no,

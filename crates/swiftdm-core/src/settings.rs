@@ -208,13 +208,15 @@ impl Settings {
             .max(1)
     }
 
-    /// Destination folder for a file name, honouring categories.
-    pub fn folder_for(&self, file_name: &str) -> (PathBuf, Option<String>) {
+    /// Destination folder for a file name (from `url`, for site-limited categories),
+    /// honouring categories.
+    pub fn folder_for(&self, file_name: &str, url: Option<&str>) -> (PathBuf, Option<String>) {
         let base = Path::new(&self.download_dir);
         if !self.use_categories {
             return (base.to_path_buf(), None);
         }
-        let cat = categories::categorize(&self.categories, file_name);
+        let host = url.and_then(|u| url::Url::parse(u).ok()).and_then(|u| u.host_str().map(str::to_string));
+        let cat = categories::categorize(&self.categories, file_name, host.as_deref());
         (categories::folder_for(base, cat), cat.map(|c| c.name.clone()))
     }
 
@@ -300,8 +302,8 @@ mod tests {
     #[test]
     fn categories_and_logins() {
         let mut s = Settings { download_dir: "C:\\D".into(), ..Settings::default() };
-        assert_eq!(s.folder_for("a.zip"), (PathBuf::from("C:\\D\\Compressed"), Some("Compressed".into())));
-        assert_eq!(s.folder_for("a.xyz"), (PathBuf::from("C:\\D"), None));
+        assert_eq!(s.folder_for("a.zip", None), (PathBuf::from("C:\\D\\Compressed"), Some("Compressed".into())));
+        assert_eq!(s.folder_for("a.xyz", None), (PathBuf::from("C:\\D"), None));
         s.site_logins.push(SiteLogin {
             host: "*.example.com".into(),
             username: "u".into(),

@@ -56,7 +56,7 @@ export interface Progress {
   segments: SegmentProgress[];
 }
 
-export interface Category { name: string; extensions: string[]; folder: string }
+export interface Category { name: string; extensions: string[]; folder: string; sites?: string[] }
 export interface SiteLogin { host: string; username: string; password_enc: string }
 export interface ServerLimit { host: string; max_connections: number }
 

@@ -404,7 +404,7 @@ fn handle_args(app: &AppHandle, args: &[String]) {
     let s = state.mgr.settings().get();
     let mut spec = swiftdm_core::models::JobSpec::new(url.clone(), value("/p").unwrap_or_else(|| {
         let name = value("/f").unwrap_or_else(|| url.rsplit('/').next().unwrap_or("").to_string());
-        s.folder_for(&name).0.to_string_lossy().into_owned()
+        s.folder_for(&name, Some(&url)).0.to_string_lossy().into_owned()
     }));
     spec.filename = value("/f");
     spec.source = "ui".into();

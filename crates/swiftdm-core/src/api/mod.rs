@@ -218,7 +218,7 @@ impl Inner {
         let guess = req.file_name.clone().unwrap_or_else(|| {
             url::Url::parse(&req.url).ok().and_then(|u| u.path_segments().and_then(|mut p| p.next_back().map(str::to_string))).unwrap_or_default()
         });
-        let (folder, category) = s.folder_for(&guess);
+        let (folder, category) = s.folder_for(&guess, Some(&req.url));
         let mut spec = JobSpec::new(req.url.clone(), o.dest_dir.clone().unwrap_or_else(|| folder.to_string_lossy().into_owned()));
         spec.source = "extension".into();
         spec.referer = req.page_url.clone();

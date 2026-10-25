@@ -235,13 +235,16 @@ function SaveTo({ s, set }: P) {
               </div>
               <div>File types</div>
               <textarea rows={4} className="mono" value={c.extensions.join(" ")} onChange={(e) => upd({ extensions: unlines(e.target.value).map((x) => x.replace(/^\./, "").toLowerCase()) })} />
+              <div>Only files from these sites</div>
+              <textarea rows={2} className="mono" aria-label="Only files from these sites" placeholder="Any site" value={lines(c.sites ?? [])} onChange={(e) => upd({ sites: unlines(e.target.value) })} />
+              <div className="hint">One site per line; “example.com” covers its subdomains. A category with sites wins over one that only matches the file type. Leave the file types empty to take every file from these sites.</div>
               <div className="hint">A plain folder name is created inside the download folder; a full path is used as it is.</div>
             </>
           ) : (
             <div className="muted">No category selected.</div>
           )}
           <div className="row">
-            <button className="btn small" onClick={() => { set({ categories: [...cats, { name: "New category", extensions: [], folder: "New category" }] }); setCur(cats.length); }}>Add</button>
+            <button className="btn small" onClick={() => { set({ categories: [...cats, { name: "New category", extensions: [], folder: "New category", sites: [] }] }); setCur(cats.length); }}>Add</button>
             <button className="btn small danger" disabled={!c} onClick={() => { set({ categories: cats.filter((_, i) => i !== cur) }); setCur(0); }}>Delete</button>
           </div>
         </div>
