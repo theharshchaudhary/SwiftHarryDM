@@ -9,3 +9,4 @@
 | 2026-10-25 | TS to MP4 | done | verified with a trimmed public HLS stream through swiftdm-cli: MP4, h264+aac, full length |
 | 2026-10-25 | S18 find options | done | look in / match case / whole text in the find bar; new e2e scenario find_bar |
 | 2026-10-25 | S01 Q column | done | queue icon, clock when scheduled, tooltip; covered in find_bar |
+| 2026-10-25 | S11 queue retries, failed file to end | done | Queue.retries; test fails without the fix, passes 5/5 with it |

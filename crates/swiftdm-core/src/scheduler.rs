@@ -49,6 +49,10 @@ pub struct Queue {
     pub schedule: Option<Schedule>,
     #[serde(default)]
     pub after: AfterAction,
+    /// Tries for each file before it is marked failed (None = Options > Connection).
+    /// A file that fails goes to the end of the queue and the next one starts.
+    #[serde(default)]
+    pub retries: Option<u32>,
 }
 
 impl Queue {
@@ -60,6 +64,7 @@ impl Queue {
             running: false,
             schedule: None,
             after: AfterAction::None,
+            retries: None,
         }
     }
 }

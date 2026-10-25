@@ -153,6 +153,35 @@ async fn download_later_and_queue_start_with_limit_and_finish_event() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn queue_moves_a_failed_file_to_the_end_and_caps_its_tries() {
+    let e = env(4);
+    let mut q = Queue::main();
+    q.max_concurrent = 1;
+    q.retries = Some(2);
+    e.m.save_queue(q);
+    let ok = "size=50&steps=5&delay_ms=30";
+    let a = e.m.submit(spec(&e, "fail=network&times=1&size=10", "a.bin"), StartMode::Later).unwrap();
+    let b = e.m.submit(spec(&e, ok, "b.bin"), StartMode::Later).unwrap();
+    let c = e.m.submit(spec(&e, ok, "c.bin"), StartMode::Later).unwrap();
+    let d = e.m.submit(spec(&e, "fail=network", "d.bin"), StartMode::Later).unwrap();
+    e.m.start_queue(MAIN_QUEUE);
+    let done: Vec<_> = wait_all(&e, &[&a, &b, &c, &d]).await;
+    let at = |i: usize| done[i].completed_at.unwrap_or(f64::MAX);
+    assert_eq!(done[0].state, S::Completed);
+    assert!(at(1) < at(0) && at(2) < at(0), "a failed once and went behind b and c");
+    assert_eq!((done[3].state, done[3].attempts), (S::Failed, 2), "the queue's retry count wins");
+    assert_eq!(e.eng.max_seen.load(Ordering::SeqCst), 1);
+}
+
+async fn wait_all(e: &Env, ids: &[&String]) -> Vec<swiftdm_core::models::JobSnapshot> {
+    let mut out = Vec::new();
+    for id in ids {
+        out.push(e.m.wait_for(id, DONE, T).await.unwrap());
+    }
+    out
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn stop_queue_requeues_running_jobs() {
     let e = env(4);
     let id = e.m.submit(spec(&e, "hang=1", "h.bin"), StartMode::Later).unwrap();

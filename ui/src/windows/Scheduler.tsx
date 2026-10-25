@@ -15,6 +15,7 @@ function newQueue(n: number): Queue {
     running: false,
     schedule: null,
     after: "none",
+    retries: null,
   };
 }
 
@@ -142,6 +143,14 @@ export default function Scheduler() {
                   <Num value={draft.max_concurrent} min={1} max={16} onChange={(v) => upd({ max_concurrent: v })} width={64} />
                   <span>files at the same time</span>
                 </div>
+                <div className="row">
+                  <Check checked={draft.retries != null} onChange={(v) => upd({ retries: v ? live.settings.retries || 3 : null })}>
+                    Try each file
+                  </Check>
+                  <Num value={draft.retries ?? live.settings.retries} min={1} max={99} disabled={draft.retries == null} onChange={(v) => upd({ retries: v })} width={64} />
+                  <span>times if it fails</span>
+                </div>
+                <div className="hint">A file that fails waits up to 30 seconds, then goes to the end of the queue so the next file can start. Unchecked, the number in Options &gt; General is used.</div>
                 <div className="grid2">
                   <span>When the queue finishes</span>
                   <select value={draft.after} onChange={(e) => upd({ after: e.target.value as AfterAction })}>

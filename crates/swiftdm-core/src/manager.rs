@@ -1209,12 +1209,15 @@ impl Actor {
             return;
         }
         j.attempts += 1;
-        let max_attempts = self.settings.get().retries.max(1);
+        let queue = self.via_queue.get(&j.id).and_then(|qid| self.queues.iter().find(|q| &q.id == qid));
+        let max_attempts = queue.and_then(|q| q.retries).unwrap_or_else(|| self.settings.get().retries).max(1);
+        // In a queue the file waits at most 30 s (like IDM), then goes to the end of the queue.
+        let cap = if queue.is_some() { Duration::from_secs(30) } else { Duration::from_secs(120) };
         if err.retryable && j.attempts < max_attempts && self.stopping.is_none() {
             let delay = err
                 .retry_after
                 .map(Duration::from_secs_f64)
-                .unwrap_or_else(|| (self.config.retry_base * 3u32.pow(j.attempts - 1)).min(Duration::from_secs(120)));
+                .unwrap_or_else(|| (self.config.retry_base * 3u32.pow(j.attempts - 1)).min(cap));
             let reason = format!("retry in {}s", delay.as_secs());
             self.set_state(j, S::RetryWait, Some(&reason), Some(err), false);
             self.seq += 1;
@@ -1231,9 +1234,22 @@ impl Actor {
                 break;
             }
             let Reverse((_, _, id)) = self.timers.pop().unwrap();
+            let last = self.via_queue.get(&id).cloned().map(|qid| {
+                let lowest = self.jobs.values().filter(|j| j.spec.queue_id.as_deref() == Some(qid.as_str())).map(|j| j.spec.priority).min();
+                lowest.unwrap_or(0).saturating_sub(1)
+            });
             self.with_job(&id, |me, j| {
-                if j.state == S::RetryWait {
-                    me.set_state(j, S::Queued, None, None, true);
+                if j.state != S::RetryWait {
+                    return;
+                }
+                match last {
+                    // Back to the end of its queue: the queue starts it when its turn comes.
+                    Some(p) => {
+                        me.via_queue.remove(&j.id);
+                        j.spec.priority = p;
+                        me.set_state(j, S::Paused, Some(QUEUED_REASON), None, true);
+                    }
+                    None => me.set_state(j, S::Queued, None, None, true),
                 }
             });
         }

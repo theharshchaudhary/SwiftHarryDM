@@ -123,6 +123,7 @@ export interface Queue {
   running: boolean;
   schedule: Schedule | null;
   after: AfterAction;
+  retries?: number | null;
 }
 
 export interface QuotaStatus { used: number; limit: number; blocked: boolean }
