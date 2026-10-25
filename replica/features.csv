@@ -12,7 +12,7 @@ Video download panel over web players,browser,must,yes,yes,"on/off, mini, minimu
 Catch streams a player loads (HLS DASH),video,must,yes,yes,
 Video quality picker,video,must,yes,yes,
 Merge separate audio and video into MP4,video,must,yes,yes,FFmpeg shipped
-Convert TS to MP4,video,must,yes,partial,verify on HLS-only sites
+Convert TS to MP4,video,must,yes,yes,"verified 2026-10-25: 3-segment HLS (.ts) -> short.mp4, h264+aac, 30.0 s (--remux-video mp4)"
 Keep yt-dlp updated automatically,video,must,yes,yes,weekly verified update
 Refuse DRM-protected streams with a clear message,video,must,yes,yes,media/mod.rs refuses has_drm formats
 Download panel for selected links,browser,could,yes,no,
