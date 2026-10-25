@@ -1,0 +1,94 @@
+feature,area,priority,original,clone,notes
+Segmented download with dynamic splitting,engine,must,yes,yes,crates/swiftdm-core/src/http
+Resume after failure or restart with validation,engine,must,yes,yes,
+HTTP and HTTPS,engine,must,yes,yes,
+FTP downloads,engine,should,yes,no,IDM takes over FTP; PASV option
+HTTP/2 downloads,engine,could,yes,partial,depends on reqwest/hyper; verify
+Basic NTLM Negotiate Kerberos auth,engine,should,yes,partial,Basic done via login prompt; Windows auth missing
+Take over downloads from Chrome Edge Brave,browser,must,yes,yes,extension MV3
+Native messaging so the extension finds the app,browser,must,yes,yes,
+Firefox add-on,browser,should,yes,no,
+Video download panel over web players,browser,must,yes,partial,video panel exists; no full/mini modes or size/type rules
+Catch streams a player loads (HLS DASH),video,must,yes,yes,
+Video quality picker,video,must,yes,yes,
+Merge separate audio and video into MP4,video,must,yes,yes,FFmpeg shipped
+Convert TS to MP4,video,must,yes,partial,verify on HLS-only sites
+Keep yt-dlp updated automatically,video,must,yes,yes,weekly verified update
+Refuse DRM-protected streams with a clear message,video,must,yes,partial,
+Download panel for selected links,browser,could,yes,no,
+Context menu items configurable from the app,browser,should,yes,no,
+Keys to force or prevent takeover,browser,should,yes,no,
+Clipboard URL monitoring,capture,should,yes,yes,
+Takeover by file type list,capture,must,yes,yes,
+Sites and addresses not to take over,capture,must,yes,yes,editor UI partial
+Twice-cancelled download offers exception,capture,could,yes,yes,
+Takeover-failed notice,capture,could,yes,yes,
+Add URL dialog with clipboard prefill,flow,must,yes,yes,
+Download File Info dialog with category and folder,flow,must,yes,yes,
+Start transferring while the info dialog is open,flow,should,yes,yes,
+Remember path for category,flow,should,yes,yes,
+Zip preview,flow,could,yes,yes,
+Download later with queue choice,flow,should,yes,yes,
+Duplicate link dialog,flow,should,yes,yes,
+Download progress window with segment map,flow,must,yes,yes,
+Per-download speed limit,flow,should,yes,yes,
+Options on completion (exit or shut down),flow,should,yes,yes,
+Download complete dialog,flow,must,yes,yes,
+Drag the finished file out,flow,could,yes,yes,
+Delete confirmation with delete from disk,flow,must,yes,yes,
+Login prompt on 401 with save password,flow,should,yes,yes,
+Main list with columns and sorting,main window,must,yes,yes,
+Categories tree with auto-placement,main window,must,yes,yes,
+Category add edit delete with types sites folder,main window,must,yes,partial,dialog lacks sites filter
+Q column with queue icons,main window,should,yes,no,
+Drag downloads onto a queue in the tree,main window,could,yes,no,
+Menus Tasks File Downloads View Help,main window,must,yes,partial,View and Help done; File and Downloads items open
+File menu: stop remove download now redownload,main window,must,yes,partial,
+Downloads menu: pause all stop all delete completed,main window,must,yes,partial,
+View: hide categories arrange by,main window,should,yes,yes,
+Toolbar customize,main window,could,yes,yes,
+Columns dialog,main window,should,yes,partial,
+Find dialog and find next,main window,should,yes,partial,find exists; fields/match case/whole string missing
+Dark theme,main window,should,yes,yes,
+Language selection,main window,could,yes,partial,
+Tip of the day,main window,could,yes,yes,
+Properties dialog,main window,must,yes,yes,
+Export and import IDM .ef2 and text,main window,must,yes,yes,the IDM migration path
+Batch download numbered series,main window,should,yes,yes,
+Download all links window,main window,must,yes,yes,
+Drop target,main window,could,yes,yes,
+Tray icon and tray menu,system,must,yes,yes,
+Start with Windows,system,must,yes,yes,
+Command line /d /p /f /n /a,system,should,yes,yes,
+Command line /s /q,system,could,yes,no,
+Warning when running as administrator,system,could,yes,no,
+App update check,system,must,yes,yes,
+Options General tab,options,must,yes,partial,
+Options File types tab,options,must,yes,partial,
+Options Connection tab with per-server exceptions,options,should,yes,partial,exceptions table missing
+Download quotas,options,should,yes,yes,
+Options Save to tab with temp dir,options,must,yes,partial,
+Options Downloads tab (dialog toggles UA antivirus),options,should,yes,partial,
+Run antivirus on finished files,options,should,yes,partial,
+Proxy none system PAC manual SOCKS,options,should,yes,partial,SOCKS5 done; PAC and per-protocol missing
+Site logins,options,should,yes,yes,
+Sounds per event,options,could,yes,no,
+Global speed limiter,limits,must,yes,yes,
+Main download queue,scheduler,must,yes,yes,
+Custom queues,scheduler,must,yes,partial,
+Schedule start and stop times and days,scheduler,must,yes,partial,
+Retries per file and failed file to end of queue,scheduler,should,yes,no,
+Files at the same time per queue,scheduler,should,yes,partial,
+Queue done actions with shutdown countdown,scheduler,must,yes,partial,countdown dialog missing
+Synchronization queues re-download changed files,scheduler,should,yes,no,
+Site grabber wizard,grabber,should,yes,no,new subsystem
+Grabber explore and download window,grabber,should,yes,no,
+Grabber projects save load templates,grabber,could,yes,no,
+Grabber schedule,grabber,could,yes,no,
+Grabber convert links for offline browsing,grabber,could,yes,no,
+Registration and trial,business,skip,yes,skip,ODM is free and open source
+Tell a friend,business,skip,yes,skip,no service behind it
+Dial-up and VPN tab,options,skip,yes,skip,no dial-up on modern Windows
+IE monitor and Opera/IE plugins,browser,skip,yes,skip,those browsers are gone
+MMS protocol,engine,skip,yes,skip,dead protocol
+Toolbar skins and IDM artwork,main window,skip,yes,skip,IDM's own assets; ODM draws its own
