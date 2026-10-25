@@ -447,6 +447,25 @@ async fn jobs(State(st): State<Arc<Inner>>, h: HeaderMap) -> Response {
     Json(json!({ "success": true, "jobs": out })).into_response()
 }
 
+/// How the extension shows its download button on players (Options > Browser).
+async fn player_rules(State(st): State<Arc<Inner>>, h: HeaderMap) -> Response {
+    if !st.lim_read.allow() {
+        return err(StatusCode::TOO_MANY_REQUESTS, "rate limited");
+    }
+    if st.authed(&h).is_none() {
+        return err(StatusCode::UNAUTHORIZED, "not paired");
+    }
+    let s = st.mgr.settings().get();
+    Json(json!({
+        "success": true,
+        "enabled": s.player_button,
+        "mini": s.player_button_mini,
+        "minSeconds": s.player_button_min_seconds,
+        "skipSites": s.player_button_skip_sites,
+    }))
+    .into_response()
+}
+
 /// Title and real formats of a video page, for the quality list in the page's download panel.
 async fn media_info(State(st): State<Arc<Inner>>, h: HeaderMap, body: Bytes) -> Response {
     if !st.lim_download.allow() {
@@ -521,6 +540,7 @@ pub async fn start(
         .route("/api/links", post(links))
         .route("/api/jobs", get(jobs))
         .route("/api/media/info", post(media_info))
+        .route("/api/settings/player", get(player_rules))
         .fallback(fallback)
         .layer(middleware::from_fn_with_state(inner.clone(), guard))
         .layer(DefaultBodyLimit::max(MAX_BODY))

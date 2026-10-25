@@ -278,6 +278,18 @@ class BackgroundManager {
         return r.ok ? { success: true, info: r.data.info } : { success: false, error: r.data.error };
     }
 
+    /** The app's rules for the button on players, cached for a minute. */
+    async playerRules() {
+        const fresh = this._rules && Date.now() - this._rules.at < 60000;
+        if (!fresh) {
+            const r = await this.request('/api/settings/player').catch(() => null);
+            // Older apps (or not connected): the button shows everywhere, full size.
+            const rules = r && r.ok ? r.data : { enabled: true, mini: false, minSeconds: 0, skipSites: [] };
+            this._rules = { at: Date.now(), rules };
+        }
+        return { success: true, ...this._rules.rules };
+    }
+
     async jobs() {
         const r = await this.request('/api/jobs');
         return r.ok ? { success: true, jobs: r.data.jobs } : { success: false, status: r.status, error: r.data.error };
@@ -342,6 +354,7 @@ class BackgroundManager {
                 sendLinks: () => this.sendLinks(req.urls || [], req.pageUrl, req.texts),
                 mediaInfo: () => this.mediaInfo(req.url),
                 getStreams: () => this.streams(sender.tab && sender.tab.id),
+                playerRules: () => this.playerRules(),
                 bypassNext: async () => {
                     if (req.url) this.bypass.set(req.url, Date.now());
                     return { success: true };

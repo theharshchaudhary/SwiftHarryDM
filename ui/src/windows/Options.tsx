@@ -456,6 +456,21 @@ function Browser({ s, set }: P) {
         Show the “Download file info” window for downloads sent from the browser
       </Check>
       <div className="hint">Which browser downloads are taken over is set on the “File types” page.</div>
+      <fieldset>
+        <legend>Download button on video and audio players</legend>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <Check checked={s.player_button} onChange={(v) => set({ player_button: v })}>Show a download button when I point at a player</Check>
+          <Check checked={s.player_button_mini} disabled={!s.player_button} onChange={(v) => set({ player_button_mini: v })}>Small button (icon only)</Check>
+          <div className="row">
+            <span>Not on players shorter than</span>
+            <Num value={s.player_button_min_seconds} min={0} disabled={!s.player_button} onChange={(v) => set({ player_button_min_seconds: v })} />
+            <span>seconds (0 = any length)</span>
+          </div>
+          <div>Never on these sites:</div>
+          <textarea rows={3} className="mono" aria-label="Sites without the player button" disabled={!s.player_button} value={lines(s.player_button_skip_sites)} onChange={(e) => set({ player_button_skip_sites: unlines(e.target.value) })} />
+          <div className="hint">One site per line; “example.com” covers its subdomains. The browser picks up changes within a minute. The × next to the button hides it on that one player.</div>
+        </div>
+      </fieldset>
     </>
   );
 }

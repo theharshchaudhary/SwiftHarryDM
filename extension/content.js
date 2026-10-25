@@ -35,6 +35,11 @@
                 border: 0; border-radius: 18px; background: #2c5f8a; color: #fff; cursor: pointer;
                 box-shadow: 0 2px 10px rgba(0,0,0,.35); opacity: .95; }
             .pill:hover { background: #3a7bb3; opacity: 1; }
+            .pill.mini { padding: 7px; border-radius: 50%; }
+            .pill.mini span { display: none; }
+            .pill-x { position: fixed; display: none; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%;
+                background: #1c2733; color: #fff; font-size: 12px; line-height: 18px; text-align: center; cursor: pointer; opacity: .85; }
+            .pill-x:hover { opacity: 1; }
             .pill svg, .head svg { width: 16px; height: 16px; flex: none; }
             .panel { position: fixed; width: 320px; background: #fff; color: #1c2733; border-radius: 10px;
                 box-shadow: 0 10px 30px rgba(0,0,0,.35); overflow: hidden; }
@@ -102,16 +107,43 @@
     // ------------------------------------------------------------------ the button on players
     let current = null;
     let pill = null;
+    let pillX = null;
+    // The app's rules (Options > Browser): on/off, mini, minimum length, sites without it.
+    let rules = { enabled: true, mini: false, minSeconds: 0, skipSites: [] };
+    const hidden = new WeakSet(); // players the user closed the button on
+    send({ action: 'playerRules' }).then((r) => { if (r && r.success) rules = r; });
+    const hostMatches = (pat, h) => {
+        pat = String(pat).trim().toLowerCase().replace(/\/+$/, '');
+        if (!pat) return false;
+        if (pat.includes('*')) {
+            const re = new RegExp('^' + pat.split('*').map((x) => x.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
+            return re.test(h);
+        }
+        return h === pat || h.endsWith('.' + pat);
+    };
+    function allowed(media) {
+        if (!rules.enabled || hidden.has(media)) return false;
+        const h = location.hostname.toLowerCase();
+        if ((rules.skipSites || []).some((p) => hostMatches(p, h))) return false;
+        // Live streams report an infinite length; unknown length waits for the metadata.
+        if (rules.minSeconds > 0 && !(media.duration >= rules.minSeconds)) return false;
+        return true;
+    }
     function place() {
         if (!current || !pill) return;
         const r = current.getBoundingClientRect();
-        if (r.bottom < 0 || r.top > innerHeight || r.width === 0) {
+        if (r.bottom < 0 || r.top > innerHeight || r.width === 0 || !allowed(current)) {
             pill.style.display = 'none';
+            pillX.style.display = 'none';
             return;
         }
+        const w = rules.mini ? 34 : 180;
         pill.style.display = 'flex';
         pill.style.top = `${Math.max(8, r.top + 10)}px`;
-        pill.style.left = `${Math.min(innerWidth - 190, r.right - 180)}px`;
+        pill.style.left = `${Math.min(innerWidth - w - 10, r.right - w)}px`;
+        pillX.style.display = 'block';
+        pillX.style.top = `${Math.max(8, r.top + 10) - 7}px`;
+        pillX.style.left = `${Math.min(innerWidth - 10, r.right) - 11}px`;
     }
     function showPill(media) {
         const r = overlay();
@@ -124,10 +156,22 @@
                 e.stopPropagation();
                 if (current) openPanel(describe(current), pill.getBoundingClientRect());
             });
-            r.append(pill);
+            pillX = el('button', 'pill-x', '×');
+            pillX.title = 'Hide the button on this player';
+            pillX.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (current) hidden.add(current);
+                place();
+            });
+            r.append(pill, pillX);
         }
         current = media;
-        pill.lastChild.textContent = media.tagName === 'AUDIO' ? 'Download this audio' : 'Download this video';
+        const what = media.tagName === 'AUDIO' ? 'Download this audio' : 'Download this video';
+        pill.lastChild.textContent = what;
+        pill.title = what;
+        pill.classList.toggle('mini', !!rules.mini);
+        if (!(media.duration > 0)) media.addEventListener('loadedmetadata', place, { once: true });
         place();
     }
     document.addEventListener('mouseover', (e) => {

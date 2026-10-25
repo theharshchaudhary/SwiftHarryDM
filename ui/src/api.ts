@@ -90,6 +90,10 @@ export interface Settings {
   force_close_apps: boolean;
   confirm_delete: boolean;
   offer_exception_on_cancel: boolean;
+  player_button: boolean;
+  player_button_mini: boolean;
+  player_button_min_seconds: number;
+  player_button_skip_sites: string[];
   tray_icon: boolean;
   ui_font: string;
   ui_font_size: number;

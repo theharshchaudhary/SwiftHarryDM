@@ -8,7 +8,7 @@ Basic NTLM Negotiate Kerberos auth,engine,should,yes,partial,Basic done via logi
 Take over downloads from Chrome Edge Brave,browser,must,yes,yes,extension MV3
 Native messaging so the extension finds the app,browser,must,yes,yes,
 Firefox add-on,browser,should,yes,no,
-Video download panel over web players,browser,must,yes,partial,video panel exists; no full/mini modes or size/type rules
+Video download panel over web players,browser,must,yes,yes,"on/off, mini, minimum length, site exceptions, hide per player (Options > Browser). Minimum length replaces IDM's minimum size: a player knows its length, not its size"
 Catch streams a player loads (HLS DASH),video,must,yes,yes,
 Video quality picker,video,must,yes,yes,
 Merge separate audio and video into MP4,video,must,yes,yes,FFmpeg shipped

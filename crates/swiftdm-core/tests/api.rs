@@ -192,6 +192,25 @@ async fn capture_decisions_and_link_lists() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn player_button_rules_follow_the_settings() {
+    let e = env(false).await;
+    let t = e.pair().await;
+    let (s, v) = e.call("GET", "/api/settings/player", Some(EXT), Some(&t), None).await;
+    assert_eq!(s, 200, "{v}");
+    assert_eq!((v["enabled"].as_bool(), v["mini"].as_bool(), v["minSeconds"].as_u64()), (Some(true), Some(false), Some(0)));
+    let mut st = e.mgr.settings().get();
+    st.player_button_mini = true;
+    st.player_button_min_seconds = 30;
+    st.player_button_skip_sites = vec!["music.example.com".into()];
+    e.mgr.settings().set(st).unwrap();
+    let (_, v) = e.call("GET", "/api/settings/player", Some(EXT), Some(&t), None).await;
+    assert_eq!((v["mini"].as_bool(), v["minSeconds"].as_u64()), (Some(true), Some(30)));
+    assert_eq!(v["skipSites"][0].as_str(), Some("music.example.com"));
+    let (s, _) = e.call("GET", "/api/settings/player", Some(EXT), None, None).await;
+    assert_eq!(s, 401);
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn video_formats_and_exact_format_downloads() {
     let e = env(true).await;
     let t = e.pair().await;

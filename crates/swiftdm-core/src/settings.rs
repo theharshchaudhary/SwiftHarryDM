@@ -66,6 +66,14 @@ pub struct Settings {
     pub confirm_delete: bool,
     /// After the same browser download is cancelled twice, offer to stop taking it over.
     pub offer_exception_on_cancel: bool,
+    /// The download button the extension shows on video and audio players.
+    pub player_button: bool,
+    /// Icon only instead of icon and text.
+    pub player_button_mini: bool,
+    /// Not on players shorter than this (seconds; 0 = any length).
+    pub player_button_min_seconds: u32,
+    /// Sites where the button never shows (same patterns as the capture lists).
+    pub player_button_skip_sites: Vec<String>,
     /// Icon in the notification area (IDM: View > IDM tray icon).
     pub tray_icon: bool,
     /// Font of the windows; empty / 0 = the default (IDM: View > Font).
@@ -131,6 +139,10 @@ impl Default for Settings {
             force_close_apps: false,
             confirm_delete: true,
             offer_exception_on_cancel: true,
+            player_button: true,
+            player_button_mini: false,
+            player_button_min_seconds: 0,
+            player_button_skip_sites: Vec::new(),
             tray_icon: true,
             ui_font: String::new(),
             ui_font_size: 0,
