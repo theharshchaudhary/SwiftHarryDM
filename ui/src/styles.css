@@ -81,7 +81,7 @@ html, body, #root { height: 100%; margin: 0; }
 body {
   background: var(--bg);
   color: var(--text);
-  font: 13px/1.4 var(--font);
+  font: var(--font-size, 13px)/1.4 var(--font);
   user-select: none;
   overflow: hidden;
 }

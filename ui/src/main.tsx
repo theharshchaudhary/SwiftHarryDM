@@ -17,6 +17,7 @@ import Pairing from "./windows/Pairing";
 import Browser from "./windows/Browser";
 import Drop from "./windows/Drop";
 import Login from "./windows/Login";
+import Tips from "./windows/Tips";
 
 // Every window loads this page; ?w= selects what it shows.
 const WINDOWS: Record<string, () => JSX.Element | null> = {
@@ -36,6 +37,7 @@ const WINDOWS: Record<string, () => JSX.Element | null> = {
   browser: Browser,
   drop: Drop,
   login: Login,
+  tips: Tips,
 };
 
 const TITLES: Record<string, string> = {
@@ -55,6 +57,7 @@ const TITLES: Record<string, string> = {
   browser: "Connect your browser",
   drop: "Drop target",
   login: "Login required",
+  tips: "Tip of the day",
 };
 
 const kind = windowParams().get("w") ?? "main";

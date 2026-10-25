@@ -66,6 +66,15 @@ pub struct Settings {
     pub confirm_delete: bool,
     /// After the same browser download is cancelled twice, offer to stop taking it over.
     pub offer_exception_on_cancel: bool,
+    /// Icon in the notification area (IDM: View > IDM tray icon).
+    pub tray_icon: bool,
+    /// Font of the windows; empty / 0 = the default (IDM: View > Font).
+    pub ui_font: String,
+    pub ui_font_size: u32,
+    /// "Tip of the day" when the main window opens.
+    pub tips_on_startup: bool,
+    /// The speed limit to use when the limiter is turned on again.
+    pub last_speed_limit: u64,
     pub av_scan_enabled: bool,
     pub av_scan_command: String,
     pub sound_on_complete: bool,
@@ -122,6 +131,11 @@ impl Default for Settings {
             force_close_apps: false,
             confirm_delete: true,
             offer_exception_on_cancel: true,
+            tray_icon: true,
+            ui_font: String::new(),
+            ui_font_size: 0,
+            tips_on_startup: true,
+            last_speed_limit: 500 * 1024,
             av_scan_enabled: false,
             av_scan_command: r#""C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "{file}" -DisableRemediation"#
                 .into(),

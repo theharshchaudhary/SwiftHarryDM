@@ -132,12 +132,19 @@ function MainView({ live }: { live: Live }) {
   const [showSidebar, setShowSidebar] = useState(() => pref("sidebar", true));
   const [sidebarW, setSidebarW] = useState(() => pref("sidebarW", 210));
   const [smallToolbar, setSmallToolbar] = useState(() => pref("smallToolbar", false));
+  const [tbItems, setTbItems] = useState<string[]>(() => pref("toolbar", DEFAULT_TOOLBAR));
   const [openCats, setOpenCats] = useState(() => pref("openCats", true));
   const [openQueues, setOpenQueues] = useState(() => pref("openQueues", true));
   const [ctx, setCtx] = useState<{ x: number; y: number; items: MenuEntry[] } | null>(null);
   const [find, setFind] = useState<{ open: boolean; text: string; msg: string }>({ open: false, text: "", msg: "" });
   const [modal, setModal] = useState<
-    null | { kind: "delete"; ids: string[] } | { kind: "columns" } | { kind: "deleteDone" } | { kind: "export"; format: "txt" | "ef2" }
+    | null
+    | { kind: "delete"; ids: string[] }
+    | { kind: "columns" }
+    | { kind: "deleteDone" }
+    | { kind: "export"; format: "txt" | "ef2" }
+    | { kind: "toolbar" }
+    | { kind: "font" }
   >(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
@@ -154,6 +161,14 @@ function MainView({ live }: { live: Live }) {
   useEffect(() => {
     if (pref<boolean>("dropTarget", false)) api.openWindow("drop");
   }, []);
+  // Tip of the day when the window opens (not when SwiftHarryDM starts hidden in the tray).
+  const tipsShown = useRef(false);
+  useEffect(() => {
+    if (tipsShown.current || !live?.settings.tips_on_startup || document.visibilityState !== "visible") return;
+    tipsShown.current = true;
+    const t = setTimeout(() => api.openWindow("tips"), 1500);
+    return () => clearTimeout(t);
+  }, [live?.settings.tips_on_startup]);
   useEffect(() => {
     api.pendingUpdate().then(setUpdate);
     const un = onCore((e) => {
@@ -209,6 +224,7 @@ function MainView({ live }: { live: Live }) {
   useEffect(() => savePref("sidebar", showSidebar), [showSidebar]);
   useEffect(() => savePref("sidebarW", sidebarW), [sidebarW]);
   useEffect(() => savePref("smallToolbar", smallToolbar), [smallToolbar]);
+  useEffect(() => savePref("toolbar", tbItems), [tbItems]);
   useEffect(() => savePref("openCats", openCats), [openCats]);
   useEffect(() => savePref("openQueues", openQueues), [openQueues]);
 
@@ -276,12 +292,8 @@ function MainView({ live }: { live: Live }) {
       api.openWindow("links", { source: "import", urls: JSON.stringify(list.map((e) => e.url)), referers: JSON.stringify(referers) });
     },
     toggleLimiter: async (on: boolean) => {
-      const last = pref<number>("lastLimit", 500 * 1024);
-      if (on) await api.saveSettings({ ...settings, speed_limit: settings.speed_limit || last });
-      else {
-        if (settings.speed_limit) savePref("lastLimit", settings.speed_limit);
-        await api.saveSettings({ ...settings, speed_limit: 0 });
-      }
+      if (on) await api.saveSettings({ ...settings, speed_limit: settings.speed_limit || settings.last_speed_limit || 500 * 1024 });
+      else await api.saveSettings({ ...settings, speed_limit: 0, last_speed_limit: settings.speed_limit || settings.last_speed_limit });
     },
   };
 
@@ -457,22 +469,31 @@ function MainView({ live }: { live: Live }) {
     {
       label: "View",
       items: () => [
-        { label: "Show categories", checked: showSidebar, onClick: () => setShowSidebar(!showSidebar) },
+        { label: "Hide categories", checked: !showSidebar, onClick: () => setShowSidebar(!showSidebar) },
         {
-          label: "Sort by",
+          label: "Arrange files",
           submenu: [
             { label: "Order added", checked: !sort, onClick: () => setSort(null) },
             ...COLUMNS.filter((c) => c.id !== "q").map((c) => ({ label: c.title, checked: sort?.col === c.id, onClick: () => setSort({ col: c.id, asc: sort?.col === c.id ? !sort.asc : true }) })),
           ],
         },
-        { label: "Columns…", onClick: () => setModal({ kind: "columns" }) },
         {
           label: "Toolbar",
           submenu: [
+            { label: "Customize…", onClick: () => setModal({ kind: "toolbar" }) },
+            "sep",
             { label: "Large buttons", checked: !smallToolbar, onClick: () => setSmallToolbar(false) },
             { label: "Small buttons", checked: smallToolbar, onClick: () => setSmallToolbar(true) },
           ],
         },
+        {
+          label: "Notification area icon",
+          submenu: [
+            { label: "Show", checked: settings.tray_icon, onClick: () => api.saveSettings({ ...settings, tray_icon: true }) },
+            { label: "Don’t show", checked: !settings.tray_icon, onClick: () => api.saveSettings({ ...settings, tray_icon: false }) },
+          ],
+        },
+        { label: "Customize list columns…", onClick: () => setModal({ kind: "columns" }) },
         {
           label: "Theme",
           submenu: (["system", "light", "dark"] as const).map((t) => ({
@@ -481,13 +502,29 @@ function MainView({ live }: { live: Live }) {
             onClick: () => api.saveSettings({ ...settings, theme: t }),
           })),
         },
+        {
+          label: "Font",
+          submenu: [
+            { label: "Choose font…", onClick: () => setModal({ kind: "font" }) },
+            { label: "Reset to the default font", disabled: !settings.ui_font && !settings.ui_font_size, onClick: () => api.saveSettings({ ...settings, ui_font: "", ui_font_size: 0 }) },
+          ],
+        },
+        "sep",
+        { label: "Language", submenu: [{ label: "English", checked: true, onClick: () => {} }] },
       ],
     },
     {
       label: "Help",
       items: () => [
+        { label: "Help contents", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM/blob/main/docs/HELP.md") },
+        { label: "Scheduler and queues", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM/blob/main/docs/HELP.md#scheduler-and-queues") },
         { label: "Keyboard shortcuts", onClick: () => alert("Ctrl+N  Add download\nCtrl+F  Find\nF3  Find next\nDel  Delete\nEnter  Open / show progress\nCtrl+A  Select all") },
+        { label: "Tip of the day…", onClick: () => api.openWindow("tips") },
+        "sep",
+        { label: "SwiftHarryDM home page", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM") },
+        { label: "Report a problem", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM/issues") },
         { label: "Connect your browser…", onClick: () => api.openWindow("browser") },
+        "sep",
         { label: "Check for updates…", onClick: checkUpdates },
         "sep",
         { label: "About SwiftHarryDM", onClick: () => api.openWindow("about") },
@@ -592,35 +629,58 @@ function MainView({ live }: { live: Live }) {
     <div className="app" onContextMenu={(e) => e.preventDefault()}>
       <MenuBar roots={roots} />
       <div className={`toolbar${smallToolbar ? " small" : ""}`}>
-        <TB icon="add" label="Add URL" title="Add a new download (Ctrl+N)" onClick={act.add} />
-        <TB icon="resume" label="Resume" cls="green" disabled={!selected.some(F.canResume)} onClick={act.resume} title="Start or resume the selected downloads" />
-        <TB icon="stop" label="Stop" cls="amber" disabled={!selected.some(F.canStop)} onClick={act.stop} title="Stop the selected downloads" />
-        <TB icon="stopAll" label="Stop all" cls="amber" disabled={active === 0 && !live.jobs.some((j) => j.state === "QUEUED")} onClick={act.stopAll} title="Stop every download" />
-        <div className="divider" />
-        <TB icon="delete" label="Delete" cls="red" disabled={!selected.length} onClick={act.del} title="Remove the selected downloads from the list" />
-        <TB icon="deleteDone" label="Clear done" cls="red" disabled={!counts.finished} onClick={act.deleteDone} title="Remove all completed downloads from the list" />
-        <div className="divider" />
-        <TB icon="options" label="Options" onClick={() => act.options()} title="Browser integration, file types, connection, proxy, logins and more" />
-        <TB icon="scheduler" label="Scheduler" onClick={() => act.scheduler()} title="Queues and their schedules" />
-        <TB
-          icon="startQueue"
-          label="Start queue"
-          cls="green"
-          drop
-          onClick={(e) => (queues.length === 1 ? api.startQueue(queues[0].id) : setCtx({ x: e.clientX, y: e.clientY, items: queueItems((q) => api.startQueue(q.id), false) }))}
-          title="Start the main queue, or choose a queue"
-        />
-        <TB
-          icon="stopQueue"
-          label="Stop queue"
-          cls="amber"
-          drop
-          disabled={!queues.some((q) => q.running)}
-          onClick={(e) => setCtx({ x: e.clientX, y: e.clientY, items: queueItems((q) => api.stopQueue(q.id), true) })}
-          title="Stop a running queue"
-        />
-        <div className="divider" />
-        <TB icon="batch" label="Batch" onClick={act.batch} title="Add a numbered series of files" />
+        {tbItems.map((id, i) => {
+          if (id === "|") return <div key={i} className="divider" />;
+          switch (id) {
+            case "add":
+              return <TB key={id} icon="add" label="Add URL" title="Add a new download (Ctrl+N)" onClick={act.add} />;
+            case "resume":
+              return <TB key={id} icon="resume" label="Resume" cls="green" disabled={!selected.some(F.canResume)} onClick={act.resume} title="Start or resume the selected downloads" />;
+            case "stop":
+              return <TB key={id} icon="stop" label="Stop" cls="amber" disabled={!selected.some(F.canStop)} onClick={act.stop} title="Stop the selected downloads" />;
+            case "stopAll":
+              return <TB key={id} icon="stopAll" label="Stop all" cls="amber" disabled={active === 0 && !live.jobs.some((j) => j.state === "QUEUED")} onClick={act.stopAll} title="Stop every download" />;
+            case "delete":
+              return <TB key={id} icon="delete" label="Delete" cls="red" disabled={!selected.length} onClick={act.del} title="Remove the selected downloads from the list" />;
+            case "deleteDone":
+              return <TB key={id} icon="deleteDone" label="Clear done" cls="red" disabled={!counts.finished} onClick={act.deleteDone} title="Remove all completed downloads from the list" />;
+            case "options":
+              return <TB key={id} icon="options" label="Options" onClick={() => act.options()} title="Browser integration, file types, connection, proxy, logins and more" />;
+            case "scheduler":
+              return <TB key={id} icon="scheduler" label="Scheduler" onClick={() => act.scheduler()} title="Queues and their schedules" />;
+            case "startQueue":
+              return (
+                <TB
+                  key={id}
+                  icon="startQueue"
+                  label="Start queue"
+                  cls="green"
+                  drop
+                  onClick={(e) => (queues.length === 1 ? api.startQueue(queues[0].id) : setCtx({ x: e.clientX, y: e.clientY, items: queueItems((q) => api.startQueue(q.id), false) }))}
+                  title="Start the main queue, or choose a queue"
+                />
+              );
+            case "stopQueue":
+              return (
+                <TB
+                  key={id}
+                  icon="stopQueue"
+                  label="Stop queue"
+                  cls="amber"
+                  drop
+                  disabled={!queues.some((q) => q.running)}
+                  onClick={(e) => setCtx({ x: e.clientX, y: e.clientY, items: queueItems((q) => api.stopQueue(q.id), true) })}
+                  title="Stop a running queue"
+                />
+              );
+            case "batch":
+              return <TB key={id} icon="batch" label="Batch" onClick={act.batch} title="Add a numbered series of files" />;
+            case "find":
+              return <TB key={id} icon="search" label="Find" onClick={() => setFind((f) => ({ ...f, open: true }))} title="Find a download (Ctrl+F)" />;
+            default:
+              return null;
+          }
+        })}
         <div className="spacer" />
       </div>
 
@@ -824,6 +884,8 @@ function MainView({ live }: { live: Live }) {
       {ctx && <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={() => setCtx(null)} />}
       {modal?.kind === "delete" && <DeleteModal live={live} ids={modal.ids} onClose={() => setModal(null)} />}
       {modal?.kind === "deleteDone" && <DeleteDoneModal live={live} onClose={() => setModal(null)} />}
+      {modal?.kind === "toolbar" && <ToolbarModal items={tbItems} onSave={(v) => { setTbItems(v); setModal(null); }} onClose={() => setModal(null)} />}
+      {modal?.kind === "font" && <FontModal live={live} onClose={() => setModal(null)} />}
       {modal?.kind === "export" && (
         <ExportModal
           format={modal.format}
@@ -852,6 +914,105 @@ function TB({ icon, label, onClick, disabled, title, cls, drop }: { icon: string
 }
 
 // ------------------------------------------------------------------ modals inside the main window
+/** Toolbar buttons, in IDM's order; "|" is a separator. */
+const TOOLBAR_BUTTONS: [string, string][] = [
+  ["add", "Add URL"],
+  ["resume", "Resume"],
+  ["stop", "Stop"],
+  ["stopAll", "Stop all"],
+  ["delete", "Delete"],
+  ["deleteDone", "Clear done"],
+  ["options", "Options"],
+  ["scheduler", "Scheduler"],
+  ["startQueue", "Start queue"],
+  ["stopQueue", "Stop queue"],
+  ["batch", "Batch"],
+  ["find", "Find"],
+];
+const DEFAULT_TOOLBAR = ["add", "resume", "stop", "stopAll", "|", "delete", "deleteDone", "|", "options", "scheduler", "startQueue", "stopQueue", "|", "batch"];
+const tbLabel = (id: string) => (id === "|" ? "— Separator —" : TOOLBAR_BUTTONS.find(([k]) => k === id)?.[1] ?? id);
+
+/** IDM's "Customize toolbar": which buttons, in what order. */
+function ToolbarModal({ items, onSave, onClose }: { items: string[]; onSave: (v: string[]) => void; onClose: () => void }) {
+  const [list, setList] = useState(items);
+  const [cur, setCur] = useState<number | null>(null);
+  const [avail, setAvail] = useState<string | null>(null);
+  const available = [...TOOLBAR_BUTTONS.map(([k]) => k).filter((k) => !list.includes(k)), "|"];
+  const move = (d: number) => {
+    if (cur == null || cur + d < 0 || cur + d >= list.length) return;
+    const l = [...list];
+    [l[cur], l[cur + d]] = [l[cur + d], l[cur]];
+    setList(l);
+    setCur(cur + d);
+  };
+  const box = { height: 220, overflow: "auto", border: "1px solid var(--border)", borderRadius: 4, flex: 1 } as const;
+  const row = (on: boolean) => ({ padding: "3px 8px", cursor: "default", background: on ? "var(--sel)" : undefined, color: on ? "var(--sel-text)" : undefined });
+  return (
+    <Modal
+      title="Customize toolbar"
+      onClose={onClose}
+      foot={
+        <>
+          <button className="btn" onClick={() => setList(DEFAULT_TOOLBAR)}>Reset</button>
+          <span style={{ flex: 1 }} />
+          <button className="btn primary" onClick={() => onSave(list)}>OK</button>
+          <button className="btn" onClick={onClose}>Cancel</button>
+        </>
+      }
+    >
+      <div className="row" style={{ alignItems: "stretch", gap: 8 }}>
+        <div style={box}>
+          <div className="hint" style={{ padding: "4px 8px" }}>Available</div>
+          {available.map((k) => <div key={k} style={row(avail === k)} onClick={() => setAvail(k)}>{tbLabel(k)}</div>)}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, justifyContent: "center" }}>
+          <button className="btn small" disabled={!avail} onClick={() => { if (avail) { const l = [...list]; l.splice(cur == null ? l.length : cur + 1, 0, avail); setList(l); setAvail(null); } }}>Add →</button>
+          <button className="btn small" disabled={cur == null} onClick={() => { if (cur != null) { setList(list.filter((_, i) => i !== cur)); setCur(null); } }}>← Remove</button>
+          <button className="btn small" disabled={cur == null} onClick={() => move(-1)}>Move up</button>
+          <button className="btn small" disabled={cur == null} onClick={() => move(1)}>Move down</button>
+        </div>
+        <div style={box}>
+          <div className="hint" style={{ padding: "4px 8px" }}>On the toolbar</div>
+          {list.map((k, i) => <div key={i} style={row(cur === i)} onClick={() => setCur(i)}>{tbLabel(k)}</div>)}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+const FONTS = ["Segoe UI Variable Text", "Segoe UI", "Arial", "Calibri", "Tahoma", "Verdana", "Microsoft Sans Serif", "Consolas"];
+
+/** IDM's View > Font: the font and size of the windows. */
+function FontModal({ live, onClose }: { live: Live; onClose: () => void }) {
+  const s = live.settings;
+  const [font, setFont] = useState(s.ui_font || "Segoe UI Variable Text");
+  const [size, setSize] = useState(s.ui_font_size || 13);
+  return (
+    <Modal
+      title="Font"
+      onClose={onClose}
+      foot={
+        <>
+          <button className="btn primary" onClick={() => { api.saveSettings({ ...s, ui_font: font === "Segoe UI Variable Text" ? "" : font, ui_font_size: size === 13 ? 0 : size }); onClose(); }}>OK</button>
+          <button className="btn" onClick={onClose}>Cancel</button>
+        </>
+      }
+    >
+      <div className="grid2">
+        <span>Font</span>
+        <select value={font} onChange={(e) => setFont(e.target.value)}>
+          {FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+        </select>
+        <span>Size</span>
+        <select value={size} onChange={(e) => setSize(Number(e.target.value))}>
+          {[11, 12, 13, 14, 15, 16, 18].map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </div>
+      <div style={{ fontFamily: `"${font}"`, fontSize: size, border: "1px solid var(--border)", borderRadius: 4, padding: 8 }}>ubuntu-24.04-desktop-amd64.iso · 5.82 GB · 3.2 MB/s</div>
+    </Modal>
+  );
+}
+
 /** IDM's "Export download list": the download queue, the selected files, or all files. */
 function ExportModal({ format, live, selected, onExport, onClose }: { format: "txt" | "ef2"; live: Live; selected: string[]; onExport: (ids: string[] | null) => void; onClose: () => void }) {
   const [what, setWhat] = useState<"queue" | "selected" | "all">(selected.length ? "selected" : "all");

@@ -29,12 +29,18 @@ struct Share {
     tokens: f64,
     last: Instant,
     since: Instant,
+    /// When the limiter last made this download wait. A download that is held back by us is
+    /// not "using less" by choice, so it keeps its full share (otherwise a download slowed by
+    /// the limiter would look like one on a slow server, and its share would keep shrinking).
+    held: Option<Instant>,
 }
 
 /// A download that has stopped reading for this long no longer takes a share.
 const IDLE: Duration = Duration::from_secs(2);
 /// A new download counts as wanting a full share until its speed is known.
 const WARMUP: Duration = Duration::from_secs(2);
+/// A download made to wait this recently still wants a full share.
+const HELD: Duration = Duration::from_secs(1);
 
 impl Limiter {
     pub fn new(rate: u64) -> Self {
@@ -72,7 +78,7 @@ impl Limiter {
         let mut wait = if b.tokens >= 0.0 { 0.0 } else { -b.tokens / rate };
         if let Some(key) = key {
             b.shares.retain(|_, s| now.duration_since(s.last) < IDLE);
-            let s = b.shares.entry(key).or_insert(Share { speed: 0.0, tokens: 0.0, last: now, since: now });
+            let s = b.shares.entry(key).or_insert(Share { speed: 0.0, tokens: 0.0, last: now, since: now, held: None });
             let dt = now.duration_since(s.last).as_secs_f64();
             s.speed = s.speed * (-dt).exp() + n as f64;
             s.last = now;
@@ -81,6 +87,9 @@ impl Limiter {
             s.tokens = (s.tokens + dt * cap).min(cap / 4.0) - n as f64;
             if s.tokens < 0.0 {
                 wait = wait.max(-s.tokens / cap);
+            }
+            if wait > 0.0 {
+                s.held = Some(now);
             }
         }
         Duration::from_secs_f64(wait)
@@ -105,8 +114,8 @@ impl Limiter {
 /// Water-filling: downloads using clearly less than an equal share keep what they use, and
 /// the rest is split equally between the others. Every download may go up to that amount.
 fn fair_share(rate: f64, shares: &HashMap<usize, Share>, now: Instant) -> f64 {
-    let mut speeds: Vec<f64> =
-        shares.values().map(|s| if now.duration_since(s.since) < WARMUP { f64::INFINITY } else { s.speed }).collect();
+    let wants_more = |s: &Share| now.duration_since(s.since) < WARMUP || s.held.is_some_and(|h| now.duration_since(h) < HELD);
+    let mut speeds: Vec<f64> = shares.values().map(|s| if wants_more(s) { f64::INFINITY } else { s.speed }).collect();
     speeds.sort_by(f64::total_cmp);
     let (mut left, mut count) = (rate, speeds.len() as f64);
     for sp in speeds {
@@ -141,7 +150,7 @@ mod tests {
     fn fair_share_gives_unused_bandwidth_to_others() {
         let now = Instant::now();
         let old = now - Duration::from_secs(10);
-        let share = |speed: f64, since| Share { speed, tokens: 0.0, last: now, since };
+        let share = |speed: f64, since| Share { speed, tokens: 0.0, last: now, since, held: None };
         // Two busy downloads: half each.
         let two: HashMap<_, _> = [(1, share(900.0, old)), (2, share(900.0, old))].into();
         assert_eq!(fair_share(1000.0, &two, now), 500.0);
@@ -151,5 +160,10 @@ mod tests {
         // A newcomer counts as busy at once, so the running download makes room for it.
         let new: HashMap<_, _> = [(1, share(1000.0, old)), (2, share(0.0, now))].into();
         assert_eq!(fair_share(1000.0, &new, now), 500.0);
+        // A download that the limiter is holding back is not "using less": it keeps its half.
+        let mut held = share(100.0, old);
+        held.held = Some(now);
+        let both: HashMap<_, _> = [(1, held), (2, share(900.0, old))].into();
+        assert_eq!(fair_share(1000.0, &both, now), 500.0);
     }
 }

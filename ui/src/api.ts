@@ -90,6 +90,11 @@ export interface Settings {
   force_close_apps: boolean;
   confirm_delete: boolean;
   offer_exception_on_cancel: boolean;
+  tray_icon: boolean;
+  ui_font: string;
+  ui_font_size: number;
+  tips_on_startup: boolean;
+  last_speed_limit: number;
   av_scan_enabled: boolean;
   av_scan_command: string;
   sound_on_complete: boolean;
@@ -216,7 +221,7 @@ export type CoreEvent =
 
 export type WindowKind =
   | "add" | "info" | "progress" | "complete" | "options" | "scheduler" | "batch"
-  | "properties" | "about" | "countdown" | "links" | "pairing" | "browser" | "drop" | "login";
+  | "properties" | "about" | "countdown" | "links" | "pairing" | "browser" | "drop" | "login" | "tips";
 
 export const api = {
   state: () => invoke<AppState>("get_state"),

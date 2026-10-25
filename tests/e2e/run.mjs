@@ -92,7 +92,7 @@ async function setup() {
   });
   writeFileSync(
     join(work, "home", "settings3.json"),
-    JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false }),
+    JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false, tips_on_startup: false }),
   );
   const proc = start(APP_EXE, [], {
     SWIFTDM_HOME: join(work, "home"),
@@ -277,6 +277,7 @@ const scenarios = {
       ["batch", {}, "Batch download", "Replace * with"],
       ["links", { source: "typed", urls: JSON.stringify(["https://a.example/1.zip"]) }, "Choose files to download", "1.zip"],
       ["about", {}, "About SwiftHarryDM", "Version"],
+      ["tips", {}, "Tip of the day", "Did you know"],
       ["browser", {}, "Connect your browser", "extension"],
       ["options", { tab: "video" }, "Options", "yt-dlp"],
     ];

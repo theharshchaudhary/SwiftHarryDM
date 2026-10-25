@@ -97,11 +97,35 @@ export function useLive(): Live | null {
   return live;
 }
 
-/** Apply the theme setting (system/light/dark) to the document. */
+/** Apply the theme setting (system/light/dark) and the chosen font to the document. */
 export function useTheme(theme: string | undefined) {
   useEffect(() => {
     const root = document.documentElement;
     if (!theme || theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", theme);
   }, [theme]);
+  useFont();
+}
+
+function applyFont(s: { ui_font: string; ui_font_size: number }) {
+  const root = document.documentElement.style;
+  if (s.ui_font) root.setProperty("--font", `"${s.ui_font.replace(/"/g, "")}", "Segoe UI", system-ui, sans-serif`);
+  else root.removeProperty("--font");
+  if (s.ui_font_size) root.setProperty("--font-size", `${s.ui_font_size}px`);
+  else root.removeProperty("--font-size");
+}
+
+/** IDM's View > Font: every window follows the font chosen in the main window. */
+function useFont() {
+  useEffect(() => {
+    let alive = true;
+    api.state().then((s) => alive && applyFont(s.settings));
+    const un = onCore((e) => {
+      if (e.type === "settings_changed") applyFont(e.settings);
+    });
+    return () => {
+      alive = false;
+      un.then((f) => f());
+    };
+  }, []);
 }

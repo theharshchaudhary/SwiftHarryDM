@@ -31,10 +31,10 @@ SwiftHarryDM should have, written and drawn by us (no IDM text, code or images a
 - [x] Tasks: Export / Import to and from the IDM export file (`.ef2`) and text file; export dialog (queue / selected / all)
 - [ ] File: Stop download, Remove, Download now, Redownload
 - [ ] Downloads: Pause all, Stop all, Delete all completed, Find, Find next, Scheduler, Start/Stop queue submenus, Speed limiter submenu, Options
-- [ ] View: Hide categories; Arrange files by order of addition, name, size, status, time left, rate, last try, description, save path, referer, parent web page
-- [ ] View: Toolbar customize (which buttons, order), large/small buttons
-- [ ] View: tray icon style (3D / classic / don't show), customize URL list (columns dialog with widths), dark mode, font choose/reset, language
-- [ ] Help: help contents, tip of the day, home page, check for updates, about
+- [x] View: Hide categories; Arrange files by order of addition, name, size, status, time left, rate, last try, description, save path, referer, parent web page
+- [x] View: Toolbar customize (which buttons, order), large/small buttons
+- [x] View: tray icon style (3D / classic / don't show), customize URL list (columns dialog with widths), dark mode, font choose/reset, language
+- [x] Help: help contents, tip of the day, home page, check for updates, about
 - [ ] Columns dialog: show/hide, move up/down, width in pixels, reset
 - [ ] Find dialog: in name / description / site, link, parent page, referer; match case; whole string
 - [ ] Find bar at the bottom of the list
@@ -43,7 +43,7 @@ SwiftHarryDM should have, written and drawn by us (no IDM text, code or images a
 - [ ] Categories tree context menu: add, edit, delete, properties; queue context menu: start, stop, edit
 - [ ] Category dialog: file types, "only files from these sites", folder, remember last save path
 - [ ] Toolbar: Start queue / Stop queue drop-down to pick a queue
-- [ ] Tip of the day on startup (can be turned off)
+- [x] Tip of the day on startup (can be turned off)
 - [ ] Problem report / tell a friend: n/a (no service behind them)
 
 ## 3. Options
@@ -100,5 +100,5 @@ SwiftHarryDM should have, written and drawn by us (no IDM text, code or images a
 - [x] `/d URL`, `/p`, `/f`, `/n`, `/a`
 - [ ] `/s` start the queue, `/q` exit after the download, `/h` (n/a hang-up)
 - [ ] Shell: "Download with SwiftHarryDM" for links dragged onto the tray / taskbar
-- [ ] Single tray menu like IDM's (show, add URL, start/stop queue, speed limiter, exit)
+- [x] Single tray menu like IDM's (show, add URL, start/stop queue, speed limiter, exit)
 - [ ] Warning when running as administrator (browsers cannot reach an elevated app the same way)

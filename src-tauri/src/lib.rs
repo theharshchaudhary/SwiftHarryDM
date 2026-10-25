@@ -311,15 +311,27 @@ async fn watch_clipboard(app: AppHandle) {
     }
 }
 
+fn mgr_settings_tray(app: &AppHandle) -> bool {
+    app.state::<AppState>().mgr.settings().get().tray_icon
+}
+
+/// The notification-area menu, like IDM's: the main window, new downloads, the drop target,
+/// queue and speed limiter, and exit.
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open SwiftHarryDM", true, None::<&str>)?;
     let add = MenuItem::with_id(app, "add", "Add download…", true, None::<&str>)?;
+    let batch = MenuItem::with_id(app, "batch", "Add batch download…", true, None::<&str>)?;
+    let drop = MenuItem::with_id(app, "drop", "Show drop target", true, None::<&str>)?;
+    let start_q = MenuItem::with_id(app, "start_queue", "Start main queue", true, None::<&str>)?;
     let stop = MenuItem::with_id(app, "stop_all", "Stop all downloads", true, None::<&str>)?;
+    let lim_on = MenuItem::with_id(app, "limiter_on", "Turn on", true, None::<&str>)?;
+    let lim_off = MenuItem::with_id(app, "limiter_off", "Turn off", true, None::<&str>)?;
+    let limiter = tauri::menu::Submenu::with_items(app, "Speed limiter", true, &[&lim_on, &lim_off])?;
     let sched = MenuItem::with_id(app, "scheduler", "Scheduler…", true, None::<&str>)?;
+    let options = MenuItem::with_id(app, "options", "Options…", true, None::<&str>)?;
     let exit = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
-    let sep = PredefinedMenuItem::separator(app)?;
-    let sep2 = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(app, &[&open, &add, &sep, &stop, &sched, &sep2, &exit])?;
+    let (s1, s2, s3) = (PredefinedMenuItem::separator(app)?, PredefinedMenuItem::separator(app)?, PredefinedMenuItem::separator(app)?);
+    let menu = Menu::with_items(app, &[&open, &add, &batch, &drop, &s1, &start_q, &stop, &limiter, &s2, &sched, &options, &s3, &exit])?;
     TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().cloned().expect("app icon"))
         .tooltip("SwiftHarryDM")
@@ -331,6 +343,31 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 open_logged(app, "add", &[]);
             }
             "stop_all" => app.state::<AppState>().mgr.pause_all(),
+            "batch" => {
+                open_logged(app, "batch", &[]);
+            }
+            "drop" => {
+                open_logged(app, "drop", &[]);
+            }
+            "options" => {
+                open_logged(app, "options", &[]);
+            }
+            "start_queue" => app.state::<AppState>().mgr.start_queue(swiftdm_core::scheduler::MAIN_QUEUE),
+            "limiter_on" | "limiter_off" => {
+                // On: the last limit (or 500 KB/s), off: no limit; like the main window's menu.
+                let st = app.state::<AppState>();
+                let on = e.id.as_ref() == "limiter_on";
+                if let Ok(saved) = st.mgr.settings().update(|s| {
+                    if on && s.speed_limit == 0 {
+                        s.speed_limit = s.last_speed_limit.max(64 * 1024);
+                    } else if !on && s.speed_limit > 0 {
+                        s.last_speed_limit = s.speed_limit;
+                        s.speed_limit = 0;
+                    }
+                }) {
+                    let _ = app.emit("core", json!({ "type": "settings_changed", "settings": saved }));
+                }
+            }
             "scheduler" => {
                 open_logged(app, "scheduler", &[]);
             }
@@ -426,6 +463,11 @@ pub fn run() {
                 b.build()?;
             }
             build_tray(app.handle())?;
+            if !mgr_settings_tray(app.handle()) {
+                if let Some(t) = app.tray_by_id("main") {
+                    let _ = t.set_visible(false);
+                }
+            }
             browser::register();
             let h = app.handle().clone();
             tauri::async_runtime::spawn(pump_events(h.clone()));

@@ -278,6 +278,11 @@ pub fn find_duplicates(st: State<AppState>, url: String) -> Vec<JobSnapshot> {
 pub fn save_settings(app: AppHandle, st: State<AppState>, settings: Settings) -> R<Settings> {
     let before = st.mgr.settings().get();
     let saved = st.mgr.settings().set(settings).map_err(|e| format!("Could not save the settings: {e}"))?;
+    if before.tray_icon != saved.tray_icon {
+        if let Some(t) = app.tray_by_id("main") {
+            let _ = t.set_visible(saved.tray_icon);
+        }
+    }
     if before.start_with_windows != saved.start_with_windows {
         use tauri_plugin_autostart::ManagerExt;
         let r = if saved.start_with_windows { app.autolaunch().enable() } else { app.autolaunch().disable() };
