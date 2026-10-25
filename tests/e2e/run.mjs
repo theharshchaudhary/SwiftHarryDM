@@ -319,6 +319,44 @@ const scenarios = {
     await assertSha("alt.pdf", "/p/alt.pdf");
   },
 
+  async find_bar(app) {
+    // Downloads > Find: where to look, match case, whole text only (like IDM's Find dialog).
+    const main = await app.window("SwiftHarryDM");
+    await main.eval("window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true }))");
+    await until(() => main.eval("!!document.querySelector('input[aria-label=Find]')"), 5000, 100, "the find bar");
+    const find = async (text, { field = "any", matchCase = false, whole = false } = {}) => {
+      await main.fill("input[aria-label=Find]", text);
+      await main.fill("select[aria-label='Look in']", field);
+      for (const [label, on] of [["Match case", matchCase], ["Whole text only", whole]]) {
+        await main.eval(`(() => { const l = [...document.querySelectorAll('.findbar label')].find(e => e.textContent.trim() === ${JSON.stringify(label)});
+          const c = l.querySelector('input'); if (c.checked !== ${on}) c.click(); })()`);
+      }
+      await main.click("Find next");
+      await sleep(150);
+      const msg = await main.eval("document.querySelector('.findbar .msg').textContent");
+      return msg ? null : main.eval("document.querySelector('tr.sel')?.innerText ?? null");
+    };
+    assert((await find("REPORT 2026"))?.includes("report 2026.pdf"), "finds a name in any case");
+    assert((await find("REPORT 2026", { matchCase: true })) === null, "match case");
+    assert((await find("/p/alt.pdf", { field: "address" }))?.includes("alt.pdf"), "finds by address");
+    assert((await find("alt.pdf", { field: "description" })) === null, "looks only where it is told");
+    assert((await find("alt", { field: "name", whole: true })) === null, "whole text only");
+    assert((await find("alt.pdf", { field: "name", whole: true }))?.includes("alt.pdf"), "whole name matches");
+    await main.shot(join(SHOTS, "find-bar.png"));
+
+    // The Q column shows the queue (and a clock when the queue is scheduled).
+    const state = await main.invoke("get_state");
+    const alt = state.jobs.find((j) => j.url.endsWith("/p/alt.pdf"));
+    const mainQ = state.queues.find((q) => q.id === "main");
+    await main.invoke("move_to_queue", { ids: [alt.id], queueId: "main" });
+    const qTip = () => main.eval(`document.querySelector('#row-${alt.id} .qmark')?.title ?? null`);
+    await until(async () => (await qTip()) === mainQ.name, 5000, 100, "the queue mark");
+    await main.invoke("save_queue", { queue: { ...mainQ, schedule: { enabled: true, start_time: "03:00", days: [true, true, true, true, true, true, true], stop_time: null } } });
+    await until(async () => (await qTip())?.includes("starts at 03:00"), 5000, 100, "the scheduled queue mark");
+    await main.invoke("save_queue", { queue: mainQ });
+    await main.invoke("move_to_queue", { ids: [alt.id], queueId: null });
+  },
+
   async extension_protocol(app) {
     const base = await apiBase();
     const call = async (method, path, body, token) => {

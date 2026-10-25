@@ -24,7 +24,7 @@ function savePref(key: string, v: unknown) {
 }
 
 // ------------------------------------------------------------------ columns
-type Row = { j: Job; p?: Progress; qIndex: number };
+type Row = { j: Job; p?: Progress; qIndex: number; queue?: Queue };
 interface Column {
   id: string;
   title: string;
@@ -39,7 +39,17 @@ const COLUMNS: Column[] = [
     id: "q",
     title: "Q",
     width: 34,
-    render: (r) => (r.qIndex > 0 ? <span className="qmark" title="Queue">{r.qIndex}</span> : null),
+    render: (r) => {
+      if (!r.queue) return null;
+      const sch = r.queue.schedule?.enabled ? r.queue.schedule : null;
+      const tip = `${r.queue.name}${sch ? `, starts at ${sch.start_time}` : ""}${r.queue.running ? ", running" : ""}`;
+      return (
+        <span className="qmark" title={tip} aria-label={tip}>
+          <Icon name={sch ? "scheduler" : "queue"} size={13} />
+          {r.qIndex}
+        </span>
+      );
+    },
     sort: (r) => r.qIndex,
   },
   {
@@ -114,6 +124,15 @@ function filterJobs(jobs: Job[], f: Filter): Job[] {
 const sameFilter = (a: Filter, b: Filter) => JSON.stringify(a) === JSON.stringify(b);
 
 // ------------------------------------------------------------------ main window
+type FindField = "any" | "name" | "description" | "address" | "referer";
+const FIND_FIELDS: [FindField, string, string][] = [
+  ["any", "Everywhere", "File name, description or address"],
+  ["name", "File name", "File name"],
+  ["description", "Description", "Description"],
+  ["address", "Address", "Download address"],
+  ["referer", "Web page", "Page the link was on"],
+];
+
 export default function Main() {
   const live = useLive();
   useTheme(live?.settings.theme);
@@ -136,7 +155,7 @@ function MainView({ live }: { live: Live }) {
   const [openCats, setOpenCats] = useState(() => pref("openCats", true));
   const [openQueues, setOpenQueues] = useState(() => pref("openQueues", true));
   const [ctx, setCtx] = useState<{ x: number; y: number; items: MenuEntry[] } | null>(null);
-  const [find, setFind] = useState<{ open: boolean; text: string; msg: string }>({ open: false, text: "", msg: "" });
+  const [find, setFind] = useState<{ open: boolean; text: string; msg: string; field: FindField; matchCase: boolean; whole: boolean }>({ open: false, text: "", msg: "", field: "any", matchCase: false, whole: false });
   const [modal, setModal] = useState<
     | null
     | { kind: "delete"; ids: string[] }
@@ -229,9 +248,10 @@ function MainView({ live }: { live: Live }) {
   useEffect(() => savePref("openQueues", openQueues), [openQueues]);
 
   const queueIndex = useMemo(() => new Map(queues.map((q, i) => [q.id, i + 1])), [queues]);
+  const queueById = useMemo(() => new Map(queues.map((q) => [q.id, q])), [queues]);
 
   const rows: Row[] = useMemo(() => {
-    const list = filterJobs(live.jobs, filter).map((j) => ({ j, p: live.progressMap.get(j.id), qIndex: j.queue_id ? queueIndex.get(j.queue_id) ?? 0 : 0 }));
+    const list = filterJobs(live.jobs, filter).map((j) => ({ j, p: live.progressMap.get(j.id), qIndex: j.queue_id ? queueIndex.get(j.queue_id) ?? 0 : 0, queue: j.queue_id ? queueById.get(j.queue_id) : undefined }));
     const col = sort && COLUMNS.find((c) => c.id === sort.col);
     if (col) {
       list.sort((a, b) => {
@@ -244,7 +264,7 @@ function MainView({ live }: { live: Live }) {
       list.sort((a, b) => a.j.created_at - b.j.created_at || a.j.id.localeCompare(b.j.id));
     }
     return list;
-  }, [live.jobs, live.progressMap, filter, sort, queueIndex]);
+  }, [live.jobs, live.progressMap, filter, sort, queueIndex, queueById]);
 
   // Drop selections that are no longer visible.
   useEffect(() => {
@@ -300,8 +320,18 @@ function MainView({ live }: { live: Live }) {
   const doFind = useCallback(
     (text: string, from: string | null) => {
       if (!text) return;
-      const t = text.toLowerCase();
-      const hit = (j: Job) => [F.fileName(j), j.description ?? "", j.url, j.referer ?? ""].some((f) => f.toLowerCase().includes(t));
+      const norm = (v: string) => (find.matchCase ? v : v.toLowerCase());
+      const t = norm(text);
+      const fields = (j: Job) => {
+        switch (find.field) {
+          case "name": return [F.fileName(j)];
+          case "description": return [j.description ?? ""];
+          case "address": return [j.url];
+          case "referer": return [j.referer ?? ""];
+          default: return [F.fileName(j), j.description ?? "", j.url, j.referer ?? ""];
+        }
+      };
+      const hit = (j: Job) => fields(j).some((f) => (find.whole ? norm(f) === t : norm(f).includes(t)));
       const start = from ? rows.findIndex((r) => r.j.id === from) + 1 : 0;
       for (let k = 0; k < rows.length; k++) {
         const r = rows[(start + k) % rows.length];
@@ -315,7 +345,7 @@ function MainView({ live }: { live: Live }) {
       }
       setFind((f) => ({ ...f, msg: "Not found in this list." }));
     },
-    [rows],
+    [rows, find.field, find.matchCase, find.whole],
   );
 
   // ------------------------------------------------------------------ keyboard
@@ -844,7 +874,8 @@ function MainView({ live }: { live: Live }) {
             ref={findRef}
             type="text"
             autoFocus
-            placeholder="File name, description or address"
+            aria-label="Find"
+            placeholder={FIND_FIELDS.find(([k]) => k === find.field)![2]}
             value={find.text}
             onChange={(e) => setFind({ ...find, text: e.target.value, msg: "" })}
             onKeyDown={(e) => {
@@ -852,6 +883,11 @@ function MainView({ live }: { live: Live }) {
               if (e.key === "Escape") setFind({ ...find, open: false });
             }}
           />
+          <select aria-label="Look in" value={find.field} onChange={(e) => setFind({ ...find, field: e.target.value as FindField, msg: "" })}>
+            {FIND_FIELDS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+          </select>
+          <Check checked={find.matchCase} onChange={(v) => setFind({ ...find, matchCase: v, msg: "" })}>Match case</Check>
+          <Check checked={find.whole} onChange={(v) => setFind({ ...find, whole: v, msg: "" })}>Whole text only</Check>
           <button className="btn small" onClick={() => doFind(find.text, anchor)}>
             Find next
           </button>

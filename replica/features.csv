@@ -40,15 +40,15 @@ Login prompt on 401 with save password,flow,should,yes,yes,
 Main list with columns and sorting,main window,must,yes,yes,
 Categories tree with auto-placement,main window,must,yes,yes,
 Category add edit delete with types sites folder,main window,must,yes,yes,sites filter added 2026-10-25
-Q column with queue icons,main window,should,yes,no,
+Q column with queue icons,main window,should,yes,yes,"queue icon + number, clock when scheduled, name on hover; e2e find_bar"
 Drag downloads onto a queue in the tree,main window,could,yes,no,
 Menus Tasks File Downloads View Help,main window,must,yes,yes,verified in Main.tsx
 File menu: stop remove download now redownload,main window,must,yes,yes,"File menu = the row menu: open, resume, stop, download again, move to queue, delete, properties"
 Downloads menu: pause all stop all delete completed,main window,must,yes,yes,"stop all, resume all, delete completed, find, scheduler, queues, limiter"
 View: hide categories arrange by,main window,should,yes,yes,
 Toolbar customize,main window,could,yes,yes,
-Columns dialog,main window,should,yes,partial,
-Find dialog and find next,main window,should,yes,partial,find exists; fields/match case/whole string missing
+Columns dialog,main window,should,yes,yes,"ColumnsModal: show/hide, order, reset; widths by dragging"
+Find dialog and find next,main window,should,yes,yes,"find bar: look in, match case, whole text; e2e find_bar"
 Dark theme,main window,should,yes,yes,
 Language selection,main window,could,yes,partial,
 Tip of the day,main window,could,yes,yes,
@@ -65,11 +65,11 @@ Warning when running as administrator,system,could,yes,no,
 App update check,system,must,yes,yes,
 Options General tab,options,must,yes,yes,"startup, tray, clipboard, resume; browser list and Keys are separate rows"
 Options File types tab,options,must,yes,yes,"types, min size, site and address exceptions, twice-cancelled"
-Options Connection tab with per-server exceptions,options,should,yes,partial,exceptions table missing
+Options Connection tab with per-server exceptions,options,should,yes,yes,server_limits table
 Download quotas,options,should,yes,yes,
 Options Save to tab with temp dir,options,must,yes,yes,no temp dir: ODM writes straight into the preallocated file
-Options Downloads tab (dialog toggles UA antivirus),options,should,yes,partial,
-Run antivirus on finished files,options,should,yes,partial,
+Options Downloads tab (dialog toggles UA antivirus),options,should,yes,partial,dialog toggles and UA done; antivirus missing
+Run antivirus on finished files,options,should,yes,no,not in settings yet
 Proxy none system PAC manual SOCKS,options,should,yes,partial,SOCKS5 done; PAC and per-protocol missing
 Site logins,options,should,yes,yes,
 Sounds per event,options,could,yes,no,
@@ -78,7 +78,7 @@ Main download queue,scheduler,must,yes,yes,
 Custom queues,scheduler,must,yes,yes,"Scheduler: new queue, edit, delete"
 Schedule start and stop times and days,scheduler,must,yes,yes,scheduler.rs Schedule
 Retries per file and failed file to end of queue,scheduler,should,yes,no,
-Files at the same time per queue,scheduler,should,yes,partial,
+Files at the same time per queue,scheduler,should,yes,yes,queue max_concurrent
 Queue done actions with shutdown countdown,scheduler,must,yes,yes,AfterAction + Countdown window; open-a-file action missing
 Synchronization queues re-download changed files,scheduler,should,yes,no,
 Site grabber wizard,grabber,should,yes,no,new subsystem
