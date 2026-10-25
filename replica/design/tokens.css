@@ -1,0 +1,66 @@
+/* ODM design tokens, generated from tokens.json / tokens.dark.json.
+   The live copy is the :root block of ui/src/styles.css (same values, older names:
+   text-2=text-muted, border-strong=border-input, accent-2=accent-hover, ok/warn/err,
+   sel-text=on-sel). */
+
+:root {
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --radius-xs: 4px;
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+}
+
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #eef2f6;
+  --surface-3: #e2e8ef;
+  --row-alt: #f8fafc;
+  --text: #1c2733;
+  --text-muted: #56657a;
+  --border: #d5dde6;
+  --border-input: #8593a3;
+  --accent: #2c5f8a;
+  --accent-hover: #3a7bb3;
+  --accent-soft: #dce9f5;
+  --on-accent: #ffffff;
+  --sel: #cfe2f6;
+  --on-sel: #0f2235;
+  --success: #23794b;
+  --warning: #9a5c00;
+  --danger: #c83a32;
+  --bar-track: #dfe7ef;
+  --bar: #3a7bb3;
+  --bar-done: #2e8b57;
+}
+
+:root[data-theme="dark"] {
+  --bg: #1b1f24;
+  --surface: #23282e;
+  --surface-2: #2a3037;
+  --surface-3: #343b44;
+  --row-alt: #262b31;
+  --text: #e6ebf0;
+  --text-muted: #9aa7b5;
+  --border: #39414b;
+  --border-input: #6b7786;
+  --accent: #5b9bd5;
+  --accent-hover: #7ab3e6;
+  --accent-soft: #24384d;
+  --on-accent: #0f1b27;
+  --sel: #2b4a69;
+  --on-sel: #ffffff;
+  --success: #4caf7d;
+  --warning: #f0a640;
+  --danger: #ef6a5f;
+  --bar-track: #343b44;
+  --bar: #5b9bd5;
+  --bar-done: #4caf7d;
+}
