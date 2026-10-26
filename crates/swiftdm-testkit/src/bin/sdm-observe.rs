@@ -68,6 +68,7 @@ async fn main() {
          <p><a id=report href=\"{b}/s6/get\">Report (PDF)</a></p>\
          <p><a id=alt href=\"{b}/p/alt.pdf\">Alt-click PDF</a></p>\
          <p><a id=bin href=\"{b}/s7/flaky.bin\">Flaky binary</a></p>\
+         <p><a id=page href=\"{b}/p/video.html\">A web page</a></p>\
          </body></html>",
         b = srv.base
     );

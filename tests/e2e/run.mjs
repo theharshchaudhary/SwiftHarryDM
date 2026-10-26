@@ -442,6 +442,22 @@ const scenarios = {
       await until(() => existsSync(join(chromeDl, "alt.pdf")), 20000, 250, "Chrome to save alt.pdf itself");
       assert(!(await app.hasWindow("Download file info")), "an Alt-clicked download is not taken over");
 
+      // Insert+click sends any link to the app, even a web page, and the page stays put.
+      const forceClick = `(() => { const a = document.getElementById('page');
+        dispatchEvent(new KeyboardEvent('keydown', { key: 'Insert', bubbles: true }));
+        a.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+        a.click();
+        dispatchEvent(new KeyboardEvent('keyup', { key: 'Insert', bubbles: true })); })()`;
+      await until(() => chrome.worker("backgroundManager._rules?.rules?.forceKey ?? null").then((k) => k === "insert"), 15000, 250, "the extension to have the app's keys");
+      await sleep(500); // the rules reach the open page
+      await chrome.evalIn(tab, forceClick);
+      const forcedInfo = await app.window("Download file info", 20000);
+      const forcedUrl = await until(() => forcedInfo.eval("document.querySelector('.grid2 input')?.value || null"), 10000, 200, "the forced link's address");
+      assert(forcedUrl.endsWith("/p/video.html"), `the forced link reaches the app (${forcedUrl})`);
+      assert((await chrome.evalIn(tab, "location.pathname")) === "/p/links.html", "the page did not follow the forced link");
+      await forcedInfo.click("Cancel");
+      await until(async () => !(await app.hasWindow("Download file info")), 10000, 200, "the forced link's window to close");
+
       // Hovering a player shows "Download this video"; its panel lists the app's formats.
       const vtab = await chrome.tab(URL_("/p/video.html"));
       const shadow = "document.querySelector('swiftharrydm-overlay').shadowRoot";

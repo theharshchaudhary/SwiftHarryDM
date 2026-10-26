@@ -74,6 +74,15 @@ pub struct Settings {
     pub player_button_min_seconds: u32,
     /// Sites where the button never shows (same patterns as the capture lists).
     pub player_button_skip_sites: Vec<String>,
+    /// Held while clicking a link in the browser: "alt", "shift", "ctrl", "insert" or "none".
+    /// The prevent key leaves the download to the browser; the force key sends the link here.
+    pub prevent_key: String,
+    pub force_key: String,
+    /// Which items the extension adds to the browser's context menu.
+    pub menu_download_with: bool,
+    pub menu_page_media: bool,
+    pub menu_all_links: bool,
+    pub menu_selected_links: bool,
     /// Icon in the notification area (IDM: View > IDM tray icon).
     pub tray_icon: bool,
     /// Font of the windows; empty / 0 = the default (IDM: View > Font).
@@ -143,6 +152,12 @@ impl Default for Settings {
             player_button_mini: false,
             player_button_min_seconds: 0,
             player_button_skip_sites: Vec::new(),
+            prevent_key: "alt".into(),
+            force_key: "insert".into(),
+            menu_download_with: true,
+            menu_page_media: true,
+            menu_all_links: true,
+            menu_selected_links: true,
             tray_icon: true,
             ui_font: String::new(),
             ui_font_size: 0,

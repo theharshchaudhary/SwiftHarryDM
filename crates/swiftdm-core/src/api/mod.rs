@@ -447,8 +447,9 @@ async fn jobs(State(st): State<Arc<Inner>>, h: HeaderMap) -> Response {
     Json(json!({ "success": true, "jobs": out })).into_response()
 }
 
-/// How the extension shows its download button on players (Options > Browser).
-async fn player_rules(State(st): State<Arc<Inner>>, h: HeaderMap) -> Response {
+/// How the extension behaves (Options > Browser): the button on players, the keys that force
+/// or prevent a take-over, and its context menu items.
+async fn extension_rules(State(st): State<Arc<Inner>>, h: HeaderMap) -> Response {
     if !st.lim_read.allow() {
         return err(StatusCode::TOO_MANY_REQUESTS, "rate limited");
     }
@@ -462,8 +463,27 @@ async fn player_rules(State(st): State<Arc<Inner>>, h: HeaderMap) -> Response {
         "mini": s.player_button_mini,
         "minSeconds": s.player_button_min_seconds,
         "skipSites": s.player_button_skip_sites,
+        "preventKey": key_name(&s.prevent_key),
+        "forceKey": key_name(&s.force_key),
+        "menu": {
+            "downloadWith": s.menu_download_with,
+            "pageMedia": s.menu_page_media,
+            "allLinks": s.menu_all_links,
+            "selectedLinks": s.menu_selected_links,
+        },
     }))
     .into_response()
+}
+
+/// Only the key names the extension knows; anything else turns the key off.
+fn key_name(k: &str) -> &'static str {
+    match k {
+        "alt" => "alt",
+        "shift" => "shift",
+        "ctrl" => "ctrl",
+        "insert" => "insert",
+        _ => "none",
+    }
 }
 
 /// Title and real formats of a video page, for the quality list in the page's download panel.
@@ -540,7 +560,7 @@ pub async fn start(
         .route("/api/links", post(links))
         .route("/api/jobs", get(jobs))
         .route("/api/media/info", post(media_info))
-        .route("/api/settings/player", get(player_rules))
+        .route("/api/settings/extension", get(extension_rules))
         .fallback(fallback)
         .layer(middleware::from_fn_with_state(inner.clone(), guard))
         .layer(DefaultBodyLimit::max(MAX_BODY))

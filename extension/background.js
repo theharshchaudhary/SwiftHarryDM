@@ -10,6 +10,11 @@ const NATIVE_HOST = 'np.com.harshchaudhary.swiftharrydm';
 // Hold Alt while clicking a link to leave that download to the browser.
 const BYPASS_MS = 4000;
 
+const DEFAULT_RULES = {
+    enabled: true, mini: false, minSeconds: 0, skipSites: [], preventKey: 'alt', forceKey: 'none',
+    menu: { downloadWith: true, pageMedia: true, allLinks: true, selectedLinks: true },
+};
+
 class BackgroundManager {
     constructor() {
         this.appPort = null;
@@ -17,7 +22,8 @@ class BackgroundManager {
         this.bypass = new Map(); // url -> time the user Alt-clicked it
         this.resent = new Set(); // urls handed back to the browser after a failed take-over
         this.seen = new Set(); // download ids already considered (two events fire per download)
-        this.createContextMenu();
+        this.createContextMenu(DEFAULT_RULES.menu);
+        this.rules().catch(() => {});
         this.setupMessageListener();
         this.setupCapture();
         this.setupStreams();
@@ -31,6 +37,7 @@ class BackgroundManager {
             const r = await chrome.runtime.sendNativeMessage(NATIVE_HOST, { type: 'hello' });
             if (r && r.success && r.token) {
                 await chrome.storage.local.set({ swiftdmToken: r.token });
+                this.refreshRules();
                 this.appPort = null;
                 return true;
             }
@@ -114,6 +121,7 @@ class BackgroundManager {
         });
         if (r.ok && r.data.token) {
             await chrome.storage.local.set({ swiftdmToken: r.data.token });
+            this.refreshRules();
             return { success: true };
         }
         return { success: false, error: r.data.error || `HTTP ${r.status}`, status: r.status };
@@ -278,16 +286,33 @@ class BackgroundManager {
         return r.ok ? { success: true, info: r.data.info } : { success: false, error: r.data.error };
     }
 
-    /** The app's rules for the button on players, cached for a minute. */
-    async playerRules() {
+    /** The app's rules (Options > Browser), cached for a minute: the button on players, the
+     *  keys that force or prevent a take-over, the context menu items. */
+    async rules() {
         const fresh = this._rules && Date.now() - this._rules.at < 60000;
         if (!fresh) {
-            const r = await this.request('/api/settings/player').catch(() => null);
-            // Older apps (or not connected): the button shows everywhere, full size.
-            const rules = r && r.ok ? r.data : { enabled: true, mini: false, minSeconds: 0, skipSites: [] };
-            this._rules = { at: Date.now(), rules };
+            const r = await this.request('/api/settings/extension').catch(() => null);
+            // Older apps (or not connected): everything on, Alt keeps a download in the browser.
+            const ok = !!(r && r.ok);
+            const rules = ok ? r.data : { ...DEFAULT_RULES };
+            const menuChanged = JSON.stringify((this._rules || {}).rules?.menu) !== JSON.stringify(rules.menu);
+            const changed = this._rules && JSON.stringify(this._rules.rules) !== JSON.stringify(rules);
+            // Without the app (not running, not paired yet) ask again in a few seconds.
+            this._rules = { at: ok ? Date.now() : Date.now() - 55000, rules };
+            if (menuChanged) this.createContextMenu(rules.menu);
+            // Pages loaded before the app answered (or before a change) get the new rules.
+            if (changed) {
+                chrome.tabs.query({}).then((tabs) => tabs.forEach((t) =>
+                    chrome.tabs.sendMessage(t.id, { action: 'rulesChanged', rules }).catch(() => {}))).catch(() => {});
+            }
         }
         return { success: true, ...this._rules.rules };
+    }
+
+    /** Now connected: fetch the rules again (and push them to open pages). */
+    refreshRules() {
+        if (this._rules) this._rules.at = 0;
+        this.rules().catch(() => {});
     }
 
     async jobs() {
@@ -328,16 +353,16 @@ class BackgroundManager {
         chrome.notifications.create({ type: 'basic', iconUrl: 'icons/icon128.png', title, message: String(message) });
     }
 
-    createContextMenu() {
+    createContextMenu(menu = DEFAULT_RULES.menu) {
         // removeAll first: the service worker restarts often and duplicate ids throw.
         chrome.contextMenus.removeAll(() => {
-            chrome.contextMenus.create({ id: 'download-with-swiftharry', title: 'Download with SwiftHarryDM',
+            if (menu.downloadWith) chrome.contextMenus.create({ id: 'download-with-swiftharry', title: 'Download with SwiftHarryDM',
                                          contexts: ['video', 'audio', 'link'] });
-            chrome.contextMenus.create({ id: 'download-page-media', title: 'Download all media from page',
+            if (menu.pageMedia) chrome.contextMenus.create({ id: 'download-page-media', title: 'Download all media from page',
                                          contexts: ['page'] });
-            chrome.contextMenus.create({ id: 'download-all-links', title: 'Download all links with SwiftHarryDM',
+            if (menu.allLinks) chrome.contextMenus.create({ id: 'download-all-links', title: 'Download all links with SwiftHarryDM',
                                          contexts: ['page'] });
-            chrome.contextMenus.create({ id: 'download-selected-links', title: 'Download selected links with SwiftHarryDM',
+            if (menu.selectedLinks) chrome.contextMenus.create({ id: 'download-selected-links', title: 'Download selected links with SwiftHarryDM',
                                          contexts: ['selection'] });
         });
     }
@@ -354,7 +379,7 @@ class BackgroundManager {
                 sendLinks: () => this.sendLinks(req.urls || [], req.pageUrl, req.texts),
                 mediaInfo: () => this.mediaInfo(req.url),
                 getStreams: () => this.streams(sender.tab && sender.tab.id),
-                playerRules: () => this.playerRules(),
+                rules: () => this.rules(),
                 bypassNext: async () => {
                     if (req.url) this.bypass.set(req.url, Date.now());
                     return { success: true };

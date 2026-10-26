@@ -405,6 +405,11 @@ function AfterDownload({ s, set }: P) {
   );
 }
 
+const KEYS: [string, string][] = [["none", "No key"], ["alt", "Alt"], ["insert", "Insert"], ["ctrl", "Ctrl"], ["shift", "Shift"]];
+function KeySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return <select value={value} onChange={(e) => onChange(e.target.value)}>{KEYS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>;
+}
+
 function Browser({ s, set }: P) {
   const [st, setSt] = useState<ApiStatus | null>(null);
   const load = () => api.apiStatus().then(setSt);
@@ -456,6 +461,26 @@ function Browser({ s, set }: P) {
         Show the “Download file info” window for downloads sent from the browser
       </Check>
       <div className="hint">Which browser downloads are taken over is set on the “File types” page.</div>
+      <fieldset>
+        <legend>Keys held while clicking a link</legend>
+        <div className="grid2">
+          <span>Leave the download to the browser</span>
+          <KeySelect value={s.prevent_key} onChange={(v) => set({ prevent_key: v })} />
+          <span>Download it with SwiftHarryDM, even if it is a web page</span>
+          <KeySelect value={s.force_key} onChange={(v) => set({ force_key: v })} />
+        </div>
+        {s.prevent_key !== "none" && s.prevent_key === s.force_key && <div className="err">Choose two different keys.</div>}
+        <div className="hint">Ctrl and Shift also open links in a new tab or window, so Alt and Insert are the usual choices.</div>
+      </fieldset>
+      <fieldset>
+        <legend>Browser context menu</legend>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <Check checked={s.menu_download_with} onChange={(v) => set({ menu_download_with: v })}>“Download with SwiftHarryDM” on links, videos and audio</Check>
+          <Check checked={s.menu_page_media} onChange={(v) => set({ menu_page_media: v })}>“Download all media from page”</Check>
+          <Check checked={s.menu_all_links} onChange={(v) => set({ menu_all_links: v })}>“Download all links”</Check>
+          <Check checked={s.menu_selected_links} onChange={(v) => set({ menu_selected_links: v })}>“Download selected links” on selected text</Check>
+        </div>
+      </fieldset>
       <fieldset>
         <legend>Download button on video and audio players</legend>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

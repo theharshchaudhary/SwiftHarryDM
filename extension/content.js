@@ -1,5 +1,5 @@
 // content.js - the "Download this video" button on players, the download panel, link
-// collection for the context menu, and Alt+click to keep a download in the browser.
+// collection for the context menu, and the keys that force or prevent a take-over.
 // Everything is drawn inside one shadow root, so page styles cannot change it and it cannot
 // change the page. Text from the page is always set as text, never parsed as HTML.
 (() => {
@@ -109,9 +109,11 @@
     let pill = null;
     let pillX = null;
     // The app's rules (Options > Browser): on/off, mini, minimum length, sites without it.
-    let rules = { enabled: true, mini: false, minSeconds: 0, skipSites: [] };
+    let rules = { enabled: true, mini: false, minSeconds: 0, skipSites: [], preventKey: 'alt', forceKey: 'none' };
     const hidden = new WeakSet(); // players the user closed the button on
-    send({ action: 'playerRules' }).then((r) => { if (r && r.success) rules = r; });
+    const loadRules = () => send({ action: 'rules' }).then((r) => { if (r && r.success) rules = r; });
+    loadRules();
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadRules(); });
     const hostMatches = (pat, h) => {
         pat = String(pat).trim().toLowerCase().replace(/\/+$/, '');
         if (!pat) return false;
@@ -320,6 +322,10 @@
 
     chrome.runtime.onMessage.addListener((req) => {
         switch (req.action) {
+            case 'rulesChanged':
+                if (req.rules) rules = { ...rules, ...req.rules };
+                place();
+                break;
             case 'collectLinks':
                 send({ action: 'sendLinks', ...links(!!req.selectionOnly), pageUrl: location.href });
                 break;
@@ -351,10 +357,33 @@
         }
     });
 
-    // Alt+click on a link leaves that download to the browser.
-    document.addEventListener('mousedown', (e) => {
-        if (!e.altKey) return;
+    // Keys held while clicking a link (Options > Browser): the prevent key (Alt) leaves the
+    // download to the browser; the force key (Insert) sends the link to the app, whatever it is.
+    let insertDown = false;
+    addEventListener('keydown', (e) => { if (e.key === 'Insert') insertDown = true; }, true);
+    addEventListener('keyup', (e) => { if (e.key === 'Insert') insertDown = false; }, true);
+    addEventListener('blur', () => { insertDown = false; });
+    const held = (e, k) => (k === 'alt' ? e.altKey : k === 'shift' ? e.shiftKey : k === 'ctrl' ? e.ctrlKey || e.metaKey : k === 'insert' ? insertDown : false);
+    const linkOf = (e) => {
         const a = e.target instanceof Element ? e.target.closest('a[href]') : null;
-        if (a && /^https?:/i.test(a.href)) send({ action: 'bypassNext', url: a.href });
+        return a && /^https?:/i.test(a.href) ? a : null;
+    };
+    let forced = null;
+    document.addEventListener('mousedown', (e) => {
+        const a = e.button === 0 ? linkOf(e) : null;
+        if (!a) return;
+        if (held(e, rules.forceKey)) {
+            forced = a.href;
+        } else if (held(e, rules.preventKey)) {
+            send({ action: 'bypassNext', url: a.href });
+        }
+    }, true);
+    document.addEventListener('click', (e) => {
+        const a = linkOf(e);
+        if (!forced || !a || a.href !== forced) return;
+        forced = null;
+        e.preventDefault();
+        e.stopPropagation();
+        send({ action: 'downloadMedia', data: { url: a.href, title: (a.innerText || a.title || '').trim().slice(0, 300), instantDownload: true, pageUrl: location.href } });
     }, true);
 })();

@@ -192,21 +192,27 @@ async fn capture_decisions_and_link_lists() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn player_button_rules_follow_the_settings() {
+async fn extension_rules_follow_the_settings() {
     let e = env(false).await;
     let t = e.pair().await;
-    let (s, v) = e.call("GET", "/api/settings/player", Some(EXT), Some(&t), None).await;
+    let (s, v) = e.call("GET", "/api/settings/extension", Some(EXT), Some(&t), None).await;
     assert_eq!(s, 200, "{v}");
     assert_eq!((v["enabled"].as_bool(), v["mini"].as_bool(), v["minSeconds"].as_u64()), (Some(true), Some(false), Some(0)));
+    assert_eq!((v["preventKey"].as_str(), v["forceKey"].as_str()), (Some("alt"), Some("insert")));
+    assert_eq!(v["menu"]["selectedLinks"].as_bool(), Some(true));
     let mut st = e.mgr.settings().get();
     st.player_button_mini = true;
     st.player_button_min_seconds = 30;
     st.player_button_skip_sites = vec!["music.example.com".into()];
+    st.force_key = "meta; drop table".into();
+    st.menu_page_media = false;
     e.mgr.settings().set(st).unwrap();
-    let (_, v) = e.call("GET", "/api/settings/player", Some(EXT), Some(&t), None).await;
+    let (_, v) = e.call("GET", "/api/settings/extension", Some(EXT), Some(&t), None).await;
     assert_eq!((v["mini"].as_bool(), v["minSeconds"].as_u64()), (Some(true), Some(30)));
     assert_eq!(v["skipSites"][0].as_str(), Some("music.example.com"));
-    let (s, _) = e.call("GET", "/api/settings/player", Some(EXT), None, None).await;
+    assert_eq!(v["forceKey"].as_str(), Some("none"), "unknown keys are turned off");
+    assert_eq!(v["menu"]["pageMedia"].as_bool(), Some(false));
+    let (s, _) = e.call("GET", "/api/settings/extension", Some(EXT), None, None).await;
     assert_eq!(s, 401);
 }
 

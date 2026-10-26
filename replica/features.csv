@@ -3,7 +3,7 @@ Segmented download with dynamic splitting,engine,must,yes,yes,crates/swiftdm-cor
 Resume after failure or restart with validation,engine,must,yes,yes,
 HTTP and HTTPS,engine,must,yes,yes,
 FTP downloads,engine,should,yes,no,IDM takes over FTP; PASV option
-HTTP/2 downloads,engine,could,yes,partial,depends on reqwest/hyper; verify
+HTTP/2 downloads,engine,could,yes,yes,reqwest built with http2
 Basic NTLM Negotiate Kerberos auth,engine,should,yes,partial,Basic done via login prompt; Windows auth missing
 Take over downloads from Chrome Edge Brave,browser,must,yes,yes,extension MV3
 Native messaging so the extension finds the app,browser,must,yes,yes,
@@ -15,9 +15,9 @@ Merge separate audio and video into MP4,video,must,yes,yes,FFmpeg shipped
 Convert TS to MP4,video,must,yes,yes,"verified 2026-10-25: 3-segment HLS (.ts) -> short.mp4, h264+aac, 30.0 s (--remux-video mp4)"
 Keep yt-dlp updated automatically,video,must,yes,yes,weekly verified update
 Refuse DRM-protected streams with a clear message,video,must,yes,yes,media/mod.rs refuses has_drm formats
-Download panel for selected links,browser,could,yes,no,
-Context menu items configurable from the app,browser,should,yes,no,
-Keys to force or prevent takeover,browser,should,yes,no,
+Download panel for selected links,browser,could,yes,partial,context menu 'Download selected links' works; no floating button
+Context menu items configurable from the app,browser,should,yes,yes,four menu items switchable in Options > Browser; rebuilt when the rules change (not e2e-checked)
+Keys to force or prevent takeover,browser,should,yes,yes,"prevent (Alt) and force (Insert) keys, set in Options > Browser; e2e Insert+click"
 Clipboard URL monitoring,capture,should,yes,yes,
 Takeover by file type list,capture,must,yes,yes,
 Sites and addresses not to take over,capture,must,yes,yes,editor UI partial
@@ -41,7 +41,7 @@ Main list with columns and sorting,main window,must,yes,yes,
 Categories tree with auto-placement,main window,must,yes,yes,
 Category add edit delete with types sites folder,main window,must,yes,yes,sites filter added 2026-10-25
 Q column with queue icons,main window,should,yes,yes,"queue icon + number, clock when scheduled, name on hover; e2e find_bar"
-Drag downloads onto a queue in the tree,main window,could,yes,no,
+Drag downloads onto a queue in the tree,main window,could,yes,yes,Main.tsx tree onDrop -> move_to_queue
 Menus Tasks File Downloads View Help,main window,must,yes,yes,verified in Main.tsx
 File menu: stop remove download now redownload,main window,must,yes,yes,"File menu = the row menu: open, resume, stop, download again, move to queue, delete, properties"
 Downloads menu: pause all stop all delete completed,main window,must,yes,yes,"stop all, resume all, delete completed, find, scheduler, queues, limiter"

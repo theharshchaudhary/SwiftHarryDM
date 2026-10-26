@@ -94,6 +94,12 @@ export interface Settings {
   player_button_mini: boolean;
   player_button_min_seconds: number;
   player_button_skip_sites: string[];
+  prevent_key: string;
+  force_key: string;
+  menu_download_with: boolean;
+  menu_page_media: boolean;
+  menu_all_links: boolean;
+  menu_selected_links: boolean;
   tray_icon: boolean;
   ui_font: string;
   ui_font_size: number;

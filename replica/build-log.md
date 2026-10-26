@@ -11,3 +11,4 @@
 | 2026-10-25 | S01 Q column | done | queue icon, clock when scheduled, tooltip; covered in find_bar |
 | 2026-10-25 | S11 queue retries, failed file to end | done | Queue.retries; test fails without the fix, passes 5/5 with it |
 | 2026-10-26 | virus check | done | already built (I missed it in the audit); added a notification when the scanner reports a problem — compile-checked, not e2e |
+| 2026-10-26 | S07/S08 keys and context menu | done | /api/settings/extension; rules pushed to open pages when they change (pages loaded before pairing kept stale rules). e2e Insert+click |
