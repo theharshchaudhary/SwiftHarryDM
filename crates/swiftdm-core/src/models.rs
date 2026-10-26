@@ -123,6 +123,10 @@ pub struct JobSpec {
     pub description: Option<String>,
     #[serde(default)]
     pub speed_limit: Option<u64>,
+    /// A synchronization re-download: the finished download it replaces. Its file is
+    /// overwritten, and its entry removed, only when this one completes.
+    #[serde(default)]
+    pub replaces: Option<String>,
     /// Cookies forwarded by the browser extension. Never serialized with the spec: stored
     /// DPAPI-encrypted in its own column and never logged.
     #[serde(skip)]
@@ -155,6 +159,7 @@ impl JobSpec {
             queue_id: None,
             description: None,
             speed_limit: None,
+            replaces: None,
             cookies: None,
         }
     }

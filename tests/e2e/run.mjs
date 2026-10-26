@@ -347,8 +347,12 @@ const scenarios = {
     // The Q column shows the queue (and a clock when the queue is scheduled).
     const state = await main.invoke("get_state");
     const alt = state.jobs.find((j) => j.url.endsWith("/p/alt.pdf"));
-    const mainQ = state.queues.find((q) => q.id === "main");
+    // A finished file: only a synchronization queue takes it.
+    const mainQ = state.queues.find((q) => q.id === "main_sync");
     await main.invoke("move_to_queue", { ids: [alt.id], queueId: "main" });
+    await sleep(300);
+    assert((await main.invoke("get_state")).jobs.find((j) => j.id === alt.id).queue_id == null, "a finished file stays out of a download queue");
+    await main.invoke("move_to_queue", { ids: [alt.id], queueId: "main_sync" });
     const qTip = () => main.eval(`document.querySelector('#row-${alt.id} .qmark')?.title ?? null`);
     await until(async () => (await qTip()) === mainQ.name, 5000, 100, "the queue mark");
     await main.invoke("save_queue", { queue: { ...mainQ, schedule: { enabled: true, start_time: "03:00", days: [true, true, true, true, true, true, true], stop_time: null } } });

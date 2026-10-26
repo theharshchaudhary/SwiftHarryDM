@@ -116,6 +116,12 @@ const paths: Record<string, ReactElement> = {
       <path d="M8 12.2l2.8 2.8L16.2 9.5" />
     </>
   ),
+  sync: (
+    <>
+      <path d="M19 9.5A7.5 7.5 0 0 0 5.6 7.4M5 14.5a7.5 7.5 0 0 0 13.4 2.1" />
+      <path d="M5.2 3.8v3.9h3.9M18.8 20.2v-3.9h-3.9" />
+    </>
+  ),
   queue: (
     <>
       <path d="M8.5 6.5h11M8.5 12h11M8.5 17.5h11" />

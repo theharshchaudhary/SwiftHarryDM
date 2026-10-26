@@ -609,3 +609,50 @@ async fn zip_preview_of_a_real_archive() {
     assert!(files.iter().any(|f| f.name == "python.exe" && f.size > 50_000), "{files:?}");
     println!("{} files, e.g. {:?}", files.len(), &files[..3]);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn synchronization_queue_downloads_changed_files_again_in_place() {
+    use swiftdm_core::scheduler::{MAIN_QUEUE, SYNC_QUEUE};
+    let e = env().await;
+    let (a1, b1) = (Body::gen("sync-a1", MIB), Body::gen("sync-b", MIB / 2));
+    let a = e.run(&e.srv.add("/sync/a.bin", Resource::new(a1.clone()).etag("\"a1\"")), 30).await;
+    let b = e.run(&e.srv.add("/sync/b.bin", Resource::new(b1.clone()).etag("\"b\"")), 30).await;
+    ok(&a, &a1);
+    ok(&b, &b1);
+    // Finished files only go into synchronization queues.
+    e.m.move_to_queue(&a.id, Some(MAIN_QUEUE.into()));
+    e.m.sync().await;
+    assert_eq!(e.m.get(&a.id).unwrap().queue_id, None);
+    e.m.move_to_queue(&a.id, Some(SYNC_QUEUE.into()));
+    e.m.move_to_queue(&b.id, Some(SYNC_QUEUE.into()));
+    // a.bin changes on the server; b.bin does not.
+    let a2 = Body::gen("sync-a2", MIB + 12345);
+    e.srv.add("/sync/a.bin", Resource::new(a2.clone()).etag("\"a2\""));
+    e.m.start_queue(SYNC_QUEUE);
+    e.m.sync().await; // the queue is running from here on
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while e.m.queues().iter().any(|q| q.id == SYNC_QUEUE && q.running) {
+        assert!(Instant::now() < deadline, "the synchronization queue did not finish");
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    e.m.sync().await;
+    let list = e.m.snapshot();
+    assert!(e.m.get(&a.id).is_none(), "the old entry of the changed file is gone");
+    let new_a = list.iter().find(|s| s.url.ends_with("/sync/a.bin")).expect("a.bin is still in the list");
+    ok(new_a, &a2);
+    assert_eq!(new_a.final_path, a.final_path, "downloaded again over the same file");
+    assert_eq!(new_a.queue_id.as_deref(), Some(SYNC_QUEUE), "and it stays in the queue");
+    assert_eq!(e.m.get(&b.id).unwrap().final_path, b.final_path, "the unchanged file was left alone");
+    assert_eq!(e.files(), vec!["a.bin", "b.bin"]);
+    // Nothing changed since: a second run leaves everything as it is.
+    e.m.start_queue(SYNC_QUEUE);
+    e.m.sync().await; // the queue is running from here on
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while e.m.queues().iter().any(|q| q.id == SYNC_QUEUE && q.running) {
+        assert!(Instant::now() < deadline, "the second run did not finish");
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    e.m.sync().await;
+    assert!(e.m.get(&new_a.id).is_some() && e.m.get(&b.id).is_some());
+    assert_eq!(e.m.snapshot().len(), 2);
+}

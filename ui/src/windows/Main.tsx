@@ -427,7 +427,16 @@ function MainView({ live }: { live: Live }) {
     {
       label: "Move to queue",
       disabled: !selected.length,
-      submenu: [...queueItems((q) => api.moveToQueue(selIds, q.id)), "sep", { label: "Remove from queue", onClick: () => api.moveToQueue(selIds, null) }],
+      // Finished files can only go into synchronization queues (like IDM).
+      submenu: [
+        ...queues.map((q) => ({
+          label: q.name,
+          disabled: q.kind !== "synchronization" && selected.every((j) => j.state === "COMPLETED"),
+          onClick: () => api.moveToQueue(selIds, q.id),
+        })),
+        "sep",
+        { label: "Remove from queue", onClick: () => api.moveToQueue(selIds, null) },
+      ],
     },
     { label: "Delete", hint: "Del", disabled: !selected.length, onClick: act.del },
     "sep",
@@ -756,7 +765,7 @@ function MainView({ live }: { live: Live }) {
                     key={q.id}
                     child
                     f={{ kind: "queue", id: q.id }}
-                    icon="queue"
+                    icon={q.kind === "synchronization" ? "sync" : "queue"}
                     label={q.name}
                     dot={q.running}
                     count={counts.queue.get(q.id)}

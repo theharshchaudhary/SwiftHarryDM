@@ -80,7 +80,7 @@ Schedule start and stop times and days,scheduler,must,yes,yes,scheduler.rs Sched
 Retries per file and failed file to end of queue,scheduler,should,yes,yes,"queue retries (Scheduler), failed file waits <=30 s then goes to the end; manager test"
 Files at the same time per queue,scheduler,should,yes,yes,queue max_concurrent
 Queue done actions with shutdown countdown,scheduler,must,yes,yes,AfterAction + Countdown window; open-a-file action missing
-Synchronization queues re-download changed files,scheduler,should,yes,no,
+Synchronization queues re-download changed files,scheduler,should,yes,yes,"built-in Synchronization queue + queue type; size/ETag/Last-Modified check on start; replacement overwrites the file, old entry removed when done; http_matrix test. No 'repeat every N hours' (daily schedule only)"
 Site grabber wizard,grabber,should,yes,no,new subsystem
 Grabber explore and download window,grabber,should,yes,no,
 Grabber projects save load templates,grabber,could,yes,no,

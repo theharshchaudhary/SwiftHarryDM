@@ -6,6 +6,7 @@ import { Icon } from "../icons";
 import { useLive, useTheme } from "../store";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const BUILT_IN = new Set(["main", "main_sync"]);
 
 function newQueue(n: number): Queue {
   return {
@@ -16,6 +17,7 @@ function newQueue(n: number): Queue {
     schedule: null,
     after: "none",
     retries: null,
+    kind: "download",
   };
 }
 
@@ -92,7 +94,7 @@ export default function Scheduler() {
           <div style={{ flex: 1, overflow: "auto", padding: "0 6px" }}>
             {live.queues.map((q) => (
               <div key={q.id} className={`tree-item${q.id === curId ? " sel" : ""}`} onMouseDown={() => switchTo(q.id)}>
-                <Icon className="ico" name="queue" size={16} />
+                <Icon className="ico" name={q.kind === "synchronization" ? "sync" : "queue"} size={16} />
                 <span className="ellipsis">{q.name}</span>
                 {q.running && <span className="running-dot" title="Running" />}
               </div>
@@ -100,13 +102,13 @@ export default function Scheduler() {
           </div>
           <div className="row" style={{ padding: 8 }}>
             <button className="btn small" onClick={async () => { const q = newQueue(live.queues.length + 1); await api.saveQueue(q); switchTo(q.id); }}>New</button>
-            <button className="btn small danger" disabled={curId === "main"} onClick={() => { api.deleteQueue(curId); setCurId("main"); setDraft(null); }}>Delete</button>
+            <button className="btn small danger" disabled={BUILT_IN.has(curId)} onClick={() => { api.deleteQueue(curId); setCurId("main"); setDraft(null); }}>Delete</button>
           </div>
         </div>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
           <div className="row" style={{ padding: "10px 16px" }}>
             <span>Name</span>
-            <input type="text" className="grow" value={draft.name} disabled={draft.id === "main"} onChange={(e) => upd({ name: e.target.value })} />
+            <input type="text" className="grow" value={draft.name} disabled={BUILT_IN.has(draft.id)} onChange={(e) => upd({ name: e.target.value })} />
             {draft.running ? (
               <button className="btn small" onClick={() => api.stopQueue(draft.id)}>Stop</button>
             ) : (
@@ -117,6 +119,19 @@ export default function Scheduler() {
           <div className="pane" style={{ padding: "14px 16px", overflow: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
             {tab === "schedule" ? (
               <>
+                <div className="grid2">
+                  <span>Type</span>
+                  <select value={draft.kind ?? "download"} disabled={BUILT_IN.has(draft.id)} onChange={(e) => upd({ kind: e.target.value as Queue["kind"] })}>
+                    <option value="download">Download queue: files leave it when they finish</option>
+                    <option value="synchronization">Synchronization queue: keeps finished files up to date</option>
+                  </select>
+                </div>
+                {draft.kind === "synchronization" && (
+                  <div className="hint">
+                    Each time this queue starts, every finished file in it is checked on its server. Files that changed (size, date or version) are downloaded
+                    again over the old copy; the old copy stays until the new one is complete. Add finished files with “Move to queue”.
+                  </div>
+                )}
                 <Check checked={sched.enabled} onChange={(v) => updS({ enabled: v })}>Start this queue automatically</Check>
                 <div className="grid2" style={{ opacity: sched.enabled ? 1 : 0.55 }}>
                   <span>Start at</span>

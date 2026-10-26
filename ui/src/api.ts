@@ -130,6 +130,7 @@ export interface Queue {
   schedule: Schedule | null;
   after: AfterAction;
   retries?: number | null;
+  kind?: "download" | "synchronization";
 }
 
 export interface QuotaStatus { used: number; limit: number; blocked: boolean }

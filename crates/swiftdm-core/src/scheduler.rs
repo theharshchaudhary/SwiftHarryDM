@@ -4,6 +4,18 @@ use chrono::{Datelike, Local, NaiveTime, Timelike};
 use serde::{Deserialize, Serialize};
 
 pub const MAIN_QUEUE: &str = "main";
+/// The built-in synchronization queue (IDM's "Synchronization queue").
+pub const SYNC_QUEUE: &str = "main_sync";
+
+/// A download queue removes files once they are done; a synchronization queue keeps finished
+/// files and, each time it starts, checks them on the server and downloads changed ones again.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum QueueKind {
+    #[default]
+    Download,
+    Synchronization,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
@@ -53,6 +65,8 @@ pub struct Queue {
     /// A file that fails goes to the end of the queue and the next one starts.
     #[serde(default)]
     pub retries: Option<u32>,
+    #[serde(default)]
+    pub kind: QueueKind,
 }
 
 impl Queue {
@@ -65,7 +79,12 @@ impl Queue {
             schedule: None,
             after: AfterAction::None,
             retries: None,
+            kind: QueueKind::Download,
         }
+    }
+
+    pub fn main_sync() -> Self {
+        Queue { id: SYNC_QUEUE.into(), name: "Synchronization queue".into(), max_concurrent: 1, kind: QueueKind::Synchronization, ..Queue::main() }
     }
 }
 

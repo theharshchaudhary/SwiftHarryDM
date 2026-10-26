@@ -20,7 +20,7 @@ use crate::fs::collisions::{finalize_move, move_path, Reservations};
 use crate::fs::names::sanitize_component;
 use crate::limiter::Limiter;
 use crate::models::{Job, JobPatch, JobSnapshot, JobSpec, JobState, ProgressSnapshot};
-use crate::scheduler::{self, Queue, Tick, MAIN_QUEUE};
+use crate::scheduler::{self, Queue, QueueKind, Tick, MAIN_QUEUE, SYNC_QUEUE};
 use crate::settings::SettingsStore;
 use crate::states;
 use crate::store::{Store, StoreError};
@@ -81,6 +81,8 @@ enum Cmd {
     Done(String, Outcome),
     ScheduleTick(u32, usize),
     Sync(oneshot::Sender<()>),
+    /// A synchronization check finished: Ok(Some(why)) = changed on the server.
+    SyncChecked(String, Result<Option<String>, String>),
     Inspect(InspectFn, oneshot::Sender<Box<dyn std::any::Any + Send>>),
     Shutdown(Duration, oneshot::Sender<()>),
     Halt(oneshot::Sender<Vec<(tokio::task::JoinHandle<()>, CancelToken)>>),
@@ -201,6 +203,7 @@ impl Manager {
             via_queue: HashMap::new(),
             requeue_on_stop: HashSet::new(),
             pending_remove: HashMap::new(),
+            sync_pending: HashMap::new(),
             queues: vec![],
             timers: BinaryHeap::new(),
             seq: 0,
@@ -506,6 +509,8 @@ pub struct Actor {
     pub via_queue: HashMap<String, String>,
     requeue_on_stop: HashSet<String>,
     pending_remove: HashMap<String, bool>,
+    /// Finished downloads being checked by a synchronization queue (job id -> queue id).
+    sync_pending: HashMap<String, String>,
     pub queues: Vec<Queue>,
     timers: BinaryHeap<Reverse<(Instant, u64, String)>>,
     seq: u64,
@@ -593,6 +598,7 @@ impl Actor {
                 }
             }
             Cmd::StartQueue(q) => self.set_queue_running(&q, true),
+            Cmd::SyncChecked(id, r) => self.on_sync_checked(&id, r),
             Cmd::StopQueue(q) => self.set_queue_running(&q, false),
             Cmd::SaveQueue(q) => self.on_save_queue(q),
             Cmd::DeleteQueue(q) => self.on_delete_queue(&q),
@@ -697,6 +703,11 @@ impl Actor {
         self.settings.get().collision_policy == "overwrite"
     }
 
+    /// A synchronization re-download always takes the name of the file it replaces.
+    fn overwrite_for(&self, id: &str) -> bool {
+        self.overwrite() || self.jobs.get(id).is_some_and(|j| j.spec.replaces.is_some())
+    }
+
     fn with_job(&mut self, id: &str, f: impl FnOnce(&mut Self, &mut Job)) {
         if let Some(mut j) = self.jobs.remove(id) {
             f(self, &mut j);
@@ -724,6 +735,10 @@ impl Actor {
         self.queues = self.store.load_queues()?;
         if !self.queues.iter().any(|q| q.id == MAIN_QUEUE) {
             self.queues.insert(0, Queue::main());
+        }
+        if !self.queues.iter().any(|q| q.id == SYNC_QUEUE) {
+            let at = self.queues.iter().position(|q| q.id == MAIN_QUEUE).map_or(0, |i| i + 1);
+            self.queues.insert(at, Queue::main_sync());
         }
         // Queues stop on restart, like IDM; schedules start them again.
         for q in self.queues.iter_mut() {
@@ -819,7 +834,7 @@ impl Actor {
             }
         }
         if let Some(name) = job.spec.filename.clone() {
-            match self.res.reserve(&job.id, job.dest_dir(), &sanitize_component(&name), self.overwrite()) {
+            match self.res.reserve(&job.id, job.dest_dir(), &sanitize_component(&name), self.overwrite() || job.spec.replaces.is_some()) {
                 Ok(n) => job.reserved_name = Some(n),
                 Err(e) => tracing::warn!("reservation failed: {e}"),
             }
@@ -1031,8 +1046,12 @@ impl Actor {
             return;
         }
         q.running = running;
+        let sync = q.kind == QueueKind::Synchronization;
         self.persist_queues();
         self.hub.publish(Event::QueueChanged { queue_id: qid.into(), running });
+        if running && sync {
+            self.start_sync_checks(qid);
+        }
         if !running {
             // Stop the queue's downloads; they wait in the queue for the next start.
             let ids: Vec<String> = self.via_queue.iter().filter(|(_, q)| *q == qid).map(|(id, _)| id.clone()).collect();
@@ -1057,7 +1076,13 @@ impl Actor {
         }
     }
 
-    fn on_save_queue(&mut self, q: Queue) {
+    fn on_save_queue(&mut self, mut q: Queue) {
+        // The built-in queues keep their kind.
+        if q.id == MAIN_QUEUE {
+            q.kind = QueueKind::Download;
+        } else if q.id == SYNC_QUEUE {
+            q.kind = QueueKind::Synchronization;
+        }
         if let Some(existing) = self.queues.iter_mut().find(|x| x.id == q.id) {
             let running = existing.running;
             *existing = q;
@@ -1069,7 +1094,7 @@ impl Actor {
     }
 
     fn on_delete_queue(&mut self, qid: &str) {
-        if qid == MAIN_QUEUE {
+        if qid == MAIN_QUEUE || qid == SYNC_QUEUE {
             return;
         }
         self.set_queue_running(qid, false);
@@ -1084,7 +1109,16 @@ impl Actor {
     }
 
     fn on_move_to_queue(&mut self, id: &str, q: Option<String>) {
+        let to_download_queue = q.as_ref().is_some_and(|qid| self.queues.iter().any(|x| &x.id == qid && x.kind == QueueKind::Download));
         self.with_job(id, |me, j| {
+            // Like IDM: finished files can only be in synchronization queues.
+            if j.state == S::Completed && to_download_queue {
+                if j.spec.queue_id.is_some() {
+                    j.spec.queue_id = None;
+                    me.save(j);
+                }
+                return;
+            }
             j.spec.queue_id = q.clone();
             if q.is_some() && j.state == S::Paused && j.reason.as_deref() != Some(QUEUED_REASON) {
                 j.state = S::Paused;
@@ -1094,7 +1128,60 @@ impl Actor {
         });
     }
 
+    /// IDM's periodic synchronization: every finished file in the queue is checked on the
+    /// server (size, ETag, Last-Modified); a changed one is downloaded again over it.
+    fn start_sync_checks(&mut self, qid: &str) {
+        let replacing: HashSet<String> = self.jobs.values().filter_map(|j| j.spec.replaces.clone()).collect();
+        let todo: Vec<Job> = self
+            .jobs
+            .values()
+            .filter(|j| j.state == S::Completed && j.spec.queue_id.as_deref() == Some(qid))
+            .filter(|j| !replacing.contains(&j.id) && !self.sync_pending.contains_key(&j.id))
+            .cloned()
+            .collect();
+        let settings = self.settings.get();
+        for j in todo {
+            self.sync_pending.insert(j.id.clone(), qid.into());
+            let (tx, s) = (self.tx.clone(), settings.clone());
+            tokio::spawn(async move {
+                let url = j.final_url.clone().unwrap_or_else(|| j.spec.url.clone());
+                let r = match crate::http::probe::probe_url(&url, &s, &CancelToken::new(), j.spec.cookies.clone()).await {
+                    Ok(p) => Ok(sync_change(&j, p.total, p.etag.as_deref(), p.last_modified.as_deref())),
+                    Err(e) => Err(e.0.message),
+                };
+                let _ = tx.send(Cmd::SyncChecked(j.id.clone(), r));
+            });
+        }
+    }
+
+    fn on_sync_checked(&mut self, id: &str, r: Result<Option<String>, String>) {
+        let Some(qid) = self.sync_pending.remove(id) else { return };
+        let running = self.queues.iter().any(|q| q.id == qid && q.running);
+        let Some(old) = self.jobs.get(id).cloned() else { return };
+        match r {
+            Ok(None) => self.log(id, "info", "Synchronization: unchanged on the server."),
+            Err(e) => self.log(id, "warning", &format!("Synchronization: could not check the file ({e}).")),
+            Ok(Some(why)) if running => {
+                self.log(id, "info", &format!("Synchronization: {why}; downloading it again."));
+                let mut spec = old.spec.clone();
+                spec.filename = old
+                    .final_path
+                    .as_deref()
+                    .and_then(|p| Path::new(p).file_name())
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .or(spec.filename);
+                spec.replaces = Some(old.id.clone());
+                spec.queue_id = Some(qid);
+                self.on_submit(Job::new(new_job_id(), spec), StartMode::Later);
+            }
+            Ok(Some(_)) => {}
+        }
+    }
+
     fn queue_has_work(&self, qid: &str) -> bool {
+        if self.sync_pending.values().any(|q| q == qid) {
+            return true;
+        }
         self.jobs.values().any(|j| {
             (j.spec.queue_id.as_deref() == Some(qid) && j.state == S::Paused && j.reason.as_deref() == Some(QUEUED_REASON))
                 || (self.via_queue.get(&j.id).map(String::as_str) == Some(qid)
@@ -1427,7 +1514,7 @@ impl Actor {
             let desired = j.reserved_name.clone().unwrap_or_else(|| {
                 sanitize_component(&Path::new(&artifact).file_name().unwrap_or_default().to_string_lossy())
             });
-            let final_path = finalize_move(Path::new(&artifact), j.dest_dir(), &desired, &j.id, &self.res, self.overwrite())
+            let final_path = finalize_move(Path::new(&artifact), j.dest_dir(), &desired, &j.id, &self.res, self.overwrite() || j.spec.replaces.is_some())
                 .map_err(|e| from_io(&e, j.dest_dir()))?;
             let got = std::fs::metadata(crate::fs::long_path(&final_path)).map(|m| m.len()).unwrap_or(0);
             if got != size {
@@ -1455,6 +1542,11 @@ impl Actor {
                 self.set_state(j, S::Completed, None, None, false);
                 self.res.release(&j.id);
                 self.log(&j.id, "info", &format!("Completed: {}", final_path.display()));
+                if let Some(old) = j.spec.replaces.take() {
+                    // The new copy is in place: the old entry goes (its file was replaced).
+                    self.save(j);
+                    let _ = self.tx.send(Cmd::Remove(old, false));
+                }
                 self.maybe_scan(j);
             }
             Err(e) => self.set_state(j, S::Failed, None, Some(e.0), false),
@@ -1552,6 +1644,27 @@ async fn run_scan(template: &str, file: &str) -> std::io::Result<i32> {
     Ok(out.status.code().unwrap_or(-1))
 }
 
+/// Why a finished file differs from what the server has now, or None if it looks the same.
+/// A validator only counts when both sides have it.
+fn sync_change(j: &Job, size: Option<u64>, etag: Option<&str>, last_modified: Option<&str>) -> Option<String> {
+    if let (Some(a), Some(b)) = (j.total_bytes, size) {
+        if a != b {
+            return Some(format!("the size changed ({a} to {b} bytes)"));
+        }
+    }
+    if let (Some(a), Some(b)) = (j.etag.as_deref(), etag) {
+        if a != b {
+            return Some("the server's version tag changed".into());
+        }
+    }
+    if let (Some(a), Some(b)) = (j.last_modified.as_deref(), last_modified) {
+        if a != b {
+            return Some(format!("it was modified on the server ({b})"));
+        }
+    }
+    None
+}
+
 /// Name reservation performed by workers goes through the actor-owned registry: workers
 /// ask via a blocking round trip so a name is never handed to two jobs.
 #[derive(Clone)]
@@ -1562,7 +1675,7 @@ struct ResHandle {
 impl ResHandle {
     async fn reserve(&self, job_id: String, dest: String, desired: String) -> Result<String, String> {
         let f: InspectFn = Box::new(move |a: &Actor| {
-            let r = a.res.reserve(&job_id, &dest, &desired, a.overwrite()).map_err(|e| e.to_string());
+            let r = a.res.reserve(&job_id, &dest, &desired, a.overwrite_for(&job_id)).map_err(|e| e.to_string());
             Box::new(r)
         });
         let (rtx, rrx) = oneshot::channel();
