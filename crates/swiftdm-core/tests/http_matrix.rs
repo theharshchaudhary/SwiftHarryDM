@@ -691,3 +691,130 @@ async fn pac_script_sends_chosen_sites_through_the_proxy() {
     e.m.settings().set(st).unwrap();
     ok(&e.run("http://via-proxy.invalid/pac/manual.bin", 60).await, &b2);
 }
+
+/// A small site on the test server, explored by the site grabber.
+fn grabber_site(srv: &TestServer, other: &TestServer) -> HashMap<&'static str, Body> {
+    let html = |s: String| Resource::new(Body::raw(s.into_bytes())).content_type("text/html; charset=utf-8");
+    let o = &other.base;
+    srv.add("/robots.txt", Resource::new(Body::raw(b"User-agent: *\nDisallow: /site/private/\n".to_vec())).content_type("text/plain"));
+    srv.add(
+        "/site/index.html",
+        html(format!(
+            r#"<h1>Files</h1><a href="docs.html">Docs</a> <a href="report.pdf">The report</a> <img src="logo.png">
+               <a href="private/secret.pdf">x</a> <a href="private/page.html">x</a> <a href="../outside.pdf">Outside</a>
+               <a href="dl">Latest build</a> <a href="{o}/x.html">Other site</a> <a href="{o}/o.zip">Mirror</a>"#
+        )),
+    );
+    srv.add("/site/docs.html", html(r#"<a href="manual.zip">Manual</a> <a href="deep.html">More</a> <a href="report.pdf">Report again</a>"#.into()));
+    srv.add("/site/deep.html", html(r#"<a href="deep.zip">Deep</a>"#.into()));
+    srv.add("/site/private/page.html", html(r#"<a href="hidden.zip">hidden</a>"#.into()));
+    other.add("/x.html", html(r#"<a href="far.zip">far</a>"#.into()));
+    let mut files = HashMap::new();
+    for (path, size, server) in [
+        ("/site/report.pdf", 300_000, srv),
+        ("/site/logo.png", 20_000, srv),
+        ("/site/manual.zip", 400_000, srv),
+        ("/site/deep.zip", 10_000, srv),
+        ("/site/private/secret.pdf", 10_000, srv),
+        ("/site/private/hidden.zip", 10_000, srv),
+        ("/outside.pdf", 50_000, srv),
+        ("/o.zip", 30_000, other),
+        ("/far.zip", 30_000, other),
+    ] {
+        let b = Body::gen(path, size);
+        server.add(path, Resource::new(b.clone()));
+        files.insert(path, b);
+    }
+    let dl = Body::gen("dl", 64_000);
+    srv.add("/site/dl", Resource::new(dl.clone()).content_type("application/zip").disposition("attachment; filename=\"build.zip\""));
+    files.insert("/site/dl", dl);
+    files
+}
+
+async fn explore(g: &Arc<swiftdm_core::grabber::crawl::Grabber>, p: swiftdm_core::grabber::Project) -> (String, Vec<swiftdm_core::grabber::Item>) {
+    let p = g.save_project(p).unwrap();
+    let mut rx = g.subscribe();
+    g.explore(&p.id).unwrap();
+    let reason = tokio::time::timeout(Duration::from_secs(60), async {
+        loop {
+            if let Ok(swiftdm_core::grabber::GrabberEvent::Done { project_id, reason }) = rx.recv().await {
+                if project_id == p.id {
+                    return reason;
+                }
+            }
+        }
+    })
+    .await
+    .expect("exploring did not finish");
+    (p.id.clone(), g.items(&p.id))
+}
+
+fn file_paths(items: &[swiftdm_core::grabber::Item]) -> Vec<String> {
+    let mut v: Vec<String> = items
+        .iter()
+        .filter(|i| i.kind == swiftdm_core::grabber::ItemKind::File)
+        .map(|i| url::Url::parse(&i.url).unwrap().path().to_string())
+        .collect();
+    v.sort();
+    v
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn site_grabber_explores_within_its_rules_and_downloads_the_files() {
+    use swiftdm_core::grabber::{crawl::Grabber, ItemKind, ItemStatus, Project, SaveMode, Template};
+    let e = env().await;
+    let other = TestServer::start().await;
+    let files = grabber_site(&e.srv, &other);
+    let g = Grabber::new(e.store.clone(), e.m.clone());
+    let start = format!("{}/site/index.html", e.srv.base);
+    let base = Project { start_url: start.clone(), delay_ms: 0, ..Project::default() };
+
+    // One level, all files: the linked files of the start page and of docs.html; not deep.zip
+    // (two levels), not the robots.txt folder, not far.zip (other sites are not explored).
+    let (id, items) = explore(&g, base.clone()).await;
+    assert_eq!(
+        file_paths(&items),
+        ["/o.zip", "/outside.pdf", "/site/dl", "/site/logo.png", "/site/manual.zip", "/site/report.pdf"],
+        "{items:#?}"
+    );
+    let report = items.iter().find(|i| i.url.ends_with("report.pdf")).unwrap();
+    assert_eq!((report.size, report.link_text.as_deref()), (Some(300_000), Some("The report")));
+    let private = items.iter().find(|i| i.url.ends_with("private/page.html")).unwrap();
+    assert_eq!((private.kind, private.status), (ItemKind::Page, ItemStatus::Skipped), "robots.txt is respected");
+    assert!(e.srv.requests("/site/private/secret.pdf").is_empty(), "not even a HEAD request for a disallowed file");
+
+    // Download them all into one folder, keeping the site's folders.
+    let folder = format!(r"{}\grab", e.dest);
+    let mut p = g.project(&id).unwrap();
+    p.save_mode = SaveMode::Folder;
+    p.folder = folder.clone();
+    p.keep_subfolders = true;
+    g.save_project(p).unwrap();
+    let ids: Vec<i64> = items.iter().filter(|i| i.kind == ItemKind::File).map(|i| i.id).collect();
+    let jobs = g.download(&id, &ids).unwrap();
+    assert_eq!(jobs.len(), 6);
+    for j in &jobs {
+        let s = e.m.wait_for(j, DONE, Duration::from_secs(60)).await.unwrap();
+        let path = url::Url::parse(&s.url).unwrap().path().to_string();
+        ok(&s, &files[path.as_str()]);
+    }
+    let build = e.m.snapshot().into_iter().find(|s| s.url.ends_with("/site/dl")).unwrap();
+    assert!(build.final_path.unwrap().ends_with("build.zip"), "named by the server");
+    let manual = e.m.snapshot().into_iter().find(|s| s.url.ends_with("manual.zip")).unwrap();
+    let got = manual.final_path.unwrap();
+    assert!(got.starts_with(&folder) && got.ends_with(r"\site\manual.zip"), "the site's folders are kept: {got}");
+    assert!(g.items(&id).iter().filter(|i| i.kind == ItemKind::File).all(|i| i.status == ItemStatus::Queued && i.job_id.is_some()));
+    assert!(g.download(&id, &ids).unwrap().is_empty(), "already downloaded items are not added twice");
+
+    // Deeper, only this site's files, images only.
+    let (_, items) = explore(&g, Project { depth: 2, files_this_site_only: true, ..base.clone() }).await;
+    assert!(file_paths(&items).contains(&"/site/deep.zip".to_string()) && !file_paths(&items).contains(&"/o.zip".to_string()));
+    let (_, items) = explore(&g, Project { template: Template::Images, ..base.clone() }).await;
+    assert_eq!(file_paths(&items), ["/site/logo.png"]);
+    // Other sites one level deep: far.zip appears.
+    let (_, items) = explore(&g, Project { other_sites_depth: 1, ..base.clone() }).await;
+    assert!(file_paths(&items).contains(&"/far.zip".to_string()));
+    // Size limits.
+    let (_, items) = explore(&g, Project { min_size: 100_000, ..base }).await;
+    assert_eq!(file_paths(&items), ["/site/manual.zip", "/site/report.pdf"]);
+}

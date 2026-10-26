@@ -12,6 +12,7 @@ pub mod ef2;
 pub mod errors;
 pub mod events;
 pub mod fs;
+pub mod grabber;
 pub mod http;
 pub mod limiter;
 pub mod logging;

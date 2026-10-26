@@ -5,9 +5,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::models::{Job, JobSpec, JobState, Segment};
+use crate::grabber::{Item, ItemKind, ItemStatus, Project};
 use crate::scheduler::Queue;
 
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 const MIGRATION_1: &str = r#"
 CREATE TABLE jobs (
@@ -27,6 +28,29 @@ CREATE TABLE queues (id TEXT PRIMARY KEY, data TEXT NOT NULL, position INTEGER N
 CREATE UNIQUE INDEX jobs_reservation ON jobs(lower(dest_dir), lower(reserved_name))
     WHERE reserved_name IS NOT NULL AND state NOT IN ('COMPLETED', 'CANCELLED');
 CREATE TABLE schema_version (v INTEGER NOT NULL);
+"#;
+
+/// Site grabber projects and what exploring them found.
+const MIGRATION_2: &str = r#"
+CREATE TABLE grabber_projects (
+    id TEXT PRIMARY KEY, data TEXT NOT NULL, created_at REAL NOT NULL, updated_at REAL NOT NULL
+);
+CREATE TABLE grabber_items (
+    id INTEGER PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES grabber_projects(id) ON DELETE CASCADE,
+    url TEXT NOT NULL, parent_url TEXT, depth INTEGER NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('page','file')),
+    content_type TEXT, size INTEGER, link_text TEXT,
+    checked INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'found' CHECK (status IN ('found','explored','skipped','failed','queued')),
+    note TEXT,
+    -- the download made from this item (not a foreign key: the item is saved before the
+    -- manager writes the download, and the download may later be removed from the list)
+    job_id TEXT,
+    UNIQUE (project_id, url)
+);
+CREATE INDEX grabber_items_project ON grabber_items(project_id, kind, status);
+CREATE INDEX grabber_items_job ON grabber_items(job_id);
 "#;
 
 #[derive(Debug, thiserror::Error)]
@@ -116,15 +140,23 @@ impl Store {
             return Ok(());
         }
         if cur > 0 {
-            self.backup(&self.path.with_file_name(format!(
-                "{}.bak-v{cur}",
-                self.path.file_name().unwrap().to_string_lossy()
-            )))?;
+            // A backup left by an earlier attempt is kept; this one gets the next free name.
+            let name = self.path.file_name().unwrap().to_string_lossy().into_owned();
+            let mut dest = self.path.with_file_name(format!("{name}.bak-v{cur}"));
+            let mut n = 1;
+            while dest.exists() {
+                n += 1;
+                dest = self.path.with_file_name(format!("{name}.bak-v{cur}-{n}"));
+            }
+            self.backup(&dest)?;
         }
         let mut c = self.conn.lock().unwrap();
         let tx = c.transaction()?;
         if cur < 1 {
             tx.execute_batch(MIGRATION_1)?;
+        }
+        if cur < 2 {
+            tx.execute_batch(MIGRATION_2)?;
         }
         tx.execute("DELETE FROM schema_version", [])?;
         tx.execute("INSERT INTO schema_version (v) VALUES (?1)", [SCHEMA_VERSION])?;
@@ -299,6 +331,98 @@ impl Store {
         self.conn.lock().unwrap().execute("DELETE FROM queues WHERE id=?1", [id])?;
         Ok(())
     }
+
+    // ------------------------------------------------------------------ site grabber
+    pub fn save_grabber_project(&self, p: &Project) -> Result<(), StoreError> {
+        self.conn.lock().unwrap().execute(
+            "INSERT INTO grabber_projects (id, data, created_at, updated_at) VALUES (?1,?2,?3,?4)
+             ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at",
+            params![p.id, serde_json::to_string(p).unwrap(), p.created_at, p.updated_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn grabber_projects(&self) -> Result<Vec<Project>, StoreError> {
+        let c = self.conn.lock().unwrap();
+        let mut st = c.prepare("SELECT data FROM grabber_projects ORDER BY updated_at DESC")?;
+        let v = st
+            .query_map([], |r| r.get::<_, String>(0))?
+            .filter_map(|s| s.ok().and_then(|s| serde_json::from_str::<Project>(&s).ok()))
+            .map(Project::normalized)
+            .collect();
+        Ok(v)
+    }
+
+    pub fn delete_grabber_project(&self, id: &str) -> Result<(), StoreError> {
+        self.conn.lock().unwrap().execute("DELETE FROM grabber_projects WHERE id=?1", [id])?;
+        Ok(())
+    }
+
+    /// Insert an item found while exploring, or update the one with the same address.
+    /// Returns the item's id.
+    pub fn save_grabber_item(&self, it: &Item) -> Result<i64, StoreError> {
+        let c = self.conn.lock().unwrap();
+        let kind = match it.kind {
+            ItemKind::Page => "page",
+            ItemKind::File => "file",
+        };
+        c.execute(
+            "INSERT INTO grabber_items (project_id, url, parent_url, depth, kind, content_type, size, link_text, checked, status, note, job_id)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)
+             ON CONFLICT(project_id, url) DO UPDATE SET parent_url=excluded.parent_url, depth=excluded.depth, kind=excluded.kind,
+               content_type=excluded.content_type, size=excluded.size, link_text=excluded.link_text, checked=excluded.checked,
+               status=excluded.status, note=excluded.note, job_id=excluded.job_id",
+            params![
+                it.project_id,
+                it.url,
+                it.parent_url,
+                it.depth,
+                kind,
+                it.content_type,
+                it.size.map(|v| v as i64),
+                it.link_text,
+                it.checked,
+                it.status.as_str(),
+                it.note,
+                it.job_id
+            ],
+        )?;
+        Ok(c.query_row("SELECT id FROM grabber_items WHERE project_id=?1 AND url=?2", params![it.project_id, it.url], |r| r.get(0))?)
+    }
+
+    pub fn grabber_items(&self, project_id: &str) -> Result<Vec<Item>, StoreError> {
+        let c = self.conn.lock().unwrap();
+        let mut st = c.prepare(
+            "SELECT id, project_id, url, parent_url, depth, kind, content_type, size, link_text, checked, status, note, job_id
+             FROM grabber_items WHERE project_id=?1 ORDER BY id",
+        )?;
+        let v = st
+            .query_map([project_id], |r| {
+                Ok(Item {
+                    id: r.get(0)?,
+                    project_id: r.get(1)?,
+                    url: r.get(2)?,
+                    parent_url: r.get(3)?,
+                    depth: r.get(4)?,
+                    kind: if r.get::<_, String>(5)? == "page" { ItemKind::Page } else { ItemKind::File },
+                    content_type: r.get(6)?,
+                    size: r.get::<_, Option<i64>>(7)?.map(|v| v as u64),
+                    link_text: r.get(8)?,
+                    checked: r.get(9)?,
+                    status: ItemStatus::parse(&r.get::<_, String>(10)?),
+                    note: r.get(11)?,
+                    job_id: r.get(12)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(v)
+    }
+
+    /// Forget what a project found (before exploring it again from scratch).
+    pub fn clear_grabber_items(&self, project_id: &str) -> Result<(), StoreError> {
+        self.conn.lock().unwrap().execute("DELETE FROM grabber_items WHERE project_id=?1", [project_id])?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -380,5 +504,60 @@ mod tests {
         let st = Store::open(d.path().join("s.db")).unwrap();
         st.save_queue(&Queue::main(), 0).unwrap();
         assert_eq!(st.load_queues().unwrap(), vec![Queue::main()]);
+    }
+
+    #[test]
+    fn upgrades_a_version_1_database() {
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("s.db");
+        {
+            let c = Connection::open(&p).unwrap();
+            c.execute_batch(MIGRATION_1).unwrap();
+            c.execute("INSERT INTO schema_version (v) VALUES (1)", []).unwrap();
+        }
+        {
+            let st = Store::open(&p).unwrap();
+            st.save_job(&job("old", "C:/d", None, JobState::Completed)).unwrap();
+        }
+        // Pretend that job was saved by version 1, then open with this version again.
+        Connection::open(&p).unwrap().execute("UPDATE schema_version SET v=1", []).unwrap();
+        Connection::open(&p).unwrap().execute_batch("DROP TABLE grabber_items; DROP TABLE grabber_projects;").unwrap();
+        let st = Store::open(&p).unwrap();
+        assert_eq!(st.schema_version().unwrap(), SCHEMA_VERSION);
+        assert_eq!(st.load_jobs().unwrap().len(), 1, "the downloads survive the upgrade");
+        assert!(d.path().join("s.db.bak-v1").exists(), "a backup is made first");
+        assert!(d.path().join("s.db.bak-v1-2").exists(), "an earlier backup is not in the way");
+    }
+
+    #[test]
+    fn grabber_projects_and_items() {
+        let d = tempfile::tempdir().unwrap();
+        let st = Store::open(d.path().join("s.db")).unwrap();
+        let p = Project { id: "p1".into(), name: "Docs".into(), start_url: "https://a.example/".into(), ..Project::default() };
+        st.save_grabber_project(&p).unwrap();
+        assert_eq!(st.grabber_projects().unwrap()[0].name, "Docs");
+        let mut it = Item {
+            id: 0,
+            project_id: "p1".into(),
+            url: "https://a.example/f.pdf".into(),
+            parent_url: Some("https://a.example/".into()),
+            depth: 1,
+            kind: ItemKind::File,
+            content_type: None,
+            size: None,
+            link_text: Some("F".into()),
+            checked: true,
+            status: ItemStatus::Found,
+            note: None,
+            job_id: None,
+        };
+        let id = st.save_grabber_item(&it).unwrap();
+        it.size = Some(42);
+        it.status = ItemStatus::Queued;
+        assert_eq!(st.save_grabber_item(&it).unwrap(), id, "the same address updates the same item");
+        let items = st.grabber_items("p1").unwrap();
+        assert_eq!((items.len(), items[0].size, items[0].status), (1, Some(42), ItemStatus::Queued));
+        st.delete_grabber_project("p1").unwrap();
+        assert!(st.grabber_items("p1").unwrap().is_empty(), "items go with their project");
     }
 }
