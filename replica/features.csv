@@ -92,3 +92,8 @@ Dial-up and VPN tab,options,skip,yes,skip,no dial-up on modern Windows
 IE monitor and Opera/IE plugins,browser,skip,yes,skip,those browsers are gone
 MMS protocol,engine,skip,yes,skip,dead protocol
 Toolbar skins and IDM artwork,main window,skip,yes,skip,IDM's own assets; ODM draws its own
+Failed download opens the page it came from and takes the new link,fixes,should,yes,no,"fixes.md #1: 6 posts, 4 projects"
+Small memory use while in the tray (under 30 MB),fixes,should,no,no,fixes.md #2: ~207 MB with the window open (debug build)
+Tray icon shows overall progress,fixes,could,no,no,fixes.md #3 (thin)
+Proxy path in the speed benchmark,fixes,could,no,no,fixes.md #5
+Linux build,fixes,could,no,no,"fixes.md #7: unsolved, 6 posts"

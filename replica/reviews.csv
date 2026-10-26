@@ -1,0 +1,192 @@
+source,url,date,rating,text
+Hacker News,https://news.ycombinator.com/item?id=50065696,2026-10-13,,"IDM and NDM are still the golden standards for download managers. I still can’t trust browsers. These things let me go to the source page where the download was captured from if it failed. Gets streaming video from most non drm sites. IDM is still getting updates."
+Hacker News,https://news.ycombinator.com/item?id=45858270,2025-11-08,,"IDM - Internet Download Manager -- Only available for Windows, never saw a proper alternative for Linux/MacOS with the same reliability and browser integration."
+Hacker News,https://news.ycombinator.com/item?id=41302096,2024-08-20,,"(I use the VTT on my Firefox, I use IDM to download the auto-generated English language scripts for lengthy videos)."
+Hacker News,https://news.ycombinator.com/item?id=37422719,2023-09-07,,"Using a download manager like IDM or jDownloader will help for http downloads, but most hosts will limit your speed even with 16 connections open."
+Hacker News,https://news.ycombinator.com/item?id=35563544,2023-04-13,,"It is of course easier for people like me who are no longer or were ever competent programmers, let alone being well versed in python, to pick some other program - I've been told such as IDM will handle youtube antics fine as well as being compatible with older systems, so it may well be worthwhile to purchase a copy."
+Hacker News,https://news.ycombinator.com/item?id=24171547,2020-08-15,,"What helps a lot, is copy and paste to an excel, like this
+Cell A1: http://image.slidesharecdn.com/PATH-TO-SLIDES
+Cell A2: 1
+Cell A3: .jpg
+then pull the A2 till the number of the slides (e.g. 50)
+So you end up with 50 lines.
+Then copy all that 'table' and paste it to a Notepad
+Then Replace (Ctrl+H) the 'tab' to null
+Then Ctrl+A and Copy from the notepad
+Then paste it to IDM
+Download all"
+Hacker News,https://news.ycombinator.com/item?id=24168990,2020-08-15,,"The pricing looks very straight forward to me.
+
+The lifetime option is less than $20 for either windows or Mac.
+
+Mipony and jd shouldn't be compared with IDM. They don't do the same thing."
+Hacker News,https://news.ycombinator.com/item?id=16865887,2018-04-18,,"And oh how I miss GetRight. I remember it was able to jump-around and download from linked web-pages. While IDM doesn't seem to be able to crawl like this (or at least I haven't found a way)."
+Hacker News,https://news.ycombinator.com/item?id=14031286,2017-04-04,,"A file downloader for Mac, like IDM for Windows. First version out."
+Hacker News,https://news.ycombinator.com/item?id=49800727,2026-09-22,,"There is 2 softwares I will buy for myself if I still use Windows: WinRAR and Internet Download Manager. In fact, I will buy them in the future regardless the Windows usage."
+Hacker News,https://news.ycombinator.com/item?id=4969810,2012-12-26,,"- Internet Download Manager (Windows)"
+Hacker News,https://news.ycombinator.com/item?id=45320074,2025-09-21,,"Internet Download Manager on Windows (https://www.internetdownloadmanager.com/) allows downloading all kinds of videos from your browser, not just Youtube."
+Hacker News,https://news.ycombinator.com/item?id=4372330,2012-08-12,,"Internet Download Manager automatically rips the .mp3 file from RainyMood with ease."
+Hacker News,https://news.ycombinator.com/item?id=24978856,2020-11-03,,"Internet Download Manager on Windows is an amazing grabber, not just for YouTube, but all other videos and files and documents."
+GitHub issues,https://github.com/agalwood/Motrix/issues/2070,2026-09-05,,"The speed of download is lower than Internet download manager,
+I think it is very important for the speed of download on all download apps. Please enhance the speed of Motrix on
+Https/http and BT."
+GitHub issues,https://github.com/agalwood/Motrix/issues/1788,2025-12-11,,"Feature requests
+- A dedicated tab/list showing all downloaded files with their current status.
+  - Ability to sort by download progress (percent).
+  - Quick actions per item: resume download and refresh download/source.
+- “Refresh download” behavior similar to IDM:
+  - If resume fails, IDM opens the originating page so you can re-request the file.
+  - Currently, Motrix’s “Copy link” returns a CDN link that is often expired; a refresh action that opens the source page would solve that."
+GitHub issues,https://github.com/agalwood/Motrix/issues/651,2020-05-19,,"Hi, it would be nicer if there's a confirmation dialog before download a file like IDM or Persepolis (Linux) or any download manager. Please consider this option, thanks."
+GitHub issues,https://github.com/agalwood/Motrix/issues/403,2019-08-26,,"**Is your feature request related to a problem? Please describe.**
+No it's not. I'm a Linux user, sometimes a Windows user too. I have used XDM (Linux) and IDM (Windows) which both support YouTube video download. I think it's very convenient feature to have in this awesome downloading tool. Definitely can replace IDM and XDM."
+GitHub issues,https://github.com/agalwood/Motrix/issues/1360,2022-12-22,,A browser extension is required (for video downloading like IDM).
+GitHub issues,https://github.com/agalwood/Motrix/issues/1584,2023-11-02,,"Yesterday, I was downloading one file which was of 3 GB. I have connected to mobile hotspot and my internet got used up. The file was downloaded upto 2.3GB. After that, I connected to my friend's hotspot but when I connected, my downloaded file was in stopped task. I thought that was normal as when I used IDM , it also stopped. So, I tried to resume it but it failed. My internet was wasted."
+GitHub issues,https://github.com/agalwood/Motrix/issues/1556,2023-09-15,,so im requesting a system proxy detection if its possible. idm has this option too in its settings.
+GitHub issues,https://github.com/agalwood/Motrix/issues/1709,2024-10-22,,"**Describe the solution you'd like**
+Considering FDM and IDM, is it possible to automatically connect Motrix without setting a key, or Motrix can save multiple Keys for different browsers/devices."
+GitHub issues,https://github.com/agalwood/Motrix/issues/1583,2023-11-02,,"Whenever i disconnect from wifi , the download fails and when i resumes, it fails again. In IDM , it doesn't happen. Sometimes , I want to switch to another wifi connection and it fails in that process too. Please fix this issue."
+GitHub issues,https://github.com/agalwood/Motrix/issues/311,2019-06-10,,"**Describe the solution you'd like**
+It would be very helpful, if we had a simple child window per task where we could control and check progress of an individual task. This is similar to how other download managers do it e.g. IDM, XDM etc."
+GitHub issues,https://github.com/agalwood/Motrix/issues/1242,2022-06-13,,"#Basic idea
+Like IDM(Internet Download Manger) I would like to see an integration between the browser and the download manager.
+So when a download is requested by the browser it redirects the download over to Mortrix."
+GitHub issues,https://github.com/agalwood/Motrix/issues/734,2020-07-06,,"first : i think it's better if you make the app open the extension or install it like what IDM does and give option for making it the default downloader
+* btw it doesn't work and i'm always copying pasting the link manually *
+second : make size of the window more able to be smaller free to change size"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/1464,2026-10-09,,"First of all, great download manager my guy, finally I found something to get rid of me being a slave to IDM after more than a decade. It looks modern and feels great and best thing is that it's free and the chrome extension works great without having the same dumb problems IDM had on browsers."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/1478,2026-10-13,,Plase add antivirus check after file download. see IDM for example
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/1140,2026-03-10,,Ideally AB Download Manager should behave more like IDM:
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/819,2025-09-11,,"Just an idea for you, maybe you could add a feature like the Grabber in IDM."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/1251,2026-06-08,,"Can the downloader implement a browser video sniffing extension similar to IDM? I believe video sniffing is a crucial feature for any downloader. ABDownload currently lacks this functionality, and adding it would significantly improve the user experience."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/460,2025-03-18,,"just found your app today and was surprised that it looks like IDM on first view. Now I gave it a try to see whether it could be better or not. First problem I see is using the browser extension / AddOn, so why does it not SHOW anything / Detect on a website where files are loaded you could download like some media files (audio/video) and others? In case of IDM it does show me the popup menu of the found files I can simply choose and click to download without to check manually some website page source or network traffic but the ab-download-manager shows nothing. Seems that it only works / handle clickable links on website itself having a download button. That's not an improvement to IDM. Do you plan to implement some own scan for your extension in future?"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/954,2025-12-03,,"Hopefully a function can be added to hide the left column (all, incomplete, etc.), similar to IDM."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/399,2025-02-07,,"Using the same proxy software and proxy address
+IDM and NDM speed is almost the same, download GITHUB file can hit 30M/s
+With the same proxy address and software, ADDM can download a GITHUB file at only 500kb/s by using a manual proxy at the specified address.
+If you don't use a proxy, it's only about 10kb/s.
+In addition
+Most of the time the automatic proxy doesn't work well, so whether it's IDM or NDM or ADDM, I prefer to manually set whether the download goes through a proxy or not more conveniently, so I also suggest adding the switch option in the download popup box to quickly select whether the download goes through a proxy or not."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/64,2024-09-07,,By Backup/Restore I mean a feature to create a backup of your download list (like IDM). It should be a plain text file so we can restore it in other download managers and also restore the downloads list of other apps in AB Download Manager.
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/390,2025-02-02,,It would be if there was an option for download limits like IDM
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/367,2025-01-14,,"Does it increase the download speed? 
+Under the same condition, The download speed slower than IDM and Motrix.
+I hope the download speed can surpass them. ABDM become the fastest download tool.
+Thanks!"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/507,2025-04-19,,"From someone who is coming from IDM, the downloading window is small and looks weird, could you please add the ability to adjust the download window size"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/809,2025-09-05,,"hi 
+thanks for your efforts,
+i have a question about download speed, why doesn't AB use maximum bandwidth? idm always use my full bandwidth but AB doesn't, specially when downloading of websites like github, what should i do?"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/224,2024-11-26,,When i start download anything the download panel is appear like idm but for any reason i closed it then a restart that download the download panel isn't appear . Please add this or fix this
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/757,2025-08-08,,It would be great to have a shortcut like IDM’s Alt+click that lets users skip AB Download Manager for specific downloads and use the browser’s built-in downloader instead. This shortcut should be configurable in settings and work with Chrome and Firefox.
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/1169,2026-04-07,,"Thank you for creating such an impressive downloader. 
+Compared to IDM, its sleek and modern UI has won me over, prompting me to switch my primary tool to this application. 
+However, I noticed some visual inconsistencies when using the integration in Edge: the dark theme only partially covers the page layout on both general and detailed setting tabs, which feels disconnected from the polished design of the standalone app. The lack of rounded corner elements further detracts from the cohesive aesthetic experience. I would greatly appreciate it if you could refine the integration's visual design to align more seamlessly with the app's overall style. 
+Once again, heartfelt thanks for your hard work and dedication to this project!"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/603,2025-05-19,,"As the IDM does this by default, as soon as you get a prompt for download, it starts downloading in the background, and when you press download, it has already downloaded some of the file.
+This saves time and is the logical choice because 99% of the time when we add a download, we would like it to be downloaded.
+Thank you for your work! This app is amazing."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/961,2025-12-10,,"Suggestion: Could you consider moving the widget position to the top-left corner, similar to how Internet Download Manager (IDM) implements it? This would prevent the widget from obscuring."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/877,2025-10-14,,"Currently, IDM only shows a static icon with no progress bar. And it just shows many of those for each download individually — making it completely useless."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/756,2025-08-08,,some managers like IDM starts the download in the background while waiting for the user to press the GUI option and if the user cancels it it simply discards what was downloaded.
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/685,2025-06-27,,"- Other tools like `ffmpeg`, `yt-dlp`, or `IDM` can handle these URLs successfully
+- Adding support for HLS and DASH streams would greatly improve the app’s ability to download modern video content"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/9,2024-08-05,,Please add option to detect and download videos and audio files with popup to down like in IDM.
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/109,2024-10-15,,instead of having the app constantly running in the background it would be better to automatically call the program to start whenever a download link got clicked just like how internet download manager does it (IDM) and also FDM if i'm not wrong
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/1270,2026-06-15,,"When the program is not open and we want to download a file from the browser, the program does not open automatically to download it, we have to open it manually. This feature is in IDM. Please add this to this program as well. Thank you."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/1231,2026-05-27,,Doesn't support resuming after interruption? IDM support it
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/449,2025-03-09,,"Hi. I'd highly appreciate if this app adds such a feature, which would finally bring it on-par with IDM & torrent clients such as qBittorrent I think."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/532,2025-04-29,,"Can you please add an option to Customize sounds, as is common in other download managers like FDM IDM ANT DM?
+Especially very necessary to hear well when the download is finished. And at least the option to run a file or application at the end of the download.
+Thanks!"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/862,2025-10-04,,FDM and IDM allow you to limit the number of simultaneous downloads as a global setting instead of requiring you to set up Queues:
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/858,2025-10-04,,"I know that on PR #75 you stated this feature already exists, but on IDM we don't need to enter program settings to change the download folder for a category."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/382,2025-01-26,,"It would be cool if there was an option for shutting down the PC after a queue ends downloading, just like how IDM has one.
+_Much ❤️ from Iran._"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/855,2025-10-01,,"Network sniffing feature, similar to IDM: when a web video (e.g., m3u8) is detected, a download button pops up."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/615,2025-05-23,,It would be interesting to have an option to detect videos and download them like IDM does.
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/847,2025-09-28,,"Usually, if I download directly in the browser or use IDM, I can reach 9-10MB/s, but when I download using ABDM, it is unstable and the download speed is not as maximum as usual."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/736,2025-07-31,,"The link of downloading files may change, especially using cloud storage services.
+If links are invalid, it wastes a lot of time to redownload files.
+Could you please add a function to refresh the link like IDM and NDM? Thanks a lot."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/645,2025-06-01,,IDM uses 6-7 MB of RAM while downloading. This app uses 250+ MB of RAM.
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/410,2025-02-18,,Currenty the dowload manager does not support the youtube video download like IDM please add this feature
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/290,2024-12-11,,"Add 'System Proxy, Just Like iDM'"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/154,2024-11-03,,Would like to be able to support the use of system proxies like IDM does!
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/278,2024-12-08,,Can we add an option to use system proxy in proxy settings like IDM? This will reduce the difficulty of use.
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/297,2024-12-14,,"From my observation, in IDM, before clicking the ""Start Download"" button, IDM has already started downloading files. This can save a few seconds of download time. I hope abdm can also provide similar functions."
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/165,2024-11-05,,"Please add the option to remove completed downloads to the toolbar like IDM
+![Screenshot 2024-11-04 105022](https://github.com/user-attachments/assets/df1c0211-966f-4c61-81c4-c706c59ac520)"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/150,2024-11-02,,"(IDM, XDM, FDM all have this feature)"
+GitHub issues,https://github.com/amir1376/ab-download-manager/issues/130,2024-10-21,,I feel like it can surpass the existence of IDM
+GitHub issues,https://github.com/GopeedLab/gopeed/issues/799,2024-11-08,,"<!--
+Please use the following template to create an issue.
+-->
+### Description(required)
+An IDM-like notification box can appear after the download is complete, or use the system's native notification component
+### App Version(required)
+1.6.1
+### OS Version(required)
+Windows 11 24H2
+### Snapshots
+### Log"
+GitHub issues,https://github.com/GopeedLab/gopeed/issues/1529,2026-09-18,,"This is similar to the behavior of IDM: after one connection finishes, another range can be created from the remaining unfinished data, so the configured number is kept as the active concurrency target rather than only the initial segment count."
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/1048,2024-11-06,,"It would be great if you could add the option to batch download like IDM.
+For patterned link such as : myhost.net/file*.pdf, and then put give numbers instead of * : myhost.net/file1.pdf,myhost.net/file2.pdf...
+Thank you"
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/1112,2026-02-18,,"3- side panel, needs some changes. add ""Unfinished"" and ""Finished""  categories to the side panel (like IDM)"
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/772,2020-03-25,,"Refer to #771 and same as other download manager applications like IDM, Sometimes the direct download link will expire during downloading file, and download progress will got error
+When this error happened the user should find the new direct link to continue the download progress, if go to download page and press download link again, the new download file was start to download."
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/628,2019-05-10,,"Download managers with multi-connection support such as IDM create multi temporary files inside its temporary directory, then merge all parts into the download directory when done. It is necessary because each connection needs a temp file."
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/627,2019-05-10,,"I just switch to Persepolis from IDM and FDM, because while Persepolis uses the same amount of RAM with FDM, the CPU usage is much lower. The aria2 core engine is good, however I miss the ""remember directory"" option when choosing download location."
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/986,2024-05-29,,"I've used IDM up until now and it allows me to set max number of connections up to 32 whereas persepolis maxes out at 16. Since I have a tendency to archive large amounts of livestreams/livestream VODs from youtube, being capped at 16 slows down the speed I can download at quite a bit (because of the way youtube caps the download speed at 2x video speed per connection, so a 2h video can be downloaded in a minimum time of 3m45s with 16 connections, and 1m52s with 32). I have 1.5Gbps connection so I can definitely make use of the 32 connections (as I have with IDM) and I'm not sure if there's a limitation or a developer choice to stop at 16 but would like to see 32 as an option."
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/987,2024-06-04,,"I just wanted to thank the team for making such great and useful piece of software. 
+The days of using cracked versions of IDM are long gone!"
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/619,2019-04-08,,"List area is not responsive with window size changes.
+Also it's better to able select/unselect items with spacebar like IDM."
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/722,2019-10-13,,P.S. As a successful and commercial example [IDM](http://www.internetdownloadmanager.com/) implements native messaging with same idea.
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/432,2018-02-11,,"In IDM, there is a possibility that the site link from which we downloaded the file is also stored.
+Until downloaded.Site access is possible."
+GitHub issues,https://github.com/persepolisdm/persepolis/issues/594,2019-02-08,,"**Issue Description and steps to reproduce:**
+please add a download path memorizing function, need to change path everytime, waste of time.
+wish to have a nice enhanced path function like IDM. 👍:)"
+GitHub issues,https://github.com/persepolisdm/persepolis/pull/371,2017-12-25,,"Because most of the powerful Download Managers have this feature, I realized it's importance. Specially I (as a Linux user) cannot use IDM or FDM (I don't like Wine). I need to download a lot of media (basically audio of the video lectures / songs). I saw that an excellent DM found for Linux! Yes, it is PDM. But it cannot download youtube videos without help of other websites (e.g. savefrom.net).
+So, I tried to add this feature to PDM; and of-course, I tested it on my machine and enjoying."
+GitHub issues,https://github.com/subhra74/xdm/issues/1347,2026-10-14,,"Additionally, clearly display the total file size (or current downloaded size vs. total size) for each active download task, similar to how Internet Download Manager (IDM) or Advanced Download Manager (ABDM) handle multi-connection downloads."
+GitHub issues,https://github.com/subhra74/xdm/issues/237,2020-06-25,,I recently started using XDM after using IDM for years.
+GitHub issues,https://github.com/subhra74/xdm/issues/134,2020-04-24,,"Hi, excellent software just moved from IDM to XDM. Working excellent but few little features can be added to make it more usable like:"
+GitHub issues,https://github.com/subhra74/xdm/issues/294,2020-08-09,,IDM has the [site grabber feature](https://www.internetdownloadmanager.com/support/idm-grabber/idm_grabber.html). Can we let xdm provide this feature also?
+GitHub issues,https://github.com/subhra74/xdm/issues/190,2020-05-25,,"Please Add Automatic opening of expired link , like idm , i cannot find my old download link"
+GitHub issues,https://github.com/subhra74/xdm/issues/860,2022-07-27,,i can not download entire youtube playlist like IDM so if possible make easy way to download youtube videos playlist .
+GitHub issues,https://github.com/subhra74/xdm/issues/812,2022-03-28,,XDM is unable to catch downloads from the amd driver site while IDM or FDM can grab the same file without any issue. I'm talking about this file here : https://www.amd.com/en/support/graphics/radeon-500-series/radeon-rx-500-series/radeon-rx-580
+GitHub issues,https://github.com/subhra74/xdm/issues/18,2019-08-03,,"**Additional context**
+CPU usage is normal with idm while downloading same file from same server!"
+GitHub issues,https://github.com/subhra74/xdm/issues/322,2020-09-02,,"*option to detect / use proxy from I.E.
+its the same proxy detection from IDM and Eagleget where we can use the proxy from ie automatically.
+my proxy changes constantly since Im using vpn and it translate to IE but not on XDM"
+GitHub issues,https://github.com/subhra74/xdm/issues/402,2020-11-22,,"I was loving XDM for many years and it is far better than idm when considering it is paid. But today when I was downloading a 20 GB file And the download whent the download progress was at 70 % th system failed due to a faulty usb drive followed by blue  screen of death in windows after restarting with the faulty usb removed the system booted perfectly but when i opened xdm my download list is missing . In file explorer xdm's cache files are intact with a size of  14 GB but the download is not showing up in xdm. I have constricted bandwidth so starting again is not posssible for me is there any way to get my download back, .please help."
+GitHub issues,https://github.com/subhra74/xdm/issues/1377,2026-10-25,,"Features like this are already present in other download managers like IDM and FDM, and having audio feedback—especially for failed downloads—allows users to quickly notice when an action is needed without constantly checking the screen."
+GitHub issues,https://github.com/subhra74/xdm/issues/1340,2026-09-27,,"As someone who recently transitioned from Internet Download Manager (IDM), I noticed a few quality-of-life features that could make XDM even more competitive. **I have already implemented and locally tested the browser extension improvements below, and I am ready to submit a Pull Request (PR) or share the code.**"
+GitHub issues,https://github.com/subhra74/xdm/issues/107,2020-04-07,,Can XDM use system proxy like IDM use system settings in proxy/socks configuration?
+GitHub issues,https://github.com/subhra74/xdm/issues/195,2020-05-26,,Please Add Quick Update like idm
+GitHub issues,https://github.com/subhra74/xdm/issues/943,2022-12-05,,"WRITE DESCRIPTION HERE
+Make XDM run automatically when a download is detected, the same happens on FDM and IDM."
+GitHub issues,https://github.com/subhra74/xdm/issues/700,2021-10-30,,"like this thing in IDM where u can hold & drag & drop the file to a next folder.
+Thanks."
+GitHub issues,https://github.com/subhra74/xdm/issues/701,2021-10-30,,"like this on IDM
+![image](https://user-images.githubusercontent.com/37028131/139541516-22b4174a-fb33-4aa7-8d1e-5ccccaa62833.png)"
+GitHub issues,https://github.com/subhra74/xdm/issues/339,2020-09-16,,"I would like to congratulate everyone who created and helped develop the application. Thanks to it, I've already saved a lot of time with downloads and saved money by not buying IDM, which is still inferior to XDM."
+GitHub issues,https://github.com/subhra74/xdm/issues/1218,2024-04-01,,"In both cases, it's too bad because it was the only FOSS download manager that could compete with IDM and FDM. There's Motrix too which looks like it isn't actively maintained anymore as well."
+GitHub issues,https://github.com/subhra74/xdm/issues/373,2020-10-21,,"2. Suggestion:
+- I think it's better to add ""Download later -> Default queue"" as a main button like ""Download now"" or ""Cancel"".
+- In IDM(Internet Download Manager), ""Download later"" is a main button. 
+This option will add a downloading task to **Default Queue**"
+GitHub issues,https://github.com/subhra74/xdm/issues/1207,2024-02-24,,"If possible, could you please add a progress bar like IDM to see which segment downloaded how much of the total amount of the source file?"
+GitHub issues,https://github.com/subhra74/xdm/issues/1346,2026-10-14,,"## 💬 Additional Context
+> *First of all, I'm really glad to see this project reactivated! XDM has been one of my favorite apps since moving to Linux, replacing IDM. Thank you for the great work, and keep up the amazing effort!*"
+GitHub issues,https://github.com/subhra74/xdm/issues/327,2020-09-07,,"As of now, I did end up preferring this app over both IDM and FDM, mainly because it holds alot of potential and I like the responsiveness and approach to it. I do want to make not of some room for improvement as well."
+GitHub issues,https://github.com/subhra74/xdm/issues/292,2020-08-08,,"**Expected behavior**
+I expect that:
+   1. Bilibili videos can be downloaded with the audio (I can do so using youtube-dl on Linux, albeit at a much slower speed, and IDM on Windows)
+   2. Converting audio from Bilibili videos should not be a problem (since it does so for YouTube and Twitter videos)"
+GitHub issues,https://github.com/subhra74/xdm/issues/837,2022-05-23,,"I really liked your downloader, it is almost of same standards as official IDM is. Therefore, I hope you can fix the issue or guide through it..."

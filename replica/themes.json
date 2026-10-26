@@ -1,0 +1,212 @@
+{
+ "_about": "Download-manager themes for ODM's research on IDM. Complaints are about IDM itself; requests are IDM features people ask other download managers for (what IDM users value).",
+ "request_patterns": [
+  "\\bi wish\\b",
+  "\\bplease add\\b",
+  "\\bwould be (nice|great|good|helpful)\\b",
+  "\\bwould love\\b",
+  "\\bneeds? (a|an|the|to|more)\\b",
+  "\\bno way to\\b",
+  "\\bthere'?s no (way|option)\\b",
+  "\\b(can'?t|cannot|unable to) (even )?(add|change|edit|set|choose|export|import|customi[sz]e|connect|undo|delete|turn off)\\b",
+  "\\b(missing|lacks|lacking)\\b",
+  "\\bdoesn'?t (have|support|let|allow)\\b",
+  "\\bif only\\b",
+  "\\bfeature request\\b",
+  "\\bwhy (can'?t|isn'?t|doesn'?t)\\b"
+ ],
+ "themes": [
+  {
+   "id": "price",
+   "label": "Price, licences and cracked copies",
+   "kind": "complaint",
+   "patterns": [
+    "\\bpaid\\b",
+    "\\bpric(e|es|ing)\\b",
+    "\\bcrack(ed)?\\b",
+    "\\bbuy(ing)?\\b",
+    "\\bpurchase\\b",
+    "\\bmoney\\b",
+    "\\bit'?s free\\b",
+    "\\blicen[cs]e\\b",
+    "\\bserial\\b"
+   ]
+  },
+  {
+   "id": "windows_only",
+   "label": "Windows only",
+   "kind": "complaint",
+   "patterns": [
+    "\\blinux\\b",
+    "\\bmac(os)?\\b",
+    "\\bwindows only\\b",
+    "\\bonly available for windows\\b",
+    "\\bwine\\b",
+    "\\bfor windows\\b"
+   ]
+  },
+  {
+   "id": "integration_problems",
+   "label": "Browser integration problems",
+   "kind": "complaint",
+   "patterns": [
+    "problems? idm had on browsers",
+    "\\bdoesn'?t work\\b",
+    "\\bcan'?t (grab|catch|capture)",
+    "\\bunable to catch\\b"
+   ]
+  },
+  {
+   "id": "dated_ui",
+   "label": "Dated interface and tray",
+   "kind": "complaint",
+   "patterns": [
+    "\\bugl(y|iest)\\b",
+    "\\bmodern\\b",
+    "\\bstatic icon\\b",
+    "\\bdark theme\\b",
+    "\\bwindows 98\\b"
+   ]
+  },
+  {
+   "id": "resources",
+   "label": "Memory and CPU use",
+   "kind": "complaint",
+   "patterns": [
+    "\\bram\\b",
+    "\\bcpu\\b",
+    "\\bmemory\\b"
+   ]
+  },
+  {
+   "id": "video",
+   "label": "Detect and download web video",
+   "kind": "request",
+   "patterns": [
+    "\\bvideo",
+    "\\bsniff",
+    "\\bm3u8\\b",
+    "\\bhls\\b",
+    "\\byoutube\\b",
+    "\\bstream"
+   ]
+  },
+  {
+   "id": "capture",
+   "label": "Take over browser downloads, start the app by itself",
+   "kind": "request",
+   "patterns": [
+    "\\bintegration\\b",
+    "\\bextension\\b",
+    "\\bauto(matically)? (launch|open|start)",
+    "\\bopen (the program|xdm|the app)\\b",
+    "\\bnot open automatically\\b",
+    "\\bredirects? the download\\b",
+    "\\bcapture\\b",
+    "\\balt\\+click\\b",
+    "\\bbypass\\b"
+   ]
+  },
+  {
+   "id": "speed",
+   "label": "Speed and connections",
+   "kind": "request",
+   "patterns": [
+    "\\bspeed\\b",
+    "\\bslow(er)?\\b",
+    "\\bfaster\\b",
+    "\\bbandwidth\\b",
+    "\\bconnections?\\b",
+    "\\bthreads?\\b",
+    "\\bsegment"
+   ]
+  },
+  {
+   "id": "proxy",
+   "label": "System proxy",
+   "kind": "request",
+   "patterns": [
+    "\\bproxy\\b",
+    "\\bproxies\\b"
+   ]
+  },
+  {
+   "id": "resume",
+   "label": "Resume, refresh an expired link",
+   "kind": "request",
+   "patterns": [
+    "\\bresum",
+    "\\brefresh\\b",
+    "\\bexpired?\\b",
+    "\\binterrupt",
+    "\\bdisconnect"
+   ]
+  },
+  {
+   "id": "organise",
+   "label": "Categories, folders, lists",
+   "kind": "request",
+   "patterns": [
+    "\\bcategor",
+    "\\bfolders?\\b",
+    "\\bremember (the )?(selected )?(path|directory)\\b",
+    "\\bleft column\\b",
+    "\\bside panel\\b",
+    "\\bclear (finished|complete)",
+    "\\bremove completed\\b",
+    "\\bsort\\b"
+   ]
+  },
+  {
+   "id": "bulk",
+   "label": "Batch, grabber, many links",
+   "kind": "request",
+   "patterns": [
+    "\\bbatch\\b",
+    "\\bgrabber\\b",
+    "\\bbulk\\b",
+    "\\bcrawl\\b",
+    "\\bmultiple links\\b",
+    "\\bfile\\*"
+   ]
+  },
+  {
+   "id": "dialogs",
+   "label": "Confirm, progress and completion windows",
+   "kind": "request",
+   "patterns": [
+    "\\bconfirmation dialog\\b",
+    "\\bchild window\\b",
+    "\\bprogress (dialog|window|bar)\\b",
+    "\\bnotification box\\b",
+    "\\bdownload window\\b",
+    "\\bstart(s)? (the )?download(ing)? (in the background|before)\\b",
+    "\\bbefore clicking\\b",
+    "\\bdrag\\b"
+   ]
+  },
+  {
+   "id": "automation",
+   "label": "When done: shut down, sound, antivirus, schedule",
+   "kind": "request",
+   "patterns": [
+    "\\bshut ?down\\b",
+    "\\bsounds?\\b",
+    "\\baudio notification",
+    "\\bantivirus\\b",
+    "\\bschedul",
+    "\\bqueue ends\\b"
+   ]
+  },
+  {
+   "id": "limits",
+   "label": "Speed limits per download, quotas",
+   "kind": "request",
+   "patterns": [
+    "\\bspeed limit",
+    "\\bdownload limits\\b",
+    "\\blimit the number\\b"
+   ]
+  }
+ ]
+}
