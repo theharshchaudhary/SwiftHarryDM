@@ -36,6 +36,7 @@ fn spec(kind: &str) -> Option<Spec> {
         "drop" => s("Drop target", 88.0, 88.0, false, None, true),
         "login" => s("Login required", 460.0, 270.0, false, Some("id"), false),
         "tips" => s("Tip of the day", 480.0, 230.0, false, None, false),
+        "grabber" => s("Site grabber", 960.0, 620.0, true, None, false),
         _ => return None,
     })
 }

@@ -215,6 +215,60 @@ export type Series =
   | { kind: "numbers"; from: number; to: number; width: number }
   | { kind: "letters"; from: string; to: string };
 
+export type GrabberTemplate = "images" | "audio" | "video" | "files" | "site" | "custom";
+export interface GrabberProject {
+  id: string;
+  name: string;
+  start_url: string;
+  template: GrabberTemplate;
+  save_mode: "categories" | "folder";
+  folder: string;
+  keep_subfolders: boolean;
+  depth: number;
+  other_sites_depth: number;
+  no_parent: boolean;
+  whole_domain: boolean;
+  include_paths: string[];
+  exclude_paths: string[];
+  file_types: string[];
+  exclude_types: string[];
+  files_this_site_only: boolean;
+  hide_duplicates: boolean;
+  min_size: number;
+  max_size: number;
+  start_at_once: boolean;
+  max_pages: number;
+  parallel: number;
+  delay_ms: number;
+  respect_robots: boolean;
+  created_at: number;
+  updated_at: number;
+}
+export interface GrabberItem {
+  id: number;
+  project_id: string;
+  url: string;
+  parent_url: string | null;
+  depth: number;
+  kind: "page" | "file";
+  content_type: string | null;
+  size: number | null;
+  link_text: string | null;
+  checked: boolean;
+  status: "found" | "explored" | "skipped" | "failed" | "queued";
+  note: string | null;
+  job_id: string | null;
+}
+export interface GrabberStats { pages_explored: number; pages_waiting: number; files_found: number; errors: number }
+export type GrabberEvent =
+  | { type: "item"; project_id: string; item: GrabberItem }
+  | { type: "stats"; project_id: string; stats: GrabberStats }
+  | { type: "done"; project_id: string; reason: string };
+
+export function onGrabber(handler: (e: GrabberEvent) => void): Promise<UnlistenFn> {
+  return listen<GrabberEvent>("grabber", (e) => handler(e.payload));
+}
+
 export type CoreEvent =
   | { type: "job_changed"; snapshot: Job }
   | { type: "job_progress"; progress: Progress }
@@ -235,7 +289,7 @@ export type CoreEvent =
 
 export type WindowKind =
   | "add" | "info" | "progress" | "complete" | "options" | "scheduler" | "batch"
-  | "properties" | "about" | "countdown" | "links" | "pairing" | "browser" | "drop" | "login" | "tips";
+  | "properties" | "about" | "countdown" | "links" | "pairing" | "browser" | "drop" | "login" | "tips" | "grabber";
 
 export const api = {
   state: () => invoke<AppState>("get_state"),
@@ -269,6 +323,14 @@ export const api = {
   refreshUrl: (id: string, url: string) => invoke<void>("refresh_url", { id, url }),
   inspectUrl: (url: string) => invoke<UrlInfo>("inspect_url", { url }),
   isMediaUrl: (url: string) => invoke<boolean>("is_media_url", { url }),
+  grabberProjects: () => invoke<GrabberProject[]>("grabber_projects"),
+  grabberSave: (project: GrabberProject) => invoke<GrabberProject>("grabber_save", { project }),
+  grabberDelete: (id: string) => invoke<void>("grabber_delete", { id }),
+  grabberState: (id: string) => invoke<{ project: GrabberProject | null; items: GrabberItem[]; running: boolean }>("grabber_state", { id }),
+  grabberExplore: (id: string) => invoke<void>("grabber_explore", { id }),
+  grabberStop: (id: string) => invoke<void>("grabber_stop", { id }),
+  grabberCheck: (id: string, items: number[], checked: boolean) => invoke<void>("grabber_check", { id, items, checked }),
+  grabberDownload: (id: string, items: number[]) => invoke<string[]>("grabber_download", { id, items }),
   inspectMedia: (url: string) => invoke<MediaInfo>("inspect_media", { url }),
   findDuplicates: (url: string) => invoke<Job[]>("find_duplicates", { url }),
   saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),

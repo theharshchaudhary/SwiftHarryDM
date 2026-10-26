@@ -16,3 +16,4 @@
 | 2026-10-26 | S07 proxy (PAC, system auto-config, bypass, per protocol) | done | Resolver via reqwest Proxy::custom; yt-dlp never got a proxy before (fixed). Test kit serves proxy-form requests |
 | 2026-10-26 | e2e reliability | done | 3 real causes: info window counted its own early download as a duplicate; progress windows opened after completion stayed at 100%; harness clicked/filled before windows were ready. Stray windows closed between scenarios; failures screenshot every window. 5/5 full runs pass |
 | 2026-10-26 | Firefox add-on | deferred | needs Firefox to test, and pairing is bound to the Chrome extension ID |
+| 2026-10-26 | S22-S24 site grabber | done | engine (html5ever tokenizer, depth/folder/robots/size rules), DB migration 2, window with 4 steps; no schedule or offline link conversion. Found: a migration backup left by an earlier attempt blocked every later start (fixed) |

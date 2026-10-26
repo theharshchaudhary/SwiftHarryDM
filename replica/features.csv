@@ -81,11 +81,11 @@ Retries per file and failed file to end of queue,scheduler,should,yes,yes,"queue
 Files at the same time per queue,scheduler,should,yes,yes,queue max_concurrent
 Queue done actions with shutdown countdown,scheduler,must,yes,yes,AfterAction + Countdown window; open-a-file action missing
 Synchronization queues re-download changed files,scheduler,should,yes,yes,"built-in Synchronization queue + queue type; size/ETag/Last-Modified check on start; replacement overwrites the file, old entry removed when done; http_matrix test. No 'repeat every N hours' (daily schedule only)"
-Site grabber wizard,grabber,should,yes,no,new subsystem
-Grabber explore and download window,grabber,should,yes,no,
-Grabber projects save load templates,grabber,could,yes,no,
-Grabber schedule,grabber,could,yes,no,
-Grabber convert links for offline browsing,grabber,could,yes,no,
+Site grabber wizard,grabber,should,yes,yes,"4 steps: start page + kind of files, where to save, pages to explore, files to list; e2e site_grabber"
+Grabber explore and download window,grabber,should,yes,yes,"explore/stop, file list with sizes and link texts, filter, show pages, check all, download checked; http_matrix + e2e"
+Grabber projects save load templates,grabber,could,yes,yes,"projects kept in the database with what they found; 6 kinds (all files, images, audio, video, whole site, listed types)"
+Grabber schedule,grabber,could,yes,no,not built: projects are explored by hand
+Grabber convert links for offline browsing,grabber,could,yes,no,not built: 'whole site' saves pages as they are
 Registration and trial,business,skip,yes,skip,ODM is free and open source
 Tell a friend,business,skip,yes,skip,no service behind it
 Dial-up and VPN tab,options,skip,yes,skip,no dial-up on modern Windows

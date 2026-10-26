@@ -18,6 +18,7 @@ import Browser from "./windows/Browser";
 import Drop from "./windows/Drop";
 import Login from "./windows/Login";
 import Tips from "./windows/Tips";
+import Grabber from "./windows/Grabber";
 
 // Every window loads this page; ?w= selects what it shows.
 const WINDOWS: Record<string, () => JSX.Element | null> = {
@@ -38,6 +39,7 @@ const WINDOWS: Record<string, () => JSX.Element | null> = {
   drop: Drop,
   login: Login,
   tips: Tips,
+  grabber: Grabber,
 };
 
 const TITLES: Record<string, string> = {
@@ -58,6 +60,7 @@ const TITLES: Record<string, string> = {
   drop: "Drop target",
   login: "Login required",
   tips: "Tip of the day",
+  grabber: "Site grabber",
 };
 
 const kind = windowParams().get("w") ?? "main";

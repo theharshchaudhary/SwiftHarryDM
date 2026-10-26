@@ -453,6 +453,7 @@ function MainView({ live }: { live: Live }) {
         { label: "Add new download…", hint: "Ctrl+N", onClick: act.add },
         { label: "Add batch download…", onClick: act.batch },
         { label: "Add batch download from clipboard", onClick: act.batchClipboard },
+        { label: "Site grabber…", onClick: () => api.openWindow("grabber") },
         "sep",
         { label: "Show drop target", checked: dropShown, onClick: () => toggleDrop(!dropShown) },
         "sep",

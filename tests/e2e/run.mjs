@@ -554,7 +554,9 @@ const scenarios = {
       // only the page with the content script answers.
       await chrome.worker(`chrome.tabs.query({}).then(t => Promise.all(t.map(x => chrome.tabs.sendMessage(x.id, { action: 'collectLinks', selectionOnly: false }).catch(() => null))))`);
       const links = await app.window("Choose files to download", 15000);
-      const n = await until(() => links.eval("document.querySelectorAll('.tbl tbody tr').length"), 10000, 200, "the links");
+      // Rows settle once each address's type is known (web pages are hidden).
+      const count = () => links.eval("document.querySelectorAll('.tbl tbody tr').length");
+      const n = await until(async () => ((await count()) === 3 ? 3 : null), 15000, 200, "the links").catch(async () => count());
       assert(n === 3, `all three links arrive (${n})`);
       await links.shot(join(SHOTS, "chrome-links.png"));
       await links.click("Cancel");
@@ -562,6 +564,41 @@ const scenarios = {
       await chrome.stop();
     }
   },
+
+  async site_grabber(app) {
+    // Tasks > Site grabber: the 4 steps, explore the links page, download what it found.
+    const main = await app.window("SwiftHarryDM");
+    await main.invoke("open_window", { kind: "grabber", params: {} });
+    const g = await app.window("Site grabber");
+    await g.fill("input[aria-label='Start page']", URL_("/p/links.html"));
+    await g.fill("input[aria-label='Project name']", "Test downloads");
+    assert(await g.click("Next"), "step 2");
+    assert(await g.click("Next"), "step 3");
+    await g.fill("input[type=number]", "0"); // the start page only
+    assert(await g.click("Next"), "step 4");
+    await g.shot(join(SHOTS, "grabber-step4.png"));
+    assert(await g.click("Save and explore"), "save and explore");
+    await until(async () => (await g.text()).includes("Exploring finished"), 30000, 250, "exploring to finish");
+    const rows = await g.eval("[...document.querySelectorAll('.tbl tbody tr')].map(r => r.innerText)");
+    assert(rows.some((r) => r.includes("alt.pdf")) && rows.some((r) => r.includes("flaky.bin")), `the linked files are listed (${rows})`);
+    assert(!rows.some((r) => r.includes("video.html")), "pages are not listed as files");
+    await g.shot(join(SHOTS, "grabber.png"));
+    const before = new Set((await main.invoke("get_state")).jobs.map((j) => j.id));
+    assert(await g.click("Download checked"), "download checked");
+    await until(async () => (await g.text()).includes("added to the download list"), 10000, 200, "the files to be added");
+    const jobs = await until(async () => {
+      const mine = (await main.invoke("get_state")).jobs.filter((j) => !before.has(j.id) && j.source === "grabber");
+      return mine.length >= 2 && mine.every((j) => j.state === "COMPLETED") && mine;
+    }, 60000, 300, "the grabbed files to download");
+    const pdf = jobs.find((j) => j.url.endsWith("/p/alt.pdf"));
+    assert((await sha256(pdf.final_path)) === expected()["/p/alt.pdf"].sha256, "the grabbed PDF arrived intact");
+    // The project is kept, with what it found.
+    await g.invoke("close_self").catch(() => {});
+    await main.invoke("open_window", { kind: "grabber", params: {} });
+    const again = await app.window("Site grabber");
+    await until(async () => (await again.text()).includes("Test downloads") && (await again.text()).includes("alt.pdf"), 10000, 200, "the saved project");
+  },
+
 };
 
 // ------------------------------------------------------------------ main

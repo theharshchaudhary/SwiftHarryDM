@@ -44,6 +44,7 @@ pub struct AppState {
     pub api: Mutex<Result<swiftdm_core::api::ApiHandle, String>>,
     pub media: Arc<MediaEngine>,
     pub update: Mutex<Option<upkeep::UpdateInfo>>,
+    pub grabber: Arc<swiftdm_core::grabber::crawl::Grabber>,
 }
 
 impl AppState {
@@ -52,12 +53,27 @@ impl AppState {
     }
 }
 
-fn start_manager(media: Arc<MediaEngine>) -> Result<Manager, String> {
+fn start_manager(media: Arc<MediaEngine>) -> Result<(Manager, Arc<Store>), String> {
     let store = Arc::new(Store::open(swiftdm_core::appdata::db_path()).map_err(|e| e.to_string())?);
     let settings = SettingsStore::open(swiftdm_core::appdata::settings_path());
     let http = Arc::new(swiftdm_core::http::HttpEngine::new(store.clone())) as Arc<dyn swiftdm_core::engine::Engine>;
     let engines = HashMap::from([("http".to_string(), http), ("media".to_string(), media as Arc<dyn swiftdm_core::engine::Engine>)]);
-    Manager::start(store, engines, settings, ManagerConfig::default()).map_err(|e| e.to_string())
+    let mgr = Manager::start(store.clone(), engines, settings, ManagerConfig::default()).map_err(|e| e.to_string())?;
+    Ok((mgr, store))
+}
+
+/// Site grabber progress for its window.
+async fn pump_grabber(app: AppHandle) {
+    let mut rx = app.state::<AppState>().grabber.subscribe();
+    loop {
+        match rx.recv().await {
+            Ok(ev) => {
+                let _ = app.emit("grabber", &ev);
+            }
+            Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+            Err(_) => break,
+        }
+    }
 }
 
 /// Stop downloads cleanly (their progress is saved), then quit.
@@ -442,11 +458,12 @@ pub fn run() {
             tracing::info!("media tools: yt-dlp={:?} ffmpeg={:?} ffprobe={:?}", tools.ytdlp, tools.ffmpeg, tools.ffprobe);
             let media = Arc::new(MediaEngine::new(tools));
             let m2 = media.clone();
-            let mgr = tauri::async_runtime::block_on(async move { start_manager(m2) }).map_err(|e| {
+            let (mgr, store) = tauri::async_runtime::block_on(async move { start_manager(m2) }).map_err(|e| {
                 tracing::error!("cannot start: {e}");
                 e
             })?;
             let start_hidden = std::env::args().any(|a| a == "--minimized") || mgr.settings().get().start_minimized;
+            let grabber = swiftdm_core::grabber::crawl::Grabber::new(store, mgr.clone());
             app.manage(AppState {
                 mgr,
                 after: Mutex::new(HashMap::new()),
@@ -458,6 +475,7 @@ pub fn run() {
                 api: Mutex::new(Err("starting".into())),
                 media,
                 update: Mutex::new(None),
+                grabber,
             });
             // The main window is described in tauri.conf.json but created here, so that it gets
             // the same browser arguments as every other window.
@@ -478,6 +496,7 @@ pub fn run() {
             let h = app.handle().clone();
             tauri::async_runtime::spawn(pump_events(h.clone()));
             tauri::async_runtime::spawn(pump_status(h.clone()));
+            tauri::async_runtime::spawn(pump_grabber(h.clone()));
             tauri::async_runtime::spawn(watch_clipboard(h.clone()));
             tauri::async_runtime::spawn(bridge::start(h.clone()));
             tauri::async_runtime::spawn(upkeep::ytdlp_loop(h.clone()));
@@ -566,6 +585,14 @@ pub fn run() {
             upkeep::install_update,
             upkeep::pending_update,
             commands::is_media_url,
+            commands::grabber_projects,
+            commands::grabber_save,
+            commands::grabber_delete,
+            commands::grabber_state,
+            commands::grabber_explore,
+            commands::grabber_stop,
+            commands::grabber_check,
+            commands::grabber_download,
             commands::inspect_media,
             commands::revoke_extension,
             commands::deny_pairing,

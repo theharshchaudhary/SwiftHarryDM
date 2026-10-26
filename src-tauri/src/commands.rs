@@ -527,3 +527,53 @@ pub fn close_window(app: AppHandle, label: String) {
 pub fn show_main(app: AppHandle) {
     windows::show_main(&app);
 }
+
+// ------------------------------------------------------------------ site grabber
+use swiftdm_core::grabber::{Item as GrabberItem, Project as GrabberProject};
+
+#[tauri::command]
+pub fn grabber_projects(st: State<AppState>) -> Vec<GrabberProject> {
+    st.grabber.projects()
+}
+
+#[tauri::command]
+pub fn grabber_save(st: State<AppState>, project: GrabberProject) -> R<GrabberProject> {
+    st.grabber.save_project(project)
+}
+
+#[tauri::command]
+pub fn grabber_delete(st: State<AppState>, id: String) -> R<()> {
+    st.grabber.delete_project(&id)
+}
+
+#[derive(serde::Serialize)]
+pub struct GrabberState {
+    project: Option<GrabberProject>,
+    items: Vec<GrabberItem>,
+    running: bool,
+}
+
+#[tauri::command]
+pub fn grabber_state(st: State<AppState>, id: String) -> GrabberState {
+    GrabberState { project: st.grabber.project(&id), items: st.grabber.items(&id), running: st.grabber.is_running(&id) }
+}
+
+#[tauri::command]
+pub async fn grabber_explore(st: State<'_, AppState>, id: String) -> R<()> {
+    st.grabber.explore(&id)
+}
+
+#[tauri::command]
+pub fn grabber_stop(st: State<AppState>, id: String) {
+    st.grabber.stop(&id);
+}
+
+#[tauri::command]
+pub fn grabber_check(st: State<AppState>, id: String, items: Vec<i64>, checked: bool) {
+    st.grabber.set_checked(&id, &items, checked);
+}
+
+#[tauri::command]
+pub fn grabber_download(st: State<AppState>, id: String, items: Vec<i64>) -> R<Vec<String>> {
+    st.grabber.download(&id, &items)
+}
