@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keepfetch — free download manager for Windows</title>
+<meta name="description" content="Keepfetch is a free, open-source download manager for Windows: fast segmented downloads, video from web players, browser take-over, queues, a site grabber. No licence, no ads, no tracking.">
+<meta property="og:title" content="Keepfetch — free download manager for Windows">
+<meta property="og:description" content="Everything you expect from a download manager. Free, open source, no tracking.">
+<meta property="og:image" content="images/main.png">
+<link rel="icon" href="images/keepfetch-48.png">
+<style>
+  :root {
+    --bg: #f4f6f9; --surface: #ffffff; --surface-2: #eef2f6; --text: #1c2733; --muted: #56657a;
+    --border: #d5dde6; --accent: #6d28d9; --accent-hover: #7c3aed; --on-accent: #ffffff; --soft: #ede9fe;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1b1f24; --surface: #23282e; --surface-2: #2a3037; --text: #e6ebf0; --muted: #9aa7b5;
+      --border: #39414b; --accent: #a78bfa; --accent-hover: #c4b5fd; --on-accent: #170b33; --soft: #2e2350; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 20px; }
+  header.top { display: flex; align-items: center; gap: 10px; padding: 18px 0; }
+  header.top img { width: 32px; height: 32px; }
+  header.top b { font-size: 19px; }
+  header.top nav { margin-left: auto; display: flex; gap: 18px; font-size: 15px; }
+  header.top nav a { color: var(--muted); text-decoration: none; }
+  header.top nav a:hover { color: var(--text); }
+  .hero { padding: 48px 0 28px; text-align: center; }
+  .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 0 auto 14px; max-width: 820px; letter-spacing: -0.01em; }
+  .hero p.sub { color: var(--muted); font-size: 19px; max-width: 700px; margin: 0 auto 26px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; }
+  .btn:hover { background: var(--accent-hover); }
+  .btn:focus-visible, a:focus-visible { outline: 3px solid var(--accent-hover); outline-offset: 3px; }
+  .hero .small { display: block; margin-top: 10px; color: var(--muted); font-size: 14px; }
+  .shot { margin: 34px auto 0; max-width: 980px; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 14px 40px rgba(20, 35, 55, 0.18); background: var(--surface); }
+  .shot img { display: block; width: 100%; height: auto; }
+  section { padding: 54px 0; }
+  section h2 { font-size: 28px; margin: 0 0 18px; }
+  .lead { color: var(--muted); max-width: 720px; margin: 0 0 26px; }
+  .problem { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .problem .card { background: var(--surface-2); }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--muted); font-size: 16px; }
+  .steps { counter-reset: s; }
+  .steps .card h3::before { counter-increment: s; content: counter(s); display: inline-grid; place-items: center; width: 28px; height: 28px; margin-right: 10px; border-radius: 50%; background: var(--soft); color: var(--accent); font-size: 15px; }
+  .new { display: inline-block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); margin-bottom: 6px; }
+  ul.also { columns: 2 260px; padding-left: 20px; color: var(--muted); }
+  ul.also li { margin-bottom: 6px; break-inside: avoid; }
+  .price { text-align: center; }
+  .price .card { max-width: 460px; margin: 0 auto; }
+  .price .big { font-size: 44px; font-weight: 700; margin: 6px 0; }
+  details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { color: var(--muted); margin: 10px 0 0; }
+  .cta { text-align: center; padding-bottom: 70px; }
+  footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; padding: 22px 0 40px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 18px; }
+  @media (max-width: 560px) { header.top nav { display: none; } section { padding: 40px 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <img src="images/keepfetch-48.png" alt="">
+    <b>Keepfetch</b>
+    <nav aria-label="Page">
+      <a href="#features">Features</a>
+      <a href="#faq">Questions</a>
+      <a href="https://github.com/theharshchaudhary/SwiftHarryDM">Source code</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1>The free download manager that doesn’t make you give anything up</h1>
+    <p class="sub">Fast downloads that resume after anything, video from the page you are watching, queues and a site grabber. Free and open source, for Windows.</p>
+    <a class="btn" href="https://github.com/theharshchaudhary/SwiftHarryDM/releases/latest">Download for Windows</a>
+    <span class="small">Windows 10 and 11 · 64-bit · no licence, no ads, no tracking</span>
+    <div class="shot"><img src="images/main.png" alt="Keepfetch's main window: five downloads with their sizes, progress and speed, categories and queues on the left" width="1560" height="960"></div>
+  </div>
+</div>
+
+<section class="problem" aria-labelledby="problem">
+  <div class="wrap">
+    <h2 id="problem">Why another download manager</h2>
+    <div class="grid">
+      <div class="card"><h3>The good ones cost money</h3><p>The best-known download managers sell a licence for each computer, renewed every year. That is why so many people run cracked copies.</p></div>
+      <div class="card"><h3>The free ones leave things out</h3><p>Switch to a free one and you lose something: catching video from the page, taking over downloads from the browser, grabbing a whole site, or the speed.</p></div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="how">
+  <div class="wrap">
+    <h2 id="how">How it works</h2>
+    <div class="grid steps">
+      <div class="card"><h3>Install it</h3><p>Run the installer, then add the extension for Chrome, Edge or Brave. It connects by itself.</p></div>
+      <div class="card"><h3>Click as usual</h3><p>Click a download link or play a video. Keepfetch takes it over and shows the file’s name, size and folder first.</p></div>
+      <div class="card"><h3>Let it run</h3><p>It downloads with several connections at once and picks up where it stopped after a dropped connection, a sleep or a restart.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="features" aria-labelledby="feat">
+  <div class="wrap">
+    <h2 id="feat">What it does</h2>
+    <p class="lead">The first four are what people switching from other download managers asked for most. The rest is everything you would expect.</p>
+    <div class="grid">
+      <div class="card"><span class="new">New</span><h3>Expired links continue</h3><p>A download whose link expired picks up from a fresh link to the same file. Open the page it came from, click again, keep what was already downloaded.</p></div>
+      <div class="card"><span class="new">New</span><h3>Light in the background</h3><p>Waiting in the notification area, Keepfetch uses about 15 MB of memory. It starts by itself when the browser sends it a download.</p></div>
+      <div class="card"><span class="new">New</span><h3>Progress where you look</h3><p>The tray icon fills up as your downloads do, and the taskbar button shows it too.</p></div>
+      <div class="card"><span class="new">New</span><h3>Sounds that mean something</h3><p>A different sound when a download finishes, when one fails and when a queue is done. Your own or Windows’.</p></div>
+    </div>
+    <ul class="also" style="margin-top:26px">
+      <li>Video and audio from web players, in the quality you pick, saved as MP4 or MP3</li>
+      <li>Takes over browser downloads by file type, with keys to force or skip it</li>
+      <li>Queues with start and stop times, retries, and shut down when done</li>
+      <li>Synchronization queues that download changed files again</li>
+      <li>Site grabber: every PDF, image or file a site links to</li>
+      <li>Download all links on a page, numbered series, the clipboard</li>
+      <li>Speed limits per download and overall, download quotas</li>
+      <li>Proxies: Windows settings, PAC scripts, SOCKS5, per-site bypass</li>
+      <li>Categories with their own folders, find, a dark theme</li>
+      <li>Imports and exports <code>.ef2</code> lists from other Windows download managers</li>
+    </ul>
+  </div>
+</section>
+
+<section class="price" aria-labelledby="price">
+  <div class="wrap">
+    <h2 id="price">Price</h2>
+    <div class="card">
+      <div class="big">Free</div>
+      <p>Every feature, on every computer. No trial, no licence key, no ads, nothing sent home. The source code is open under the MIT licence.</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq" aria-labelledby="q">
+  <div class="wrap">
+    <h2 id="q">Questions</h2>
+    <details><summary>Is it really free?</summary><p>Yes. There is no paid version and nothing is locked. It is open source, so you can check what it does.</p></details>
+    <details><summary>Can I bring my download list from another download manager?</summary><p>If it can export an <code>.ef2</code> file, yes: Tasks › Import. Plain text files with one address per line work too.</p></details>
+    <details><summary>Which browsers does it work with?</summary><p>Chrome, Edge and Brave, through its extension. Firefox is not supported yet.</p></details>
+    <details><summary>Can it download any video?</summary><p>It downloads video that web players load openly, from hundreds of sites. It does not download video protected with DRM (most paid streaming), and says so.</p></details>
+    <details><summary>Does it send my data anywhere?</summary><p>No. It checks GitHub for its own updates and for updates of its video component. There is no account, no analytics and no crash reporting. Browser cookies, when you allow them, stay on your computer, encrypted.</p></details>
+    <details><summary>Mac or Linux?</summary><p>Not yet. Keepfetch is for Windows 10 and 11.</p></details>
+  </div>
+</section>
+
+<div class="wrap cta">
+  <h2>Try it on your next download</h2>
+  <a class="btn" href="https://github.com/theharshchaudhary/SwiftHarryDM/releases/latest">Download for Windows</a>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Keepfetch · MIT licence</span>
+    <a href="https://github.com/theharshchaudhary/SwiftHarryDM">Source code</a>
+    <a href="https://github.com/theharshchaudhary/SwiftHarryDM/blob/main/docs/HELP.md">Help</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="https://github.com/theharshchaudhary/SwiftHarryDM/issues">Report a problem</a>
+  </div>
+</footer>
+</body>
+</html>
