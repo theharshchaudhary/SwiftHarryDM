@@ -256,6 +256,7 @@ button:focus-visible, [role="menuitem"]:focus-visible, [role="tab"]:focus-visibl
 .split-pane > .pane { flex: 1; overflow: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
 
 .tbl { border: 1px solid var(--border); border-radius: 5px; overflow: auto; background: var(--surface); }
+.tbl:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 1px; }
 .tbl table { width: 100%; border-collapse: collapse; }
 .tbl th { position: sticky; top: 0; background: var(--surface-2); text-align: left; padding: 4px 8px; font-weight: 600; border-bottom: 1px solid var(--border); }
 .tbl td { padding: 3px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px; }

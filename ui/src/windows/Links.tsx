@@ -159,7 +159,7 @@ export default function Links() {
         <>
           <button className="btn primary" disabled={!picked.length} onClick={() => go("now")}>Download now</button>
           <button className="btn" disabled={!picked.length} onClick={() => go("later")}>Add to queue</button>
-          <select value={queueId} onChange={(e) => setQueueId(e.target.value)} style={{ height: 30 }}>
+          <select aria-label="Queue for Download later" value={queueId} onChange={(e) => setQueueId(e.target.value)} style={{ height: 30 }}>
             {live.queues.map((q) => <option key={q.id} value={q.id}>{q.name}</option>)}
           </select>
           <button className="btn" onClick={() => api.closeSelf()}>Cancel</button>

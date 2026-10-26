@@ -133,7 +133,7 @@ export default function Scheduler() {
                   </div>
                 )}
                 <Check checked={sched.enabled} onChange={(v) => updS({ enabled: v })}>Start this queue automatically</Check>
-                <div className="grid2" style={{ opacity: sched.enabled ? 1 : 0.55 }}>
+                <div className="grid2">
                   <span>Start at</span>
                   <input type="time" value={sched.start_time} disabled={!sched.enabled} onChange={(e) => updS({ start_time: e.target.value })} style={{ width: 120 }} />
                   <span>On</span>
@@ -147,9 +147,7 @@ export default function Scheduler() {
                   </div>
                   <span>Stop at</span>
                   <div className="row">
-                    <Check checked={sched.stop_time != null} disabled={!sched.enabled} onChange={(v) => updS({ stop_time: v ? "07:00" : null })}>
-                      {""}
-                    </Check>
+                    <input type="checkbox" aria-label="Stop at a set time" checked={sched.stop_time != null} disabled={!sched.enabled} onChange={(e) => updS({ stop_time: e.target.checked ? "07:00" : null })} />
                     <input type="time" value={sched.stop_time ?? "07:00"} disabled={!sched.enabled || sched.stop_time == null} onChange={(e) => updS({ stop_time: e.target.value })} style={{ width: 120 }} />
                   </div>
                 </div>

@@ -58,6 +58,22 @@ function findFile(dir, name) {
   }
   return null;
 }
+/** Fail when a window has serious or critical accessibility problems. */
+async function assertAccessible(w, name) {
+  const found = await axeScan(w, name);
+  assert(!found.length, `accessibility: ${found.join("; ")}`);
+}
+
+/** Serious and critical problems axe-core finds in a window (WCAG 2.1 A and AA rules). */
+const AXE = readFileSync(join(ROOT, "ui", "node_modules", "axe-core", "axe.min.js"), "utf8");
+async function axeScan(w, name) {
+  await w.eval(`window.axe ? 1 : (0, eval)(${JSON.stringify(AXE)})`);
+  const found = await w.eval(`axe.run(document, { runOnly: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] })
+    .then(r => r.violations.filter(v => v.impact === "serious" || v.impact === "critical")
+      .map(v => v.id + " (" + v.nodes.length + "): " + v.nodes.slice(0, ${process.env.SDM_A11Y_ALL ? 50 : 2}).map(n => ${process.env.SDM_A11Y_ALL ? "n.html.slice(0, 110) + ' <- ' + ((n.element && n.element.previousElementSibling && n.element.previousElementSibling.textContent) || (n.element && n.element.parentElement && n.element.parentElement.previousElementSibling && n.element.parentElement.previousElementSibling.textContent) || '').slice(0, 50)" : "n.target.join(' ')"}).join(" | ")))`);
+  return found.map((f) => `${name}: ${f}`);
+}
+
 async function assertSha(name, path) {
   const f = findFile(DL, name);
   assert(f, `${name} was not saved`);
@@ -209,9 +225,11 @@ const scenarios = {
     assert(t.includes("300,000 bytes"), "the info window shows the size");
     assert((await info.eval("document.querySelector('select').value")) === "Documents", "a PDF goes to Documents");
     await info.shot(join(SHOTS, "info.png"));
+    await assertAccessible(info, "info");
     await info.click("Start download");
     const done = await completeFor(app, "report 2026.pdf", 30000);
     await done.shot(join(SHOTS, "complete.png"));
+    await assertAccessible(done, "complete");
     // Dragging the file out uses the drag plugin; a malformed call must reach it (an argument
     // error), not be refused as unknown or not allowed.
     const dragErr = await done.eval(`window.__TAURI_INTERNALS__.invoke("plugin:drag|start_drag", { item: 1, image: 1 }).then(() => "ok", (e) => String(e))`);
@@ -268,6 +286,8 @@ const scenarios = {
     await add.click("OK");
     // Asked while the address is checked, as IDM does; then the file info is shown.
     const login = await app.window("Login required", 30000);
+    await until(() => login.eval("!!document.querySelector('input[type=password]')"), 5000, 100, "the login form");
+    await assertAccessible(login, "login");
     await login.fill("input[type=text]", "ann");
     await login.fill("input[type=password]", "secret");
     await login.click("OK");
@@ -291,6 +311,7 @@ const scenarios = {
     const segs = await prog.eval("document.querySelectorAll('.segmap .seg').length");
     assert(segs >= 4, `the segment map shows the connections (${segs})`);
     await prog.shot(join(SHOTS, "progress.png"));
+    await assertAccessible(prog, "progress");
     await main.shot(join(SHOTS, "main.png"));
     assert(await prog.click("Pause"), "Pause is available");
     await until(async () => (await prog.text()).includes("Resume"), 15000, 200, "pause");
@@ -315,6 +336,7 @@ const scenarios = {
       ["options", { tab: "video" }, "Options", "yt-dlp"],
     ];
     if (job) cases.push(["properties", { id: job.id }, "Properties", "File name"]);
+    const a11y = [...(await axeScan(main, "main"))];
     for (const [kind, params, title, text] of cases) {
       if (await app.hasWindow(title)) {
         const old = await app.window(title);
@@ -325,9 +347,12 @@ const scenarios = {
       const w = await app.window(title);
       assert((await w.text()).includes(text), `${title} shows its content`);
       await w.shot(join(SHOTS, `window-${kind}${params.tab ? "-" + params.tab : ""}.png`));
+      a11y.push(...(await axeScan(w, `${kind}${params.tab ? "/" + params.tab : ""}`)));
       await w.invoke("close_self").catch(() => {});
       await until(async () => !(await app.hasWindow(title)), 5000, 100, `${title} to close`);
     }
+    if (a11y.length) console.log(`    accessibility:\n${a11y.map((v) => `      ${v}`).join("\n")}`);
+    assert(!a11y.length, `${a11y.length} serious accessibility problems`);
   },
 
   async drop_target_and_command_line(app) {
@@ -384,6 +409,7 @@ const scenarios = {
     assert((await find("alt", { field: "name", whole: true })) === null, "whole text only");
     assert((await find("alt.pdf", { field: "name", whole: true }))?.includes("alt.pdf"), "whole name matches");
     await main.shot(join(SHOTS, "find-bar.png"));
+    await assertAccessible(main, "main with the find bar");
 
     // The Q column shows the queue (and a clock when the queue is scheduled).
     const state = await main.invoke("get_state");
@@ -585,12 +611,14 @@ const scenarios = {
     await g.fill("input[type=number]", "0"); // the start page only
     assert(await g.click("Next"), "step 4");
     await g.shot(join(SHOTS, "grabber-step4.png"));
+    await assertAccessible(g, "grabber step 4");
     assert(await g.click("Save and explore"), "save and explore");
     await until(async () => (await g.text()).includes("Exploring finished"), 30000, 250, "exploring to finish");
     const rows = await g.eval("[...document.querySelectorAll('.tbl tbody tr')].map(r => r.innerText)");
     assert(rows.some((r) => r.includes("alt.pdf")) && rows.some((r) => r.includes("flaky.bin")), `the linked files are listed (${rows})`);
     assert(!rows.some((r) => r.includes("video.html")), "pages are not listed as files");
     await g.shot(join(SHOTS, "grabber.png"));
+    await assertAccessible(g, "grabber");
     const before = new Set((await main.invoke("get_state")).jobs.map((j) => j.id));
     assert(await g.click("Download checked"), "download checked");
     await until(async () => (await g.text()).includes("added to the download list"), 10000, 200, "the files to be added");

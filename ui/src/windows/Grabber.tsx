@@ -77,7 +77,7 @@ export default function Grabber() {
       <div className="split-pane">
         <div style={{ width: 200, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", background: "var(--surface-2)" }}>
           <div style={{ padding: "10px 10px 4px", fontWeight: 600 }}>Projects</div>
-          <div style={{ flex: 1, overflow: "auto", padding: "0 6px" }} role="listbox" aria-label="Projects">
+          <div style={{ flex: 1, overflow: "auto", padding: "0 6px" }} role={projects.length ? "listbox" : undefined} aria-label="Projects">
             {projects.map((p) => (
               <div
                 key={p.id}

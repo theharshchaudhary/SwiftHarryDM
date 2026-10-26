@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./styles.css";
 import { windowParams } from "./api";
+import { autoLabel } from "./autolabel";
 import Main from "./windows/Main";
 import AddUrl from "./windows/AddUrl";
 import FileInfo from "./windows/FileInfo";
@@ -67,6 +68,7 @@ const kind = windowParams().get("w") ?? "main";
 document.title = TITLES[kind] ?? "SwiftHarryDM";
 const View = WINDOWS[kind] ?? Unknown;
 
+autoLabel();
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <View />
