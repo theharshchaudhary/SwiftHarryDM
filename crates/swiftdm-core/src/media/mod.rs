@@ -172,9 +172,10 @@ impl MediaEngine {
     /// Title and available formats, for the quality picker.
     /// With the browser's cookies for the site when the extension sent them (sites such as
     /// YouTube ask visitors without them to prove they are not a bot).
-    pub async fn inspect(&self, url: &str, cookies: Option<&str>) -> Result<MediaInfo, String> {
+    pub async fn inspect(&self, url: &str, cookies: Option<&str>, settings: &crate::settings::Settings) -> Result<MediaInfo, String> {
         let name = format!("inspect-{}", uuid::Uuid::new_v4().simple());
-        let extra = cookies.map(|c| cookie_args(url, c, &name)).unwrap_or_default();
+        let mut extra = cookies.map(|c| cookie_args(url, c, &name)).unwrap_or_default();
+        extra.extend(proxy_args(settings, url));
         let r = self.json(url, None, &extra, &CancelToken::new()).await;
         forget_cookie_file(&name);
         let info = r.map_err(|e| match e {
@@ -224,6 +225,13 @@ impl MediaEngine {
 
 /// The browser's cookies for the video's site, as a cookie file limited to that site (never a
 /// global header). `name` keeps the files of parallel requests apart.
+/// yt-dlp does its own transfers: give it the proxy Options chose for the video's page (an
+/// empty --proxy means a direct connection, whatever the environment says).
+fn proxy_args(settings: &crate::settings::Settings, url: &str) -> Vec<String> {
+    let proxy = url::Url::parse(url).ok().and_then(|u| crate::proxy::Resolver::new(settings).proxy_for_url(&u));
+    vec!["--proxy".into(), proxy.unwrap_or_default()]
+}
+
 fn cookie_args(url: &str, cookies: &str, name: &str) -> Vec<String> {
     let Some(host) = url::Url::parse(url).ok().and_then(|u| u.host_str().map(str::to_string)) else { return vec![] };
     let dir = crate::appdata::app_dir().join("tmp");
@@ -287,6 +295,7 @@ impl Engine for MediaEngine {
         let opts = Self::options(job);
         let sel = formats::build(&opts);
         let mut extra = Self::job_args(job);
+        extra.extend(proxy_args(&ctx.settings.get(), &job.spec.url));
         if let Some(sort) = &sel.sort {
             extra.extend(["-S".to_string(), sort.clone()]);
         }
@@ -345,6 +354,7 @@ impl Engine for MediaEngine {
         cmd.push(format!("temp:{tmp}"));
         cmd.extend(s(&["--continue", "--no-overwrites", "--newline", "--progress", "--progress-template", PROGRESS_TEMPLATE, "--progress-template", POSTPROCESS_TEMPLATE, "--print", FILE_TEMPLATE, "--no-simulate"]));
         cmd.extend(Self::job_args(job));
+        cmd.extend(proxy_args(&ctx.settings.get(), &job.spec.url));
         // yt-dlp does its own transfers, so it gets the lower of this download's limit and the
         // overall one (applied when it starts).
         let limit = [job.spec.speed_limit.unwrap_or(0), ctx.settings.get().speed_limit].into_iter().filter(|l| *l > 0).min();

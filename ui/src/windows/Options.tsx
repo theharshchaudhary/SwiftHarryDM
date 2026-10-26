@@ -318,16 +318,24 @@ function Proxy({ s, set }: P) {
         <legend>Proxy</legend>
         {(
           [
-            ["system", "Use the Windows proxy settings"],
+            ["system", "Use the Windows proxy settings (including automatic configuration scripts)"],
             ["none", "No proxy"],
+            ["pac", "Use this automatic configuration script (PAC):"],
             ["manual", "Use this proxy:"],
           ] as const
         ).map(([k, l]) => (
           <div key={k}>
             <label><input type="radio" checked={s.proxy_mode === k} onChange={() => set({ proxy_mode: k })} /> {l}</label>
+            {k === "pac" && (
+              <input type="text" aria-label="Configuration script address" style={{ width: "100%", margin: "4px 0 6px" }} disabled={s.proxy_mode !== "pac"} placeholder="http://wpad.example/proxy.pac" value={s.proxy_pac_url} onChange={(e) => set({ proxy_pac_url: e.target.value })} />
+            )}
           </div>
         ))}
-        <input type="text" style={{ width: "100%", marginTop: 6 }} disabled={s.proxy_mode !== "manual"} placeholder="http://host:port  or  socks5://user:pass@host:port" value={s.proxy_url} onChange={(e) => set({ proxy_url: e.target.value })} />
+        <input type="text" aria-label="Proxy address" style={{ width: "100%", marginTop: 4 }} disabled={s.proxy_mode !== "manual"} placeholder="http://host:port  or  socks5://user:pass@host:port" value={s.proxy_url} onChange={(e) => set({ proxy_url: e.target.value })} />
+        <div className="hint">One proxy for everything, or one per protocol: http=host:port;https=host2:port</div>
+        <div style={{ marginTop: 8 }}>Connect directly to these addresses:</div>
+        <textarea rows={2} className="mono" aria-label="Addresses that skip the proxy" disabled={s.proxy_mode !== "manual"} value={lines(s.proxy_bypass)} onChange={(e) => set({ proxy_bypass: unlines(e.target.value) })} />
+        <div className="hint">One per line, with * as a wildcard (*.corp.example, 10.*). &lt;local&gt; means names without a dot.</div>
       </fieldset>
       <div className="grid2">
         <span>Browser identification</span>

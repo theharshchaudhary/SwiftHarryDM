@@ -75,7 +75,9 @@ export interface Settings {
   auto_resume: boolean;
   retries: number;
   speed_limit: number;
-  proxy_mode: "system" | "none" | "manual";
+  proxy_mode: "system" | "none" | "manual" | "pac";
+  proxy_bypass: string[];
+  proxy_pac_url: string;
   proxy_url: string;
   user_agent: string;
   site_logins: SiteLogin[];

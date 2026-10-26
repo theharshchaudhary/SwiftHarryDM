@@ -111,17 +111,17 @@ async fn temporary_errors_are_retried() {
 #[tokio::test(flavor = "multi_thread")]
 async fn lists_formats_for_the_picker() {
     let _e = env();
-    let info = engine().inspect("https://fake.test/ok", None).await.unwrap();
+    let info = engine().inspect("https://fake.test/ok", None, &direct()).await.unwrap();
     assert_eq!(info.title, "Fake Video");
     let heights: Vec<Option<u32>> = info.formats.iter().map(|f| f.height).collect();
     assert_eq!(heights, vec![Some(720), Some(360), None]);
-    assert!(engine().inspect("https://fake.test/private", None).await.unwrap_err().contains("private"));
+    assert!(engine().inspect("https://fake.test/private", None, &direct()).await.unwrap_err().contains("private"));
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn missing_tool_is_reported() {
     let e = MediaEngine::new(Tools::default());
-    assert!(e.inspect("https://fake.test/ok", None).await.unwrap_err().contains("yt-dlp was not found"));
+    assert!(e.inspect("https://fake.test/ok", None, &direct()).await.unwrap_err().contains("yt-dlp was not found"));
 }
 
 fn walk(dir: &str) -> Vec<String> {
@@ -161,4 +161,19 @@ async fn ytdlp_update_is_verified_before_use() {
     let ok = serve(good).await;
     assert_eq!(swiftdm_core::media::tools::update_ytdlp_in(dir.path(), &ok).await.unwrap(), "2026.01.01-fake");
     assert!(dir.path().join("yt-dlp.exe").is_file());
+}
+
+fn direct() -> swiftdm_core::settings::Settings {
+    swiftdm_core::settings::Settings { proxy_mode: swiftdm_core::settings::ProxyMode::None, ..Default::default() }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ytdlp_gets_the_proxy_from_options() {
+    let manual = swiftdm_core::settings::Settings {
+        proxy_mode: swiftdm_core::settings::ProxyMode::Manual,
+        proxy_url: "px.test:3128".into(),
+        ..Default::default()
+    };
+    engine().inspect("https://fake.test/needs-proxy", None, &manual).await.unwrap();
+    assert!(engine().inspect("https://fake.test/needs-proxy", None, &direct()).await.is_err(), "no proxy when Options say none");
 }

@@ -26,6 +26,10 @@ fn main() {
     let probe = args.iter().any(|a| a == "-J");
     match path.as_str() {
         "/private" => fail("ERROR: [fake] abc: Private video. Sign in if you've been granted access"),
+        // The proxy chosen in Options must reach yt-dlp.
+        "/needs-proxy" if arg_after(&args, "--proxy") != ["http://px.test:3128"] => {
+            fail(&format!("ERROR: [fake] expected --proxy http://px.test:3128, got {:?}", arg_after(&args, "--proxy")))
+        }
         "/playlist" if probe => {
             println!(r#"{{"_type":"playlist","id":"pl","title":"A playlist","entries":[]}}"#);
             return;

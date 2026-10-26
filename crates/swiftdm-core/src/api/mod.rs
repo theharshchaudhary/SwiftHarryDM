@@ -506,7 +506,8 @@ async fn media_info(State(st): State<Arc<Inner>>, h: HeaderMap, body: Bytes) -> 
         Ok(c) => c,
         Err(e) => return err(StatusCode::BAD_REQUEST, &e),
     };
-    match engine.inspect(&url, cookies.as_deref()).await {
+    let settings = st.mgr.settings().get();
+    match engine.inspect(&url, cookies.as_deref(), &settings).await {
         Ok(info) => Json(json!({ "success": true, "info": info })).into_response(),
         Err(e) => err(StatusCode::UNPROCESSABLE_ENTITY, &e),
     }

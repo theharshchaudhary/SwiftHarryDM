@@ -375,6 +375,12 @@ async fn handle_conn(mut sock: TcpStream, st: Arc<State>, conn: u64) -> std::io:
         let mut parts = first.split_whitespace();
         let method = parts.next().unwrap_or("").to_string();
         let target = parts.next().unwrap_or("/").to_string();
+        // A request sent to a proxy names the whole address ("http://host/path"): serve the
+        // path, so the server can stand in for a proxy in tests.
+        let target = match target.strip_prefix("http://") {
+            Some(rest) => rest.find('/').map(|i| rest[i..].to_string()).unwrap_or_else(|| "/".into()),
+            None => target,
+        };
         let path = target.split('?').next().unwrap_or("/").to_string();
         let mut hdr: HashMap<String, String> = HashMap::new();
         for l in lines {

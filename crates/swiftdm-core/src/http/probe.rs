@@ -21,12 +21,12 @@ pub fn build_client(settings: &Settings) -> Result<Client, SdmError> {
         .user_agent(settings.user_agent.clone())
         .pool_max_idle_per_host(32)
         .tcp_nodelay(true);
-    b = match crate::proxy::proxy_for(settings) {
-        Some(p) => b.proxy(
-            reqwest::Proxy::all(&p)
-                .map_err(|e| SdmError::new(ErrorCode::Network, "The proxy address is not valid.").detail(e.to_string()))?,
-        ),
-        None => b.no_proxy(),
+    let resolver = crate::proxy::Resolver::new(settings);
+    b = if resolver.is_direct() {
+        b.no_proxy()
+    } else {
+        // Chosen per address (PAC scripts and bypass lists send some sites direct).
+        b.proxy(reqwest::Proxy::custom(move |url| resolver.proxy_for_url(url)))
     };
     b.build().map_err(|e| SdmError::new(ErrorCode::Internal, "Could not start the HTTP client.").detail(e.to_string()))
 }

@@ -11,6 +11,8 @@ pub enum ProxyMode {
     System,
     None,
     Manual,
+    /// An automatic configuration (PAC) script at `proxy_pac_url`.
+    Pac,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -49,6 +51,9 @@ pub struct Settings {
     pub speed_limit: u64, // bytes/s, 0 = unlimited
     pub proxy_mode: ProxyMode,
     pub proxy_url: String,
+    /// Addresses that skip the manual proxy ("*.corp.example", "10.*", "<local>").
+    pub proxy_bypass: Vec<String>,
+    pub proxy_pac_url: String,
     pub user_agent: String,
     pub site_logins: Vec<SiteLogin>,
     pub clipboard_monitor: bool,
@@ -131,6 +136,8 @@ impl Default for Settings {
             speed_limit: 0,
             proxy_mode: ProxyMode::System,
             proxy_url: String::new(),
+            proxy_bypass: vec!["<local>".into()],
+            proxy_pac_url: String::new(),
             user_agent: DEFAULT_UA.into(),
             site_logins: vec![],
             clipboard_monitor: true,

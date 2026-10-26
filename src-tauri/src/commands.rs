@@ -514,7 +514,8 @@ pub fn is_media_url(url: String) -> bool {
 #[tauri::command]
 pub async fn inspect_media(st: State<'_, AppState>, url: String) -> R<swiftdm_core::media::MediaInfo> {
     let url = swiftdm_core::manager::validate_url(&url)?;
-    st.media.inspect(&url, None).await
+    let settings = st.mgr.settings().get();
+    st.media.inspect(&url, None, &settings).await
 }
 
 #[tauri::command]

@@ -656,3 +656,38 @@ async fn synchronization_queue_downloads_changed_files_again_in_place() {
     assert!(e.m.get(&new_a.id).is_some() && e.m.get(&b.id).is_some());
     assert_eq!(e.m.snapshot().len(), 2);
 }
+
+/// A PAC script decides per address: via-proxy.invalid goes through the proxy (the test
+/// server, which serves by path), everything else direct. The host does not exist, so the
+/// download only works if the script ran and the proxy was used.
+#[tokio::test(flavor = "multi_thread")]
+async fn pac_script_sends_chosen_sites_through_the_proxy() {
+    let srv = TestServer::start().await;
+    let hostport = srv.base.trim_start_matches("http://").to_string();
+    let pac = format!(
+        "function FindProxyForURL(url, host) {{ if (host == \"via-proxy.invalid\") return \"PROXY {hostport}\"; return \"DIRECT\"; }}"
+    );
+    let pac_url = srv.add("/proxy.pac", Resource::new(Body::raw(pac.into_bytes())).content_type("application/x-ns-proxy-autoconfig"));
+    let b = Body::gen("pac", MIB);
+    srv.add("/pac/file.bin", Resource::new(b.clone()));
+    let settings = Settings { proxy_mode: ProxyMode::Pac, proxy_pac_url: pac_url, ..Settings::default() };
+    let r = swiftdm_core::proxy::Resolver::new(&settings);
+    let u = |x: &str| url::Url::parse(x).unwrap();
+    assert_eq!(r.proxy_for_url(&u("http://via-proxy.invalid/pac/file.bin")), Some(format!("http://{hostport}")));
+    assert_eq!(r.proxy_for_url(&u("http://example.invalid/x")), None);
+    let e = env_with(|_| {}, settings).await;
+    // env_with sets proxy_mode None; switch the running manager to the PAC script.
+    let mut st = e.m.settings().get();
+    st.proxy_mode = ProxyMode::Pac;
+    st.proxy_pac_url = format!("{}/proxy.pac", srv.base);
+    e.m.settings().set(st).unwrap();
+    ok(&e.run("http://via-proxy.invalid/pac/file.bin", 60).await, &b);
+    // The same through a manual per-protocol proxy list.
+    let b2 = Body::gen("manual-proxy", MIB / 2);
+    srv.add("/pac/manual.bin", Resource::new(b2.clone()));
+    let mut st = e.m.settings().get();
+    st.proxy_mode = ProxyMode::Manual;
+    st.proxy_url = format!("http={hostport};https=unused.invalid:1");
+    e.m.settings().set(st).unwrap();
+    ok(&e.run("http://via-proxy.invalid/pac/manual.bin", 60).await, &b2);
+}
