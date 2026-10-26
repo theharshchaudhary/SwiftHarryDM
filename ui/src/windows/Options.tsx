@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { api, onCore, windowParams, type ApiStatus, type Category, type Settings } from "../api";
 import { Check, Loading, Num, Tabs } from "../components/Dialog";
 import { ComponentsBanner, useComponents } from "../components/Components";
@@ -399,10 +399,31 @@ function Logins({ s, set }: P) {
   );
 }
 
+const SOUNDS: ["complete" | "failed" | "queue", string, keyof Settings, keyof Settings][] = [
+  ["complete", "A download finishes", "sound_on_complete", "sound_complete_file"],
+  ["failed", "A download fails", "sound_on_failed", "sound_failed_file"],
+  ["queue", "A queue is done", "sound_on_queue_done", "sound_queue_file"],
+];
+
 function AfterDownload({ s, set }: P) {
   return (
     <>
-      <Check checked={s.sound_on_complete} onChange={(v) => set({ sound_on_complete: v })}>Play a sound when a download finishes</Check>
+      <fieldset>
+        <legend>Sounds</legend>
+        <div className="grid2" style={{ gridTemplateColumns: "auto 1fr" }}>
+          {SOUNDS.map(([ev, label, on, file]) => (
+            <Fragment key={ev}>
+              <Check checked={s[on] as boolean} onChange={(v) => set({ [on]: v } as Partial<Settings>)}>{label}</Check>
+              <div className="row">
+                <input type="text" className="grow mono" aria-label={`Sound file: ${label}`} placeholder="The Windows sound" disabled={!s[on]} value={s[file] as string} onChange={(e) => set({ [file]: e.target.value } as Partial<Settings>)} />
+                <button className="btn small" disabled={!s[on]} onClick={async () => { const f = await api.pickFile((s[file] as string) || null); if (f) set({ [file]: f } as Partial<Settings>); }}>Browse…</button>
+                <button className="btn small" disabled={!s[on]} onClick={() => api.playSound(ev, s[file] as string)}>Play</button>
+              </div>
+            </Fragment>
+          ))}
+        </div>
+        <div className="hint">.wav files. Leave a box empty for the matching Windows sound.</div>
+      </fieldset>
       <fieldset>
         <legend>Virus check</legend>
         <Check checked={s.av_scan_enabled} onChange={(v) => set({ av_scan_enabled: v })}>Scan each finished file with this program</Check>

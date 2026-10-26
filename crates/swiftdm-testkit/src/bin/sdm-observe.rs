@@ -55,6 +55,9 @@ async fn main() {
     secret.require_basic = Some("Basic YW5uOnNlY3JldA==".into());
     add("/a/secret.bin", secret, None);
     add("/s7/flaky.bin", Resource::new(Body::gen("s7", 4 * MIB)).etag("\"s7\"").statuses(&[503, 503]), None);
+    // An expired link (always 403) and the fresh link for the same file.
+    add("/e/old/build.bin", Resource::new(Body::gen("build", 2 * MIB)).statuses(&[403; 64]), None);
+    add("/e/new/build.bin", Resource::new(Body::gen("build", 2 * MIB)), None);
     // Pages for browser tests: a page with download links, and a small PDF for "leave it to
     // the browser" (Alt+click) checks.
     add(

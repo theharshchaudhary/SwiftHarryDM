@@ -468,6 +468,12 @@ pub struct ApiStatus {
     error: Option<String>,
 }
 
+/// Options' "Play" buttons: the sound for an event, from the file being chosen.
+#[tauri::command]
+pub fn play_sound(event: String, file: String) {
+    crate::system::play_sound(&event, &file);
+}
+
 #[tauri::command]
 pub fn is_elevated() -> bool {
     crate::system::is_elevated()

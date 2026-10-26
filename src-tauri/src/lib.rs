@@ -131,7 +131,7 @@ async fn pump_events(app: AppHandle) {
                 if s.state == JobState::Completed && changed {
                     windows::close(&app, &format!("progress-{}", s.id));
                     if settings.sound_on_complete {
-                        system::beep();
+                        system::play_sound("complete", &settings.sound_complete_file);
                     }
                     if settings.show_complete_dialog && s.queue_id.is_none() && !state.held.lock().unwrap().contains(&s.id) {
                         open_logged(&app, "complete", &[("id".into(), s.id.clone())]);
@@ -141,6 +141,9 @@ async fn pump_events(app: AppHandle) {
                         let what = format!("“{}” has finished downloading.", file_label(s));
                         open_logged(&app, "countdown", &[("action".into(), after.as_str().into()), ("what".into(), what)]);
                     }
+                }
+                if s.state == JobState::Failed && changed && settings.sound_on_failed {
+                    system::play_sound("failed", &settings.sound_failed_file);
                 }
                 // The server wants a login: ask for it.
                 if s.state == JobState::Failed && changed && s.error.as_ref().is_some_and(|e| e.http_status == Some(401)) {
@@ -170,6 +173,9 @@ async fn pump_events(app: AppHandle) {
             Event::QueueFinished { queue_id, action } => {
                 let name = state.mgr.queues().into_iter().find(|q| &q.id == queue_id).map(|q| q.name).unwrap_or_else(|| queue_id.clone());
                 notify(&app, "Queue finished", &format!("All downloads in “{name}” are done."));
+                if settings.sound_on_queue_done {
+                    system::play_sound("queue", &settings.sound_queue_file);
+                }
                 if action != "none" {
                     let what = format!("The queue “{name}” has finished.");
                     open_logged(&app, "countdown", &[("action".into(), action.clone()), ("what".into(), what)]);
@@ -604,6 +610,7 @@ pub fn run() {
             upkeep::pending_update,
             commands::is_media_url,
             commands::is_elevated,
+            commands::play_sound,
             commands::grabber_projects,
             commands::grabber_save,
             commands::grabber_delete,

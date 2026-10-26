@@ -19,3 +19,5 @@
 | 2026-10-26 | S22-S24 site grabber | done | engine (html5ever tokenizer, depth/folder/robots/size rules), DB migration 2, window with 4 steps; no schedule or offline link conversion. Found: a migration backup left by an earlier attempt blocked every later start (fixed) |
 | 2026-10-26 | /s /q, administrator warning | done | /s e2e-tested; /q not (it exits the app) |
 | 2026-10-26 | clone screenshots | done | replica/clone-screens/ from an e2e run (no IDM reference shots in replica/screens yet) |
+| 2026-10-26 | fix #1 expired links | done | 'Open the page it came from'; same file sent again offers to continue the stopped download; e2e expired_link |
+| 2026-10-26 | fix #4 sounds | done | three events, Windows sounds or .wav, Play; not audible in tests |

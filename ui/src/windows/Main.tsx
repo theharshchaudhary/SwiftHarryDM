@@ -421,6 +421,8 @@ function MainView({ live }: { live: Live }) {
     { label: "Open", disabled: !one || one.state !== "COMPLETED", onClick: () => one && api.openFile(one.id), hint: "Enter" },
     { label: "Open with…", disabled: !one || one.state !== "COMPLETED", onClick: () => one && api.openWith(one.id) },
     { label: "Open folder", disabled: !one, onClick: () => one && api.openFolder(one.id) },
+    // An expired link: open the page again, click the link there, and the download continues.
+    { label: "Open the page it came from", disabled: !one?.referer, onClick: () => one?.referer && api.openPath(one.referer) },
     "sep",
     { label: "Resume download", disabled: !selected.some(F.canResume), onClick: act.resume },
     { label: "Stop download", disabled: !selected.some(F.canStop), onClick: act.stop },

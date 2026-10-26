@@ -100,6 +100,12 @@ pub struct Settings {
     pub av_scan_enabled: bool,
     pub av_scan_command: String,
     pub sound_on_complete: bool,
+    pub sound_on_failed: bool,
+    pub sound_on_queue_done: bool,
+    /// A .wav file per event; empty = the matching Windows sound.
+    pub sound_complete_file: String,
+    pub sound_failed_file: String,
+    pub sound_queue_file: String,
     pub theme: String, // system | light | dark
     pub api_port: u16,
     pub server_limits: Vec<ServerLimit>,
@@ -174,6 +180,11 @@ impl Default for Settings {
             av_scan_command: r#""C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "{file}" -DisableRemediation"#
                 .into(),
             sound_on_complete: true,
+            sound_on_failed: true,
+            sound_on_queue_done: true,
+            sound_complete_file: String::new(),
+            sound_failed_file: String::new(),
+            sound_queue_file: String::new(),
             theme: "system".into(),
             api_port: 5001,
             server_limits: vec![],

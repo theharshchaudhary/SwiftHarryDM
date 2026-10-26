@@ -192,6 +192,8 @@ export default function FileInfo() {
   const earlyStart = useRef<Promise<Early | null> | null>(null);
   const settled = async () => (earlyStart.current ? await earlyStart.current : null);
   const [dupsChecked, setDupsChecked] = useState(false);
+  // The same file as a download that stopped (its link expired, say): offer to continue it.
+  const [stoppedDone, setStoppedDone] = useState(false);
   const comps = useComponents();
 
   // Closed without a decision: a browser request counts as rejected, and a download that
@@ -289,11 +291,42 @@ export default function FileInfo() {
     if (name) setPath(joinPath(cat ? folderFor(cat) : settings.download_dir, name));
   }, [info, name, settings, folderFor, pathTouched, isMedia, quality]);
 
+  const stopped = useMemo(() => {
+    if (!info || info.is_web_page || isMedia || !live) return null;
+    const n = info.file_name.toLowerCase();
+    return (
+      live.jobs.find(
+        (j) =>
+          (j.state === "FAILED" || j.state === "PAUSED") &&
+          F.fileName(j).toLowerCase() === n &&
+          (j.total == null || info.size == null || j.total === info.size) &&
+          j.url !== url &&
+          j.url !== info.final_url,
+      ) ?? null
+    );
+  }, [info, isMedia, live, url]);
+  const stoppedAsk = !!stopped && !stoppedDone;
+  const continueStopped = async () => {
+    if (!stopped || !info) return;
+    setBusy(true);
+    try {
+      await api.refreshUrl(stopped.id, info.final_url || url);
+      await (stopped.state === "FAILED" ? api.retry([stopped.id]) : api.resume([stopped.id]));
+      decided.current = true;
+      if (rid) api.rejectRequest(rid); // answered: the download continues in the old entry
+      api.closeSelf();
+    } catch (e) {
+      setErr(String(e));
+      setStoppedDone(true);
+    }
+    setBusy(false);
+  };
+
   // Start early once the address is known to be a file (not a video page) and nothing needs
-  // asking first (a duplicate the user must decide about).
+  // asking first (a duplicate, or a stopped download it may belong to).
   const dupAsk = dups.length > 0 && !dupDone;
   useEffect(() => {
-    if (!settings?.start_while_info || earlyStart.current || decided.current || probing || probeErr || !info || info.is_web_page || isMedia || !dupsChecked || dupAsk || !path) return;
+    if (!settings?.start_while_info || earlyStart.current || decided.current || probing || probeErr || !info || info.is_web_page || isMedia || !dupsChecked || dupAsk || stoppedAsk || !path) return;
     const [dir, file] = splitPath(path);
     earlyStart.current = (async () => {
       try {
@@ -311,7 +344,7 @@ export default function FileInfo() {
         return null; // nothing started: "Start download" starts it as usual
       }
     })();
-  }, [settings?.start_while_info, probing, probeErr, info, isMedia, dupsChecked, dupAsk, path, rid, url, category, params]);
+  }, [settings?.start_while_info, probing, probeErr, info, isMedia, dupsChecked, dupAsk, stoppedAsk, path, rid, url, category, params]);
 
   // A choice saved in Options is applied without asking.
   useEffect(() => {
@@ -486,6 +519,21 @@ export default function FileInfo() {
         <div className="banner">
           <Icon name="link" size={18} />
           <div>Sent from your browser{params.get("referer") ? <> by <b>{F.host(params.get("referer"))}</b></> : null}. Check the details and choose how to download it.</div>
+        </div>
+      )}
+      {stoppedAsk && stopped && (
+        <div className="banner warn" role="status">
+          <Icon name="warning" size={18} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div>
+              This looks like <b>{F.fileName(stopped)}</b>, which stopped{F.percent(stopped.downloaded, stopped.total) != null ? ` at ${Math.floor(F.percent(stopped.downloaded, stopped.total)!)}%` : ""}
+              {stopped.error ? ` (${stopped.error.message})` : ""}. Continue it from this new address and keep what is already downloaded?
+            </div>
+            <div className="row">
+              <button className="btn small primary" disabled={busy} onClick={continueStopped}>Continue the stopped download</button>
+              <button className="btn small" disabled={busy} onClick={() => setStoppedDone(true)}>Download it again as a new file</button>
+            </div>
+          </div>
         </div>
       )}
       {twice && <TwiceCancelled url={url} onClose={() => api.closeSelf()} />}

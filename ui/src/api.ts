@@ -110,6 +110,11 @@ export interface Settings {
   av_scan_enabled: boolean;
   av_scan_command: string;
   sound_on_complete: boolean;
+  sound_on_failed: boolean;
+  sound_on_queue_done: boolean;
+  sound_complete_file: string;
+  sound_failed_file: string;
+  sound_queue_file: string;
   theme: "system" | "light" | "dark";
   api_port: number;
   server_limits: ServerLimit[];
@@ -324,6 +329,7 @@ export const api = {
   inspectUrl: (url: string) => invoke<UrlInfo>("inspect_url", { url }),
   isMediaUrl: (url: string) => invoke<boolean>("is_media_url", { url }),
   isElevated: () => invoke<boolean>("is_elevated"),
+  playSound: (event: "complete" | "failed" | "queue", file: string) => invoke<void>("play_sound", { event, file }),
   grabberProjects: () => invoke<GrabberProject[]>("grabber_projects"),
   grabberSave: (project: GrabberProject) => invoke<GrabberProject>("grabber_save", { project }),
   grabberDelete: (id: string) => invoke<void>("grabber_delete", { id }),

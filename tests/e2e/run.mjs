@@ -141,7 +141,7 @@ async function setup() {
   });
   writeFileSync(
     join(work, "home", "settings3.json"),
-    JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false, tips_on_startup: false }),
+    JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false, sound_on_failed: false, sound_on_queue_done: false, tips_on_startup: false }),
   );
   const proc = start(APP_EXE, [], {
     SWIFTDM_HOME: join(work, "home"),
@@ -334,9 +334,13 @@ const scenarios = {
       ["tips", {}, "Tip of the day", "Did you know"],
       ["browser", {}, "Connect your browser", "extension"],
       ["options", { tab: "video" }, "Options", "yt-dlp"],
+      ["options", { tab: "complete" }, "Options", "A download fails"],
     ];
     if (job) cases.push(["properties", { id: job.id }, "Properties", "File name"]);
     const a11y = [...(await axeScan(main, "main"))];
+    // Sounds: the Windows sound, and a missing file falls back to it without an error.
+    await main.invoke("play_sound", { event: "failed", file: "" });
+    await main.invoke("play_sound", { event: "complete", file: "C:\\no such file.wav" });
     for (const [kind, params, title, text] of cases) {
       if (await app.hasWindow(title)) {
         const old = await app.window(title);
@@ -383,6 +387,24 @@ const scenarios = {
     await until(async () => (await main.invoke("get_state")).queues.find((q) => q.id === "main").running, 10000, 200, "/s to start the main queue");
     await main.invoke("stop_queue", { id: "main" });
     await main.invoke("remove", { ids: [waiting], deleteFiles: true }).catch(() => {});
+  },
+
+  async expired_link(app) {
+    // A download whose link expired (403) continues from a fresh link to the same file.
+    const main = await app.window("Keepfetch");
+    const old = await main.invoke("submit", { spec: { url: URL_("/e/old/build.bin"), dest_dir: DL, kind: "auto", filename: null, source: "batch" }, mode: "now" });
+    await until(async () => (await main.invoke("get_state")).jobs.find((j) => j.id === old)?.state === "FAILED", 60000, 300, "the expired link to fail");
+    const info = await addThroughUi(app, main, URL_("/e/new/build.bin"));
+    await until(async () => (await info.text()).includes("which stopped"), 10000, 200, "the offer to continue the stopped download");
+    await assertAccessible(info, "info with the stopped-download offer");
+    assert(await info.click("Continue the stopped download"), "continue");
+    const done = await until(async () => {
+      const j = (await main.invoke("get_state")).jobs.find((x) => x.id === old);
+      return j?.state === "COMPLETED" && j;
+    }, 60000, 300, "the stopped download to finish from the new link");
+    assert(done.url.endsWith("/e/new/build.bin"), `it uses the new address (${done.url})`);
+    assert((await sha256(done.final_path)) === expected()["/e/new/build.bin"].sha256, "the file is intact");
+    assert(!(await main.invoke("get_state")).jobs.some((j) => j.id !== old && j.url.includes("/e/new/")), "no second download was added");
   },
 
   async find_bar(app) {

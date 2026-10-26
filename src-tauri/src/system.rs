@@ -6,8 +6,7 @@ use std::process::Command;
 use windows::core::{HSTRING, PCWSTR};
 use windows::Win32::System::Power::SetSuspendState;
 use windows::Win32::UI::Shell::ShellExecuteW;
-use windows::Win32::System::Diagnostics::Debug::MessageBeep;
-use windows::Win32::UI::WindowsAndMessaging::{MB_ICONASTERISK, SW_SHOWNORMAL};
+use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
@@ -52,9 +51,21 @@ pub fn is_elevated() -> bool {
     unsafe { windows::Win32::UI::Shell::IsUserAnAdmin().as_bool() }
 }
 
-pub fn beep() {
+/// The sound for an event: the user's .wav file, or the Windows sound that fits.
+pub fn play_sound(event: &str, file: &str) {
+    use windows::Win32::Media::Audio::{PlaySoundW, SND_ALIAS, SND_ASYNC, SND_FILENAME, SND_NODEFAULT};
+    let file = file.trim();
     unsafe {
-        let _ = MessageBeep(MB_ICONASTERISK);
+        if !file.is_empty() && Path::new(file).is_file() {
+            let _ = PlaySoundW(&HSTRING::from(file), None, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+            return;
+        }
+        let alias = match event {
+            "failed" => "SystemHand",
+            "queue" => "SystemExclamation",
+            _ => "SystemAsterisk",
+        };
+        let _ = PlaySoundW(&HSTRING::from(alias), None, SND_ALIAS | SND_ASYNC);
     }
 }
 
