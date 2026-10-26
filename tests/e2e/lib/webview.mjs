@@ -69,17 +69,33 @@ export class Page {
     const r = await this.send("Page.captureScreenshot", { format: "png" });
     writeFileSync(path, Buffer.from(r.data, "base64"));
   }
-  /** Click a button by its text. A button that closes its own window counts as clicked. */
-  async click(text, selector = "button") {
-    try {
-      return await this.eval(`(() => { const b = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.textContent.trim() === ${JSON.stringify(text)} && !e.disabled);
-        if (!b) return false; b.click(); return true; })()`);
-    } catch (e) {
-      if (String(e).includes("window closed")) return true;
-      throw e;
+  /** Click a button by its text, waiting up to `wait` ms for it to appear and be enabled (a
+   *  button can be disabled for a moment, e.g. while a download is being set up). A button
+   *  that closes its own window counts as clicked. */
+  async click(text, selector = "button", wait = 5000) {
+    const end = Date.now() + wait;
+    for (;;) {
+      try {
+        const ok = await this.eval(`(() => { const b = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.textContent.trim() === ${JSON.stringify(text)} && !e.disabled);
+          if (!b) return false; b.click(); return true; })()`);
+        if (ok || Date.now() > end) return ok;
+      } catch (e) {
+        if (String(e).includes("window closed")) return true;
+        throw e;
+      }
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
-  fill(selector, value) {
+  /** Type into a field, waiting up to `wait` ms for it (a window may still be loading). */
+  async fill(selector, value, wait = 5000) {
+    const end = Date.now() + wait;
+    for (;;) {
+      const ok = await this.fillNow(selector, value);
+      if (ok || Date.now() > end) return ok;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+  fillNow(selector, value) {
     return this.eval(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false;
       const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : el.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
       Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, ${JSON.stringify(value)});

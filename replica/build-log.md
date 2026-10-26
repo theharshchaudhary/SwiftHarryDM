@@ -13,3 +13,6 @@
 | 2026-10-26 | virus check | done | already built (I missed it in the audit); added a notification when the scanner reports a problem — compile-checked, not e2e |
 | 2026-10-26 | S07/S08 keys and context menu | done | /api/settings/extension; rules pushed to open pages when they change (pages loaded before pairing kept stale rules). e2e Insert+click |
 | 2026-10-26 | S11 synchronization queues (F05) | done | no schema change needed (queues are JSON; replacement is a new job with spec.replaces) so replica/schema.sql's sync_checks table is not used. Completed stays terminal. Repeat-every-N-hours not built |
+| 2026-10-26 | S07 proxy (PAC, system auto-config, bypass, per protocol) | done | Resolver via reqwest Proxy::custom; yt-dlp never got a proxy before (fixed). Test kit serves proxy-form requests |
+| 2026-10-26 | e2e reliability | done | 3 real causes: info window counted its own early download as a duplicate; progress windows opened after completion stayed at 100%; harness clicked/filled before windows were ready. Stray windows closed between scenarios; failures screenshot every window. 5/5 full runs pass |
+| 2026-10-26 | Firefox add-on | deferred | needs Firefox to test, and pairing is bound to the Chrome extension ID |

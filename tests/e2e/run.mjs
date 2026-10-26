@@ -83,6 +83,39 @@ function cleanup() {
 }
 process.on("exit", cleanup);
 
+/** Each scenario starts with only the main window open (a window a scenario left behind
+ *  could be mistaken for one the next scenario waits for). */
+async function closeStrayWindows(app) {
+  for (const t of await app.targets().catch(() => [])) {
+    if (t.title === "SwiftHarryDM") continue;
+    const w = await app.window((x) => x.id === t.id, 2000).catch(() => null);
+    if (!w) continue;
+    await w.invoke("close_self").catch(() => {});
+    w.close();
+  }
+  await until(async () => (await app.targets()).every((t) => t.title === "SwiftHarryDM"), 5000, 100, "stray windows to close").catch(() => {});
+}
+
+/** Keep evidence of a failure (a screenshot of every app window), then close all windows but
+ *  the main one, so a failed scenario cannot break the ones after it. */
+async function afterFailure(app, name) {
+  try {
+    const targets = await app.targets();
+    let i = 0;
+    for (const t of targets) {
+      const w = await app.window((x) => x.id === t.id, 2000).catch(() => null);
+      if (!w) continue;
+      const tag = `${name}-${++i}-${t.title.replace(/[^\w.-]+/g, "_").slice(0, 40)}`;
+      await w.shot(join(SHOTS, `fail-${tag}.png`)).catch(() => {});
+      console.log(`    open window: ${t.title}${process.env.CI ? "" : ` (fail-${tag}.png)`}`);
+      if (t.title !== "SwiftHarryDM") await w.invoke("close_self").catch(() => {});
+      w.close();
+    }
+  } catch (e) {
+    console.log(`    could not collect the windows: ${e.message}`);
+  }
+}
+
 async function setup() {
   for (const exe of [APP_EXE, OBSERVE_EXE]) assert(existsSync(exe), `${exe} is missing; build it first (see the top of this file)`);
   const srv = start(OBSERVE_EXE, [String(SRV_PORT), join(work, "observe")]);
@@ -425,7 +458,7 @@ const scenarios = {
       assert(!(await app.hasWindow("Connect browser extension")), "no pairing code was needed");
 
       // A normal click on a PDF link: the app takes it over.
-      const tab = await chrome.tab(URL_("/p/links.html"));
+      let tab = await chrome.tab(URL_("/p/links.html"));
       await chrome.evalIn(tab, "document.getElementById('report').click()");
       const info = await app.window("Download file info", 20000);
       const infoText = await until(async () => { const t = await info.text(); return t.includes("Loading") ? null : t; }, 10000, 200, "the info window to load");
@@ -439,6 +472,11 @@ const scenarios = {
       assert(left.length === 0, `the browser's own download was cancelled and removed (${left})`);
 
       // Alt+click keeps the download in the browser.
+      // Chrome may leave the tab on an error page after handing the download over: reopen it.
+      if (!(await chrome.evalIn(tab, "!!document.getElementById('alt')").catch(() => false))) {
+        await chrome.closeTab(tab).catch(() => {});
+        tab = await chrome.tab(URL_("/p/links.html"));
+      }
       await until(() => chrome.evalIn(tab, "!!document.getElementById('alt') || location.href").then((v) => v === true || (() => { throw new Error('links tab is at ' + v); })()), 10000, 250, 'the links page');
       await chrome.evalIn(tab, "document.getElementById('alt').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, altKey: true }))");
       await sleep(400);
@@ -534,12 +572,14 @@ try {
   for (const [name, fn] of Object.entries(scenarios)) {
     if (only && !only.includes(name)) continue;
     const t0 = Date.now();
+    await closeStrayWindows(app);
     try {
       await fn(app);
       console.log(`PASS ${name} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
     } catch (e) {
       failed++;
       console.log(`FAIL ${name}: ${e.message}`);
+      await afterFailure(app, name);
     }
   }
 } catch (e) {

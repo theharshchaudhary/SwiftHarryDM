@@ -21,6 +21,12 @@ export default function Progress() {
   useEffect(() => {
     getCurrentWindow().setSize(new LogicalSize(560, details ? 520 : 300));
   }, [details]);
+  // A finished or cancelled download needs no progress window. The app closes it too, but a
+  // window that finished opening after the download ended would otherwise stay at 100%.
+  const ended = job?.state === "COMPLETED" || job?.state === "CANCELLED";
+  useEffect(() => {
+    if (ended) api.closeSelf();
+  }, [ended]);
 
   if (!live) return null;
   if (!job) return <div className="dlg-body muted">This download is no longer in the list.</div>;

@@ -7,7 +7,7 @@ HTTP/2 downloads,engine,could,yes,yes,reqwest built with http2
 Basic NTLM Negotiate Kerberos auth,engine,should,yes,partial,Basic done via login prompt; Windows auth missing
 Take over downloads from Chrome Edge Brave,browser,must,yes,yes,extension MV3
 Native messaging so the extension finds the app,browser,must,yes,yes,
-Firefox add-on,browser,should,yes,no,
+Firefox add-on,browser,should,yes,no,"deferred: Firefox not installed here to test; the API trusts the Chrome extension ID and Firefox IDs are random per install, so pairing needs a design change"
 Video download panel over web players,browser,must,yes,yes,"on/off, mini, minimum length, site exceptions, hide per player (Options > Browser). Minimum length replaces IDM's minimum size: a player knows its length, not its size"
 Catch streams a player loads (HLS DASH),video,must,yes,yes,
 Video quality picker,video,must,yes,yes,
@@ -70,7 +70,7 @@ Download quotas,options,should,yes,yes,
 Options Save to tab with temp dir,options,must,yes,yes,no temp dir: ODM writes straight into the preallocated file
 Options Downloads tab (dialog toggles UA antivirus),options,should,yes,yes,"dialog toggles, UA, virus check (on the After download tab)"
 Run antivirus on finished files,options,should,yes,yes,av_scan_command (Defender by default); a reported problem now shows a notification
-Proxy none system PAC manual SOCKS,options,should,yes,partial,SOCKS5 done; PAC and per-protocol missing
+Proxy none system PAC manual SOCKS,options,should,yes,yes,"per address: system (WinHTTP runs PAC/auto-detect), PAC URL, manual list per protocol + bypass, SOCKS5; yt-dlp gets the same proxy; tested through a proxy chosen by a PAC script"
 Site logins,options,should,yes,yes,
 Sounds per event,options,could,yes,no,
 Global speed limiter,limits,must,yes,yes,

@@ -206,6 +206,22 @@ export default function FileInfo() {
     return () => window.removeEventListener("beforeunload", off);
   }, [rid]);
 
+  // Same address already in the list? Asked once per address, before anything starts: this
+  // window's own early download must never count as a duplicate (the check below runs again
+  // when the video components or a login change).
+  useEffect(() => {
+    let alive = true;
+    setDupsChecked(false);
+    api.findDuplicates(url).then((d) => {
+      if (!alive) return;
+      setDups(d);
+      setDupsChecked(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+
   // Inspect the address: video sites go to the media engine; other links get a quick file
   // check, and if that finds a web page, the media engine is asked whether it has a video.
   useEffect(() => {
@@ -215,11 +231,6 @@ export default function FileInfo() {
     setMedia(null);
     setInfo(null);
     const t = setTimeout(async () => {
-      api.findDuplicates(url).then((d) => {
-        if (!alive) return;
-        setDups(d);
-        setDupsChecked(true);
-      });
       try {
         if (await api.isMediaUrl(url)) {
           const m = await api.inspectMedia(url);
