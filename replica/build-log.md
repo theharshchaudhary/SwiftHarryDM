@@ -10,3 +10,4 @@
 | 2026-10-25 | S18 find options | done | look in / match case / whole text in the find bar; new e2e scenario find_bar |
 | 2026-10-25 | S01 Q column | done | queue icon, clock when scheduled, tooltip; covered in find_bar |
 | 2026-10-25 | S11 queue retries, failed file to end | done | Queue.retries; test fails without the fix, passes 5/5 with it |
+| 2026-10-26 | virus check | done | already built (I missed it in the audit); added a notification when the scanner reports a problem — compile-checked, not e2e |

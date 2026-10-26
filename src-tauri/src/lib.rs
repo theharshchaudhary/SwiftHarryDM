@@ -138,6 +138,12 @@ async fn pump_events(app: AppHandle) {
                     windows::close(&app, &format!("progress-{}", s.id));
                 }
             }
+            // A virus scan that found something must be seen, not only logged.
+            Event::JobLog { job_id, level, message } if level == "warning" && message.starts_with("Antivirus") => {
+                let name = state.mgr.get(job_id).map(|s| file_label(&s)).unwrap_or_default();
+                notify(&app, "Virus check", &format!("{name}
+{message}"));
+            }
             Event::JobRemoved { job_id } => {
                 state.seen.lock().unwrap().remove(job_id);
                 windows::close(&app, &format!("progress-{job_id}"));
