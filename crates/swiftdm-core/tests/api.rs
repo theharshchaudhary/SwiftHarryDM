@@ -100,7 +100,7 @@ async fn rejects_foreign_hosts_origins_and_unpaired_callers() {
     assert_eq!(r.status().as_u16(), 403, "web pages must be refused");
     assert!(r.headers().get("access-control-allow-origin").is_none());
     let (s, v) = e.call("GET", "/health", None, None, None).await;
-    assert_eq!((s, v["app"].as_str(), v["paired"].as_bool()), (200, Some("SwiftHarryDM"), Some(false)));
+    assert_eq!((s, v["app"].as_str(), v["paired"].as_bool()), (200, Some("Keepfetch"), Some(false)));
     let (s, _) = e.call("POST", "/api/download", Some(EXT), None, Some(json!({ "url": "https://a.com/x.zip" }))).await;
     assert_eq!(s, 401);
     let (s, _) = e.call("POST", "/api/pair", None, None, None).await;

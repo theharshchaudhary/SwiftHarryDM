@@ -2391,6 +2391,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "keepfetch"
+version = "3.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "swiftdm-core",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-dialog",
+ "tauri-plugin-drag",
+ "tauri-plugin-notification",
+ "tauri-plugin-process",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "tokio",
+ "tracing",
+ "windows 0.58.0",
+]
+
+[[package]]
 name = "keyboard-types"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4524,28 +4546,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "tokio",
-]
-
-[[package]]
-name = "swiftharrydm"
-version = "3.0.0"
-dependencies = [
- "serde",
- "serde_json",
- "swiftdm-core",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-dialog",
- "tauri-plugin-drag",
- "tauri-plugin-notification",
- "tauri-plugin-process",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "tokio",
- "tracing",
- "windows 0.58.0",
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-// background.js - talks to the SwiftHarryDM desktop app on 127.0.0.1.
+// background.js - talks to the Keepfetch desktop app on 127.0.0.1.
 // The app only accepts requests carrying a token. The token comes from the app's native
 // messaging host (no typing), or from pairing with a one-time code as a fallback.
 // Browser downloads the app accepts (by file type, size and exception lists) are taken over;
@@ -55,7 +55,7 @@ class BackgroundManager {
     async request(path, { method = 'GET', body, auth = true, timeoutMs = 5000 } = {}) {
         const port = await this.findAppPort();
         if (!port) {
-            return { ok: false, status: 0, data: { error: 'SwiftHarryDM is not running' } };
+            return { ok: false, status: 0, data: { error: 'Keepfetch is not running' } };
         }
         const headers = {};
         if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -74,7 +74,7 @@ class BackgroundManager {
             return { ok: r.ok, status: r.status, data };
         } catch (e) {
             this.appPort = null;
-            return { ok: false, status: 0, data: { error: 'Cannot reach SwiftHarryDM' } };
+            return { ok: false, status: 0, data: { error: 'Cannot reach Keepfetch' } };
         } finally {
             clearTimeout(timer);
         }
@@ -88,7 +88,8 @@ class BackgroundManager {
             try {
                 const r = await fetch(`http://127.0.0.1:${port}/health`, { signal: ctrl.signal });
                 const data = await r.json();
-                if (r.ok && data.app === 'SwiftHarryDM') {
+                // 'SwiftHarryDM': the app's name before version 3.1, still answering on the same port.
+                if (r.ok && (data.app === 'Keepfetch' || data.app === 'SwiftHarryDM')) {
                     this.appPort = port;
                     this.apiVersion = data.api || 0;
                     return port;
@@ -192,7 +193,7 @@ class BackgroundManager {
             // The app could not take it: give the download back to the browser.
             this.resent.add(url);
             chrome.downloads.download({ url });
-            this.notify('SwiftHarryDM', `Could not take over the download: ${r.data.error || 'HTTP ' + r.status}`);
+            this.notify('Keepfetch', `Could not take over the download: ${r.data.error || 'HTTP ' + r.status}`);
         }
     }
 
@@ -247,7 +248,7 @@ class BackgroundManager {
         list.push(s);
         const trimmed = list.slice(-15);
         await chrome.storage.session.set({ [key]: trimmed });
-        chrome.action.setBadgeBackgroundColor({ tabId: d.tabId, color: '#2c5f8a' }).catch(() => {});
+        chrome.action.setBadgeBackgroundColor({ tabId: d.tabId, color: '#6d28d9' }).catch(() => {});
         chrome.action.setBadgeText({ tabId: d.tabId, text: String(trimmed.length) }).catch(() => {});
     }
 
@@ -260,7 +261,7 @@ class BackgroundManager {
     async sendLinks(urls, pageUrl, texts) {
         const unique = [...new Set(urls.filter((u) => /^https?:/i.test(u)))].slice(0, 5000);
         if (!unique.length) {
-            this.notify('SwiftHarryDM', 'No links were found.');
+            this.notify('Keepfetch', 'No links were found.');
             return { success: false };
         }
         const body = { urls: unique };
@@ -268,7 +269,7 @@ class BackgroundManager {
         if (texts) body.texts = Object.fromEntries(unique.filter((u) => texts[u]).map((u) => [u, texts[u]]));
         const r = await this.request('/api/links', { method: 'POST', body });
         if (!r.ok) {
-            this.notify('Links not sent', r.status === 401 ? 'Connect the extension to SwiftHarryDM first.' : (r.data.error || `HTTP ${r.status}`));
+            this.notify('Links not sent', r.status === 401 ? 'Connect the extension to Keepfetch first.' : (r.data.error || `HTTP ${r.status}`));
             return { success: false };
         }
         return { success: true, count: r.data.count };
@@ -334,7 +335,7 @@ class BackgroundManager {
         if (cookies) body.cookies = cookies;
         const r = await this.request('/api/download', { method: 'POST', body });
         if (r.status === 401) {
-            this.notify('Pair SwiftHarryDM first', 'Click the SwiftHarryDM toolbar icon and connect to the app.');
+            this.notify('Pair Keepfetch first', 'Click the Keepfetch toolbar icon and connect to the app.');
             return { success: false, error: 'Not paired with the app' };
         }
         if (!r.ok) {
@@ -343,9 +344,9 @@ class BackgroundManager {
             return { success: false, error: msg };
         }
         const status = r.data.status;
-        const text = status === 'pending_confirmation' ? 'Confirm the download in the SwiftHarryDM window.'
+        const text = status === 'pending_confirmation' ? 'Confirm the download in the Keepfetch window.'
             : status === 'queued' ? 'Added to the queue.' : 'Download started.';
-        this.notify('SwiftHarryDM', `${body.title || body.url}: ${text}`);
+        this.notify('Keepfetch', `${body.title || body.url}: ${text}`);
         return { success: true, status, jobId: r.data.job_id, requestId: r.data.request_id, message: text };
     }
 
@@ -356,13 +357,13 @@ class BackgroundManager {
     createContextMenu(menu = DEFAULT_RULES.menu) {
         // removeAll first: the service worker restarts often and duplicate ids throw.
         chrome.contextMenus.removeAll(() => {
-            if (menu.downloadWith) chrome.contextMenus.create({ id: 'download-with-swiftharry', title: 'Download with SwiftHarryDM',
+            if (menu.downloadWith) chrome.contextMenus.create({ id: 'download-with-keepfetch', title: 'Download with Keepfetch',
                                          contexts: ['video', 'audio', 'link'] });
             if (menu.pageMedia) chrome.contextMenus.create({ id: 'download-page-media', title: 'Download all media from page',
                                          contexts: ['page'] });
-            if (menu.allLinks) chrome.contextMenus.create({ id: 'download-all-links', title: 'Download all links with SwiftHarryDM',
+            if (menu.allLinks) chrome.contextMenus.create({ id: 'download-all-links', title: 'Download all links with Keepfetch',
                                          contexts: ['page'] });
-            if (menu.selectedLinks) chrome.contextMenus.create({ id: 'download-selected-links', title: 'Download selected links with SwiftHarryDM',
+            if (menu.selectedLinks) chrome.contextMenus.create({ id: 'download-selected-links', title: 'Download selected links with Keepfetch',
                                          contexts: ['selection'] });
         });
     }
@@ -399,7 +400,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab || tab.id === undefined) return;
     // Page actions go to the top frame only; a clicked element's action goes to its frame.
     const toTab = (msg, frameId = 0) => chrome.tabs.sendMessage(tab.id, msg, { frameId }).catch(() => {});
-    if (info.menuItemId === 'download-with-swiftharry') {
+    if (info.menuItemId === 'download-with-keepfetch') {
         if (info.mediaType === 'video' || info.mediaType === 'audio') {
             toTab({ action: 'contextMenuDownload', context: info }, info.frameId || 0);
         } else if (info.linkUrl) {

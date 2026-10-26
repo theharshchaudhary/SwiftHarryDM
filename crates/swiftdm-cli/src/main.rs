@@ -1,4 +1,4 @@
-//! swiftdm-cli: headless downloads with the SwiftHarryDM engine, plus the crash-recovery and
+//! swiftdm-cli: headless downloads with the Keepfetch engine, plus the crash-recovery and
 //! performance checks used before releases.
 //!
 //!   swiftdm-cli get <url> --dir <folder> [--home <folder>] [--connections N] [--format 720]

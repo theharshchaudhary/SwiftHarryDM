@@ -8,7 +8,7 @@
 //! >
 //! ```
 //!
-//! so lists move between them and SwiftHarryDM in both directions.
+//! so lists move between them and Keepfetch in both directions.
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Ef2Entry {

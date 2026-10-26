@@ -26,7 +26,7 @@ export default function Pairing() {
     >
       <div className="row" style={{ gap: 12 }}>
         <div style={{ color: "var(--accent)" }}><Icon name="link" size={34} /></div>
-        <div>A browser extension wants to connect to SwiftHarryDM. To allow it, type this code in the extension:</div>
+        <div>A browser extension wants to connect to Keepfetch. To allow it, type this code in the extension:</div>
       </div>
       <div className="countdown mono" style={{ letterSpacing: "0.25em", fontSize: 38 }}>{code.slice(0, 3)} {code.slice(3)}</div>
       <div className="hint">The code works once and expires in 2 minutes. If you did not start this, choose “Don’t allow”.</div>

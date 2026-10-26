@@ -67,7 +67,7 @@ function TwiceCancelled({ url, onClose }: { url: string; onClose: () => void }) 
         </>
       }
     >
-      <div>You have cancelled this download twice. If SwiftHarryDM takes it over by mistake, the browser can keep it from now on:</div>
+      <div>You have cancelled this download twice. If Keepfetch takes it over by mistake, the browser can keep it from now on:</div>
       <Check checked={site} onChange={setSite}>Don’t take over downloads from this site: <b>{host}</b></Check>
       <Check checked={addr} onChange={setAddr}>Don’t take over this address</Check>
       <div className="hint">Both lists are on Options › File types.</div>

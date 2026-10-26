@@ -18,7 +18,7 @@ import { App, sleep, until } from "./lib/webview.mjs";
 import { Chrome } from "./lib/chrome.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const APP_EXE = join(ROOT, "target", "debug", "swiftharrydm.exe");
+const APP_EXE = join(ROOT, "target", "debug", "keepfetch.exe");
 const OBSERVE_EXE = join(ROOT, "target", "debug", "sdm-observe.exe");
 const CHROME = [
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -103,13 +103,13 @@ process.on("exit", cleanup);
  *  could be mistaken for one the next scenario waits for). */
 async function closeStrayWindows(app) {
   for (const t of await app.targets().catch(() => [])) {
-    if (t.title === "SwiftHarryDM") continue;
+    if (t.title === "Keepfetch") continue;
     const w = await app.window((x) => x.id === t.id, 2000).catch(() => null);
     if (!w) continue;
     await w.invoke("close_self").catch(() => {});
     w.close();
   }
-  await until(async () => (await app.targets()).every((t) => t.title === "SwiftHarryDM"), 5000, 100, "stray windows to close").catch(() => {});
+  await until(async () => (await app.targets()).every((t) => t.title === "Keepfetch"), 5000, 100, "stray windows to close").catch(() => {});
 }
 
 /** Keep evidence of a failure (a screenshot of every app window), then close all windows but
@@ -124,7 +124,7 @@ async function afterFailure(app, name) {
       const tag = `${name}-${++i}-${t.title.replace(/[^\w.-]+/g, "_").slice(0, 40)}`;
       await w.shot(join(SHOTS, `fail-${tag}.png`)).catch(() => {});
       console.log(`    open window: ${t.title}${process.env.CI ? "" : ` (fail-${tag}.png)`}`);
-      if (t.title !== "SwiftHarryDM") await w.invoke("close_self").catch(() => {});
+      if (t.title !== "Keepfetch") await w.invoke("close_self").catch(() => {});
       w.close();
     }
   } catch (e) {
@@ -206,7 +206,7 @@ async function apiBase() {
     for (const p of [5001, 5002]) {
       try {
         const r = await fetch(`http://127.0.0.1:${p}/health`);
-        if ((await r.json()).app === "SwiftHarryDM") return `http://127.0.0.1:${p}`;
+        if ((await r.json()).app === "Keepfetch") return `http://127.0.0.1:${p}`;
       } catch {
         /* next */
       }
@@ -219,7 +219,7 @@ async function apiBase() {
 // ------------------------------------------------------------------ scenarios
 const scenarios = {
   async small_file(app) {
-    const main = await app.window("SwiftHarryDM");
+    const main = await app.window("Keepfetch");
     const info = await addThroughUi(app, main, URL_("/s6/get"));
     const t = await info.text();
     assert(t.includes("300,000 bytes"), "the info window shows the size");
@@ -257,7 +257,7 @@ const scenarios = {
   async starts_while_info_is_open(app) {
     // The file downloads while "Download file info" is open; the folder chosen
     // there is applied when Start is pressed. Cancel removes the download and its data.
-    const main = await app.window("SwiftHarryDM");
+    const main = await app.window("Keepfetch");
     const info = await addThroughUi(app, main, URL_("/s1/big64.bin"));
     await until(async () => /\d MB \(\d+%\)/.test(await info.text()), 20000, 250, "the early download to show progress");
     const other = join(work, "elsewhere");
@@ -279,7 +279,7 @@ const scenarios = {
 
   async login_when_asked(app) {
     // A server asks for a login; it is typed once and saved.
-    const main = await app.window("SwiftHarryDM");
+    const main = await app.window("Keepfetch");
     await main.click("Add URL");
     const add = await app.window("Add download");
     await add.fill("#u", URL_("/a/secret.bin"));
@@ -301,7 +301,7 @@ const scenarios = {
   },
 
   async pause_resume(app) {
-    const main = await app.window("SwiftHarryDM");
+    const main = await app.window("Keepfetch");
     const s = await main.invoke("get_state");
     await main.invoke("save_settings", { settings: { ...s.settings, speed_limit: 6 * 1024 * 1024 } });
     const info = await addThroughUi(app, main, URL_("/s4/stall.bin"));
@@ -323,14 +323,14 @@ const scenarios = {
   },
 
   async every_window_opens(app) {
-    const main = await app.window("SwiftHarryDM");
+    const main = await app.window("Keepfetch");
     const job = (await main.invoke("get_state")).jobs[0];
     const cases = [
       ["options", {}, "Options", "Connection"],
       ["scheduler", {}, "Scheduler", "Start this queue automatically"],
       ["batch", {}, "Batch download", "Replace * with"],
       ["links", { source: "typed", urls: JSON.stringify(["https://a.example/1.zip"]) }, "Choose files to download", "1.zip"],
-      ["about", {}, "About SwiftHarryDM", "Version"],
+      ["about", {}, "About Keepfetch", "Version"],
       ["tips", {}, "Tip of the day", "Did you know"],
       ["browser", {}, "Connect your browser", "extension"],
       ["options", { tab: "video" }, "Options", "yt-dlp"],
@@ -356,7 +356,7 @@ const scenarios = {
   },
 
   async drop_target_and_command_line(app) {
-    const main = await app.window("SwiftHarryDM");
+    const main = await app.window("Keepfetch");
     await main.invoke("open_window", { kind: "drop", params: {} });
     const drop = await app.window("Drop target");
     await drop.shot(join(SHOTS, "drop-target.png"));
@@ -387,7 +387,7 @@ const scenarios = {
 
   async find_bar(app) {
     // Downloads > Find: where to look, match case, whole text only.
-    const main = await app.window("SwiftHarryDM");
+    const main = await app.window("Keepfetch");
     await main.eval("window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true }))");
     await until(() => main.eval("!!document.querySelector('input[aria-label=Find]')"), 5000, 100, "the find bar");
     const find = async (text, { field = "any", matchCase = false, whole = false } = {}) => {
@@ -457,7 +457,7 @@ const scenarios = {
     const twiceUrl = URL_("/s3/cut.bin"); // not used by any other step
     for (const round of [1, 2]) {
       await until(async () => !(await app.hasWindow("Download file info")), 10000, 200, "earlier windows to close");
-      if (process.env.SDM_DEBUG) console.log(`    round ${round} jobs: ${JSON.stringify((await (await app.window("SwiftHarryDM")).invoke("get_state")).jobs.map((j) => [j.url.slice(-12), j.state, j.source]))}`);
+      if (process.env.SDM_DEBUG) console.log(`    round ${round} jobs: ${JSON.stringify((await (await app.window("Keepfetch")).invoke("get_state")).jobs.map((j) => [j.url.slice(-12), j.state, j.source]))}`);
       const [st] = await call("POST", "/api/download", { url: twiceUrl, fileName: "cut.bin", mode: "now" }, v2.token);
       assert(st === 202, `request ${round} waits for confirmation`);
       const w = await app.window("Download file info");
@@ -469,7 +469,7 @@ const scenarios = {
       }
       await until(async () => !(await app.hasWindow("Download file info")), 10000, 200, "the window to close");
     }
-    const settings = (await (await app.window("SwiftHarryDM")).invoke("get_state")).settings;
+    const settings = (await (await app.window("Keepfetch")).invoke("get_state")).settings;
     assert(settings.capture_skip_urls.includes(twiceUrl), "the address was added to the exceptions");
   },
 
@@ -536,10 +536,10 @@ const scenarios = {
 
       // Hovering a player shows "Download this video"; its panel lists the app's formats.
       const vtab = await chrome.tab(URL_("/p/video.html"));
-      const shadow = "document.querySelector('swiftharrydm-overlay').shadowRoot";
+      const shadow = "document.querySelector('keepfetch-overlay').shadowRoot";
       await until(async () => {
         await chrome.evalIn(vtab, "document.getElementById('v').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))");
-        return chrome.evalIn(vtab, `!!document.querySelector('swiftharrydm-overlay') && ${shadow}.querySelector('.pill').style.display === 'flex'`);
+        return chrome.evalIn(vtab, `!!document.querySelector('keepfetch-overlay') && ${shadow}.querySelector('.pill').style.display === 'flex'`);
       }, 15000, 300, "the Download this video button");
       await chrome.evalIn(vtab, `${shadow}.querySelector('.pill').click()`);
       const nFormats = await until(
@@ -566,7 +566,7 @@ const scenarios = {
       assert(!streams.some((x) => x.url.endsWith(".ts")), "stream fragments are not listed");
       await until(async () => {
         await chrome.evalIn(htab, "document.getElementById('v').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))");
-        return chrome.evalIn(htab, `!!document.querySelector('swiftharrydm-overlay') && ${shadow}.querySelector('.pill').style.display === 'flex'`);
+        return chrome.evalIn(htab, `!!document.querySelector('keepfetch-overlay') && ${shadow}.querySelector('.pill').style.display === 'flex'`);
       }, 15000, 300, "the Download this video button on the stream page");
       await chrome.evalIn(htab, `${shadow}.querySelector('.pill').click()`);
       const picked = await until(
@@ -601,7 +601,7 @@ const scenarios = {
 
   async site_grabber(app) {
     // Tasks > Site grabber: the 4 steps, explore the links page, download what it found.
-    const main = await app.window("SwiftHarryDM");
+    const main = await app.window("Keepfetch");
     await main.invoke("open_window", { kind: "grabber", params: {} });
     const g = await app.window("Site grabber");
     await g.fill("input[aria-label='Start page']", URL_("/p/links.html"));

@@ -44,7 +44,7 @@ const WINDOWS: Record<string, () => JSX.Element | null> = {
 };
 
 const TITLES: Record<string, string> = {
-  main: "SwiftHarryDM",
+  main: "Keepfetch",
   add: "Add download",
   info: "Download file info",
   progress: "Download progress",
@@ -54,8 +54,8 @@ const TITLES: Record<string, string> = {
   batch: "Batch download",
   links: "Choose files to download",
   properties: "Properties",
-  about: "About SwiftHarryDM",
-  countdown: "SwiftHarryDM",
+  about: "About Keepfetch",
+  countdown: "Keepfetch",
   pairing: "Connect browser extension",
   browser: "Connect your browser",
   drop: "Drop target",
@@ -65,7 +65,7 @@ const TITLES: Record<string, string> = {
 };
 
 const kind = windowParams().get("w") ?? "main";
-document.title = TITLES[kind] ?? "SwiftHarryDM";
+document.title = TITLES[kind] ?? "Keepfetch";
 const View = WINDOWS[kind] ?? Unknown;
 
 autoLabel();

@@ -11,14 +11,14 @@ const TIPS = [
   "Right-click a download and choose “Refresh download address” when a link has expired: the part already downloaded is kept.",
   "Queues can start and stop at set times. Open the Scheduler, pick a queue, and set its days and times.",
   "Speed limiter: Downloads › Speed limiter turns it on and off; each download can also have its own limit in its progress window.",
-  "Copy a link to a file and SwiftHarryDM offers to download it, when “Offer to download links I copy” is on in Options.",
+  "Copy a link to a file and Keepfetch offers to download it, when “Offer to download links I copy” is on in Options.",
   "Tasks › Add batch download fetches numbered files like photo001.jpg to photo120.jpg in one go.",
   "Right-click a web page and choose “Download all links” to pick files from the page, filtered by type.",
   "Tasks › Export and Import move your list to and from other download managers that use .ef2 files.",
   "The Q column shows which queue a download belongs to. Drag downloads onto a queue on the left to move them.",
   "View › Font changes the font and size of every window.",
   "Use “Preview the files in this ZIP” in the “Download file info” window to see what an archive contains before downloading it.",
-  "SwiftHarryDM starts with Windows and waits in the notification area, ready to take over downloads from your browser.",
+  "Keepfetch starts with Windows and waits in the notification area, ready to take over downloads from your browser.",
 ];
 
 /** Tip of the day. */

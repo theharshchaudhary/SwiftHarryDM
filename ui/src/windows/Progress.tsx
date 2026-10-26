@@ -203,7 +203,7 @@ function DoneTab({ job }: { job: Job }) {
         {(
           [
             ["none", "Do nothing"],
-            ["exit", "Exit SwiftHarryDM"],
+            ["exit", "Exit Keepfetch"],
             ["sleep", "Put the computer to sleep"],
             ["hibernate", "Hibernate the computer"],
             ["shutdown", "Shut down the computer"],

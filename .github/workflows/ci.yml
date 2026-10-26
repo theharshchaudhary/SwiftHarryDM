@@ -30,7 +30,7 @@ jobs:
       - name: Core tests
         run: cargo test -p swiftdm-core
       - name: App tests
-        run: cargo test -p swiftharrydm
+        run: cargo test -p keepfetch
       - name: Build the app and the test server
         run: |
           cargo build -p swiftdm-testkit --bin sdm-observe

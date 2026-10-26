@@ -1,5 +1,5 @@
 //! Browser integration that needs no typing: the app registers itself as a native messaging
-//! host for Chrome and Edge, so the SwiftHarryDM extension (and only it: the browser checks
+//! host for Chrome and Edge, so the Keepfetch extension (and only it: the browser checks
 //! the extension ID) can ask for its access token directly. When the extension is published
 //! in the stores, the store IDs below make the browsers offer it automatically.
 use std::io::{Read, Write};
@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use serde_json::{json, Value};
 use windows::core::HSTRING;
-use windows::Win32::System::Registry::{RegSetKeyValueW, HKEY_CURRENT_USER, REG_SZ};
+use windows::Win32::System::Registry::{RegDeleteKeyValueW, RegSetKeyValueW, HKEY_CURRENT_USER, REG_SZ};
 
 pub const HOST_NAME: &str = "np.com.harshchaudhary.swiftharrydm";
 /// ID of the extension as shipped with the app (fixed by the "key" in its manifest).
@@ -40,6 +40,13 @@ pub fn set_reg(key: &str, name: Option<&str>, value: &str) -> windows::core::Res
     }
 }
 
+/// Remove one value under HKEY_CURRENT_USER (a missing value is fine).
+pub fn delete_reg_value(key: &str, name: &str) {
+    unsafe {
+        let _ = RegDeleteKeyValueW(HKEY_CURRENT_USER, &HSTRING::from(key), &HSTRING::from(name));
+    }
+}
+
 /// Register (or refresh) the native messaging host and the store install hints. Runs at every
 /// start, so moving or updating the app keeps the registration correct.
 pub fn register() {
@@ -62,7 +69,7 @@ pub fn register() {
     let origins: Vec<String> = allowed_ids().iter().map(|id| format!("chrome-extension://{id}/")).collect();
     let body = json!({
         "name": HOST_NAME,
-        "description": "SwiftHarryDM download manager",
+        "description": "Keepfetch download manager",
         "path": host_path.to_string_lossy(),
         "type": "stdio",
         "allowed_origins": origins,

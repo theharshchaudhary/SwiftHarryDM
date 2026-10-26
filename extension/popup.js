@@ -14,9 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const s = await send({ action: 'checkAppStatus' });
         const connected = s && s.connected;
         const paired = connected && s.paired;
-        if (!connected) setStatus('SwiftHarryDM is not running', false);
-        else if (!paired) setStatus('SwiftHarryDM found, not connected yet', false);
-        else setStatus(`Connected to SwiftHarryDM ${s.version}`, true);
+        if (!connected) setStatus('Keepfetch is not running', false);
+        else if (!paired) setStatus('Keepfetch found, not connected yet', false);
+        else setStatus(`Connected to Keepfetch ${s.version}`, true);
         $('pairBox').classList.toggle('hidden', !connected || paired);
         $('actions').classList.toggle('hidden', !paired);
         $('unpairBtn').classList.toggle('hidden', !paired);
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         pairingId = r.pairingId;
         $('pairStep2').classList.remove('hidden');
-        setStatus('Type the code shown by SwiftHarryDM', false);
+        setStatus('Type the code shown by Keepfetch', false);
         $('pairCode').focus();
     });
     $('pairConfirmBtn').addEventListener('click', async () => {

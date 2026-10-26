@@ -23,25 +23,25 @@
 
 ```powershell
 ui\node_modules\.bin\tauri dev                       # hot-reloading UI
-ui\node_modules\.bin\tauri build --debug --no-bundle  # target\debug\swiftharrydm.exe
+ui\node_modules\.bin\tauri build --debug --no-bundle  # target\debug\keepfetch.exe
 ```
 
 Run all `tauri` commands from the repository root.
 
 `SWIFTDM_HOME=<folder>` makes the app keep its database, settings and logs in that folder
-instead of `%LOCALAPPDATA%\SwiftHarryDM` (useful for a clean profile).
+instead of `%LOCALAPPDATA%\Keepfetch` (useful for a clean profile).
 
 ## Tests
 
 | Command | What it covers |
 |---|---|
 | `cargo test -p swiftdm-core` | State machine, store, manager (incl. randomized crash test), HTTP fault matrix, API security and pairing, media engine with a stand-in yt-dlp |
-| `cargo test -p swiftharrydm` | App shell helpers (native messaging framing) |
+| `cargo test -p keepfetch` | App shell helpers (native messaging framing) |
 | `node tests/e2e/run.mjs` | The built debug app with a throwaway profile, driven over WebView2 DevTools, and the extension in a real headless Chrome; every download is checked by SHA-256 |
 | `swiftdm-cli kill-test` | Starts real downloads in a child process, kills it with TerminateProcess at random moments, restarts it, and checks each file's SHA-256 and that no stray files remain |
 | `swiftdm-cli bench` | Throughput and peak memory with 1 and 8 connections on a large generated file |
 
-The end-to-end tests need `target\debug\swiftharrydm.exe` and `target\debug\sdm-observe.exe`
+The end-to-end tests need `target\debug\keepfetch.exe` and `target\debug\sdm-observe.exe`
 (`cargo build -p swiftdm-testkit --bin sdm-observe`). Use `--only <scenario>` and `--keep`
 to keep screenshots.
 

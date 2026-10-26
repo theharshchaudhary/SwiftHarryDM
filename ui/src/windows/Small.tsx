@@ -15,7 +15,7 @@ export function About() {
           <Icon name="all" size={48} />
         </div>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 600 }}>SwiftHarryDM</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>Keepfetch</div>
           <div className="muted">Version {live.version}</div>
         </div>
       </div>
@@ -27,7 +27,7 @@ export function About() {
 
 const ACTION_TEXT: Record<AfterAction, string> = {
   none: "",
-  exit: "SwiftHarryDM will close",
+  exit: "Keepfetch will close",
   sleep: "The computer will go to sleep",
   hibernate: "The computer will hibernate",
   shutdown: "The computer will shut down",

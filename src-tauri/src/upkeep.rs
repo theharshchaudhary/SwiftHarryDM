@@ -87,7 +87,7 @@ pub async fn check_update(app: AppHandle) -> R<Option<UpdateInfo>> {
 /// first and resume after the restart.
 #[tauri::command]
 pub async fn install_update(app: AppHandle) -> R<()> {
-    let u = find_update(&app).await?.ok_or("SwiftHarryDM is up to date.")?;
+    let u = find_update(&app).await?.ok_or("Keepfetch is up to date.")?;
     let a = app.clone();
     let mut got = 0u64;
     let bytes = u
@@ -115,7 +115,7 @@ pub async fn update_loop(app: AppHandle) {
             let _ = app.emit("core", json!({ "type": "update_available", "update": info }));
             *app.state::<AppState>().update.lock().unwrap() = Some(info.clone());
             if told.as_deref() != Some(&info.version) {
-                crate::notify(&app, "Update available", &format!("SwiftHarryDM {} is ready. Click “Update now” in the main window.", info.version));
+                crate::notify(&app, "Update available", &format!("Keepfetch {} is ready. Click “Update now” in the main window.", info.version));
                 told = Some(info.version);
             }
         }

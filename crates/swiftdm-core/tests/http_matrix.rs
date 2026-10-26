@@ -156,7 +156,7 @@ async fn forbidden_browser_agent_retries_as_ourselves() {
     ok(&e.run(&e.srv.add("/ua.bin", Resource::new(b.clone()).statuses(&[403])), 60).await, &b);
     let ua: Vec<_> = e.srv.requests("/ua.bin").into_iter().map(|r| r.user_agent.unwrap_or_default()).collect();
     assert!(ua[0].starts_with("Mozilla/"), "{ua:?}");
-    assert!(ua[1].starts_with("SwiftHarryDM/"), "{ua:?}");
+    assert!(ua[1].starts_with("Keepfetch/"), "{ua:?}");
 }
 
 #[tokio::test(flavor = "multi_thread")]

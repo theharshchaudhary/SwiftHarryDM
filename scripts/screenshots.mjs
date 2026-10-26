@@ -29,7 +29,7 @@ writeFileSync(
   join(work, "home", "settings3.json"),
   JSON.stringify({ download_dir: DL, proxy_mode: "none", clipboard_monitor: false, sound_on_complete: false, theme: "light", tips_on_startup: false }),
 );
-const proc = spawn(join(ROOT, "target", "debug", "swiftharrydm.exe"), [], {
+const proc = spawn(join(ROOT, "target", "debug", "keepfetch.exe"), [], {
   env: { ...process.env, SWIFTDM_HOME: join(work, "home"), SWIFTDM_DEVTOOLS_PORT: String(CDP_PORT) },
   stdio: "ignore",
 });
@@ -43,7 +43,7 @@ const shot = async (w, name) => {
 const app = new App(CDP_PORT);
 try {
   await until(() => app.targets().then((t) => t.length > 0), 60000, 300, "the app to start");
-  const main = await app.window("SwiftHarryDM");
+  const main = await app.window("Keepfetch");
   const spec = (url, extra = {}) => ({ url, dest_dir: DL, source: "batch", ...extra });
   await main.invoke("submit", { spec: spec(FILES.pdf), mode: "now" });
   await sleep(3000);

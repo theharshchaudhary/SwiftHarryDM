@@ -184,7 +184,7 @@ function MainView({ live }: { live: Live }) {
   useEffect(() => {
     if (pref<boolean>("dropTarget", false)) api.openWindow("drop");
   }, []);
-  // Tip of the day when the window opens (not when SwiftHarryDM starts hidden in the tray).
+  // Tip of the day when the window opens (not when Keepfetch starts hidden in the tray).
   const tipsShown = useRef(false);
   useEffect(() => {
     if (tipsShown.current || !live?.settings.tips_on_startup || document.visibilityState !== "visible") return;
@@ -233,7 +233,7 @@ function MainView({ live }: { live: Live }) {
     try {
       const u = await api.checkUpdate();
       if (u) setUpdate(u);
-      else alert(`SwiftHarryDM ${live.version} is the latest version.`);
+      else alert(`Keepfetch ${live.version} is the latest version.`);
     } catch (e) {
       alert(String(e));
     }
@@ -565,13 +565,13 @@ function MainView({ live }: { live: Live }) {
         { label: "Keyboard shortcuts", onClick: () => alert("Ctrl+N  Add download\nCtrl+F  Find\nF3  Find next\nDel  Delete\nEnter  Open / show progress\nCtrl+A  Select all") },
         { label: "Tip of the day…", onClick: () => api.openWindow("tips") },
         "sep",
-        { label: "SwiftHarryDM home page", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM") },
+        { label: "Keepfetch home page", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM") },
         { label: "Report a problem", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM/issues") },
         { label: "Connect your browser…", onClick: () => api.openWindow("browser") },
         "sep",
         { label: "Check for updates…", onClick: checkUpdates },
         "sep",
-        { label: "About SwiftHarryDM", onClick: () => api.openWindow("about") },
+        { label: "About Keepfetch", onClick: () => api.openWindow("about") },
       ],
     },
   ];
@@ -731,7 +731,7 @@ function MainView({ live }: { live: Live }) {
       {elevated && (
         <div className="topbanner warn" role="status">
           <Icon name="warning" size={16} />
-          <span>SwiftHarryDM is running as administrator, so Windows blocks dragging links and files into it from other programs. Start it normally to drag and drop.</span>
+          <span>Keepfetch is running as administrator, so Windows blocks dragging links and files into it from other programs. Start it normally to drag and drop.</span>
           <span style={{ flex: 1 }} />
           <button className="btn small" title="Hide" onClick={() => setElevated(false)}><Icon name="close" size={12} /></button>
         </div>
@@ -741,11 +741,11 @@ function MainView({ live }: { live: Live }) {
           <Icon name="all" size={16} />
           {updating ? (
             <span>
-              Updating to {update?.version}… {updating.total ? `${Math.round((updating.done / updating.total) * 100)}%` : ""} SwiftHarryDM restarts by itself and your downloads continue.
+              Updating to {update?.version}… {updating.total ? `${Math.round((updating.done / updating.total) * 100)}%` : ""} Keepfetch restarts by itself and your downloads continue.
             </span>
           ) : (
             <>
-              <span>{updateErr ? <span className="err">{updateErr}</span> : <>SwiftHarryDM {update?.version} is available.</>}</span>
+              <span>{updateErr ? <span className="err">{updateErr}</span> : <>Keepfetch {update?.version} is available.</>}</span>
               <button className="btn small primary" onClick={installUpdate}>Update now</button>
               {update?.notes && <span className="muted ellipsis" style={{ maxWidth: 420 }} title={update.notes}>{update.notes.split("\n")[0]}</span>}
               <span style={{ flex: 1 }} />
@@ -880,9 +880,9 @@ function MainView({ live }: { live: Live }) {
           </table>
           {rows.length === 0 && (
             <div className="empty">
-              <p>No downloads here.</p>
+              <p>Nothing here yet.</p>
               <p>
-                Press <b>Add URL</b>, paste a link with Ctrl+N, or drag a link onto this window.
+                Click <b>Add URL</b> (Ctrl+N) or drop a link on this window. Downloads you start in your browser land here too.
               </p>
             </div>
           )}

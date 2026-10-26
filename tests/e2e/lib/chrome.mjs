@@ -1,4 +1,4 @@
-// A real Chrome with the unpacked SwiftHarryDM extension, driven over the DevTools pipe
+// A real Chrome with the unpacked Keepfetch extension, driven over the DevTools pipe
 // (branded Chrome ignores --load-extension; Extensions.loadUnpacked works over the pipe).
 import { spawn } from "node:child_process";
 import { sleep } from "./webview.mjs";

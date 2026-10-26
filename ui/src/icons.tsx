@@ -1,4 +1,4 @@
-// SwiftHarryDM's own icon set: 24x24 stroke drawings, coloured with currentColor.
+// Keepfetch's own icon set: 24x24 stroke drawings, coloured with currentColor.
 import type { ReactElement } from "react";
 
 const paths: Record<string, ReactElement> = {

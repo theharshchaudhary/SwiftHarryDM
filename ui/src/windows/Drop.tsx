@@ -53,7 +53,7 @@ export default function Drop() {
         // A native menu: the window is too small to hold one.
         const m = await Menu.new({
           items: [
-            { id: "open", text: "Open SwiftHarryDM", action: () => api.showMain() },
+            { id: "open", text: "Open Keepfetch", action: () => api.showMain() },
             {
               id: "hide",
               text: "Hide drop target",
@@ -73,13 +73,13 @@ export default function Drop() {
     >
       <div
         data-tauri-drag-region
-        title="Drop links here to download them. Drag to move; double-click to open SwiftHarryDM."
+        title="Drop links here to download them. Drag to move; double-click to open Keepfetch."
         onDoubleClick={() => api.showMain()}
         style={{
           width: 64,
           height: 64,
           borderRadius: "50%",
-          background: over ? "#3a7bb3" : "#2c5f8a",
+          background: over ? "#7c3aed" : "#6d28d9",
           boxShadow: "0 3px 10px rgba(0,0,0,.35)",
           display: "grid",
           placeItems: "center",

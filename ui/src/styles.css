@@ -1,4 +1,4 @@
-/* SwiftHarryDM desktop UI. Colours come from the app's own palette (blue #2C5F8A, amber #E8A735). */
+/* Keepfetch desktop UI. Colours come from the app's own palette (violet #6D28D9); tokens in replica/design. */
 :root {
   --bg: #f4f6f9;
   --surface: #ffffff;
@@ -8,19 +8,19 @@
   --text-2: #56657a;
   --border: #d5dde6;
   --border-strong: #8593a3;
-  --accent: #2c5f8a;
-  --accent-2: #3a7bb3;
-  --accent-soft: #dce9f5;
+  --accent: #6d28d9;
+  --accent-2: #7c3aed;
+  --accent-soft: #ede9fe;
   --on-accent: #ffffff;
   --amber: #e8a735;
   --ok: #23794b;
   --warn: #9a5c00;
   --err: #c83a32;
-  --sel: #cfe2f6;
-  --sel-text: #0f2235;
+  --sel: #e4dcfb;
+  --sel-text: #1e1033;
   --row-alt: #f8fafc;
-  --bar-track: #dfe7ef;
-  --bar: #3a7bb3;
+  --bar-track: #e6e1f2;
+  --bar: #7c3aed;
   --bar-done: #2e8b57;
   --shadow: 0 6px 24px rgba(20, 35, 55, 0.18);
   --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
@@ -36,15 +36,15 @@
     --text-2: #9aa7b5;
     --border: #39414b;
     --border-strong: #6b7786;
-    --accent: #5b9bd5;
-    --accent-2: #7ab3e6;
-    --accent-soft: #24384d;
-    --on-accent: #0f1b27;
-    --sel: #2b4a69;
+    --accent: #a78bfa;
+    --accent-2: #c4b5fd;
+    --accent-soft: #2e2350;
+    --on-accent: #170b33;
+    --sel: #3b2d6b;
     --sel-text: #ffffff;
     --row-alt: #262b31;
-    --bar-track: #343b44;
-    --bar: #5b9bd5;
+    --bar-track: #363044;
+    --bar: #a78bfa;
     --bar-done: #4caf7d;
     --ok: #4caf7d;
     --warn: #f0a640;
@@ -62,15 +62,15 @@
   --text-2: #9aa7b5;
   --border: #39414b;
   --border-strong: #6b7786;
-  --accent: #5b9bd5;
-  --accent-2: #7ab3e6;
-  --accent-soft: #24384d;
-  --on-accent: #0f1b27;
-  --sel: #2b4a69;
+  --accent: #a78bfa;
+  --accent-2: #c4b5fd;
+  --accent-soft: #2e2350;
+  --on-accent: #170b33;
+  --sel: #3b2d6b;
   --sel-text: #ffffff;
   --row-alt: #262b31;
-  --bar-track: #343b44;
-  --bar: #5b9bd5;
+  --bar-track: #363044;
+  --bar: #a78bfa;
   --bar-done: #4caf7d;
   --ok: #4caf7d;
   --warn: #f0a640;

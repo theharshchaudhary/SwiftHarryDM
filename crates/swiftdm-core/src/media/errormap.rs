@@ -21,7 +21,7 @@ fn rules() -> &'static [Rule] {
             r("Video unavailable|has been removed|no longer available|account associated with this video has been terminated", Unavailable, "This video is unavailable (removed or blocked).", false),
             r("Requested format is not available", FormatGone, "The selected quality is not available for this video. Choose another quality.", false),
             r("Unsupported URL", Unsupported, "This website or address is not supported.", false),
-            r(r"ffmpeg (?:is )?not (?:found|installed)|ffprobe (?:is )?not found|Postprocessing: .*ffmpeg", ToolMissing, "FFmpeg is missing or not working. Reinstall SwiftHarryDM.", false),
+            r(r"ffmpeg (?:is )?not (?:found|installed)|ffprobe (?:is )?not found|Postprocessing: .*ffmpeg", ToolMissing, "FFmpeg is missing or not working. Reinstall Keepfetch.", false),
             r(r"No space left|\[Errno 28\]|disk is full", DiskFull, "The disk is full. Free some space, then resume.", false),
             r("HTTP Error 429|Too Many Requests", RateLimited, "The site is limiting requests. Retrying later.", true),
             r("HTTP Error 403", Forbidden, "The site refused the download (403). It will be retried.", true),

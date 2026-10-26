@@ -189,7 +189,7 @@ pub async fn install_components(progress: &(dyn Fn(&str, u64, Option<u64>) + Sen
         fetch_verified(url, sha, &dir.join("yt-dlp.exe"), &|d, t| progress("yt-dlp", d, t)).await?;
     }
     if have.ffmpeg.is_none() || have.ffprobe.is_none() {
-        return Err("FFmpeg is missing from this installation. Reinstall SwiftHarryDM to repair it.".into());
+        return Err("FFmpeg is missing from this installation. Reinstall Keepfetch to repair it.".into());
     }
     Ok(status())
 }

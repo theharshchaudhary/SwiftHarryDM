@@ -290,7 +290,7 @@ pub fn save_settings(app: AppHandle, st: State<AppState>, settings: Settings) ->
             tracing::warn!("autostart change failed: {e}");
         }
         // Remembered for the installer, so an update does not turn it back on.
-        let _ = crate::browser::set_reg(r"Software\SwiftHarryDM", Some("StartWithWindows"), if saved.start_with_windows { "1" } else { "0" });
+        let _ = crate::browser::set_reg(r"Software\Keepfetch", Some("StartWithWindows"), if saved.start_with_windows { "1" } else { "0" });
     }
     let _ = app.emit("core", json!({ "type": "settings_changed", "settings": saved }));
     Ok(saved)

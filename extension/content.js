@@ -3,8 +3,8 @@
 // Everything is drawn inside one shadow root, so page styles cannot change it and it cannot
 // change the page. Text from the page is always set as text, never parsed as HTML.
 (() => {
-    if (window.__swiftharrydm) return;
-    window.__swiftharrydm = true;
+    if (window.__keepfetch) return;
+    window.__keepfetch = true;
 
     const PRESETS = [
         ['best', 'Best quality'], ['1080', '1080p'], ['720', '720p'], ['480', '480p'],
@@ -24,7 +24,7 @@
     let host, root;
     function overlay() {
         if (root) return root;
-        host = document.createElement('swiftharrydm-overlay');
+        host = document.createElement('keepfetch-overlay');
         host.style.cssText = 'all: initial; position: fixed; inset: 0 auto auto 0; z-index: 2147483647;';
         root = host.attachShadow({ mode: 'open' });
         const style = el('style');
@@ -32,9 +32,9 @@
             :host { all: initial; }
             * { box-sizing: border-box; font: 13px/1.4 "Segoe UI", system-ui, sans-serif; }
             .pill { position: fixed; display: none; align-items: center; gap: 6px; padding: 6px 12px 6px 9px;
-                border: 0; border-radius: 18px; background: #2c5f8a; color: #fff; cursor: pointer;
+                border: 0; border-radius: 18px; background: #6d28d9; color: #fff; cursor: pointer;
                 box-shadow: 0 2px 10px rgba(0,0,0,.35); opacity: .95; }
-            .pill:hover { background: #3a7bb3; opacity: 1; }
+            .pill:hover { background: #7c3aed; opacity: 1; }
             .pill.mini { padding: 7px; border-radius: 50%; }
             .pill.mini span { display: none; }
             .pill-x { position: fixed; display: none; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%;
@@ -43,14 +43,14 @@
             .pill svg, .head svg { width: 16px; height: 16px; flex: none; }
             .panel { position: fixed; width: 320px; background: #fff; color: #1c2733; border-radius: 10px;
                 box-shadow: 0 10px 30px rgba(0,0,0,.35); overflow: hidden; }
-            .head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #2c5f8a; color: #fff; font-weight: 600; }
+            .head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #6d28d9; color: #fff; font-weight: 600; }
             .head .x { margin-left: auto; background: none; border: 0; color: #fff; font-size: 18px; cursor: pointer; line-height: 1; }
             .body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
             .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             select { width: 100%; padding: 6px 8px; border: 1px solid #b7c3d0; border-radius: 5px; background: #fff; color: #1c2733; }
             .row { display: flex; gap: 8px; }
             .btn { flex: 1; padding: 8px; border: 1px solid #b7c3d0; border-radius: 5px; background: #fff; color: #1c2733; cursor: pointer; }
-            .btn.primary { background: #2c5f8a; border-color: #2c5f8a; color: #fff; }
+            .btn.primary { background: #6d28d9; border-color: #6d28d9; color: #fff; }
             .btn:hover { filter: brightness(1.05); }
             .hint { color: #56657a; font-size: 12px; }
             .toast { position: fixed; right: 16px; bottom: 16px; max-width: 360px; padding: 10px 14px; border-radius: 8px;
@@ -195,7 +195,7 @@
         panel = el('div', 'panel');
         const head = el('div', 'head');
         head.innerHTML = ICON;
-        head.append(el('span', null, 'SwiftHarryDM'));
+        head.append(el('span', null, 'Keepfetch'));
         const x = el('button', 'x', '×');
         x.title = 'Close';
         x.addEventListener('click', closePanel);
@@ -212,7 +212,7 @@
         }
         select.append(presets);
         body.append(select);
-        const hint = el('div', 'hint', 'Loading the formats from SwiftHarryDM…');
+        const hint = el('div', 'hint', 'Loading the formats from Keepfetch…');
         body.append(hint);
         const streams = [];
         const row = el('div', 'row');
@@ -264,7 +264,7 @@
         const r = await send({ action: 'mediaInfo', url });
         const formats = r && r.success && r.info ? r.info.formats : [];
         if (!formats.length) {
-            hint.textContent = r && r.error ? `Formats unavailable: ${r.error}` : 'Choose a quality; SwiftHarryDM picks the matching format.';
+            hint.textContent = r && r.error ? `Formats unavailable: ${r.error}` : 'Choose a quality; Keepfetch picks the matching format.';
             return false;
         }
         hint.textContent = formats.length === 1 ? '1 format available.' : `${formats.length} formats available.`;
@@ -291,8 +291,8 @@
         } else if (choice.startsWith('f:')) data.formatId = choice.slice(2);
         else data.format = choice;
         const r = await send({ action: 'downloadMedia', data });
-        if (r && r.success) toast(`Sent to SwiftHarryDM: ${r.message || ''}`);
-        else toast((r && r.error) || 'SwiftHarryDM is not running.', true);
+        if (r && r.success) toast(`Sent to Keepfetch: ${r.message || ''}`);
+        else toast((r && r.error) || 'Keepfetch is not running.', true);
     }
 
     // ------------------------------------------------------------------ commands from the extension

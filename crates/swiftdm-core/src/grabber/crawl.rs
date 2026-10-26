@@ -465,7 +465,7 @@ pub fn parse_robots(text: &str) -> Vec<(bool, String)> {
                 if !last_was_agent {
                     in_star = false;
                 }
-                in_star |= v == "*" || v.to_ascii_lowercase().contains("swiftharrydm");
+                in_star |= v == "*" || v.to_ascii_lowercase().contains("keepfetch");
                 last_was_agent = true;
             }
             "disallow" | "allow" => {

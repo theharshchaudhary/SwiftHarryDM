@@ -42,7 +42,7 @@ jobs:
           projectPath: .
           tauriScript: ui/node_modules/.bin/tauri
           tagName: ${{ github.ref_name }}
-          releaseName: SwiftHarryDM ${{ github.ref_name }}
+          releaseName: Keepfetch ${{ github.ref_name }}
           releaseBody: See the changes below. Installed copies update with one click.
           releaseDraft: false
           includeUpdaterJson: true

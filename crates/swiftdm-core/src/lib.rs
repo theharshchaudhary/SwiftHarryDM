@@ -1,4 +1,4 @@
-//! SwiftHarryDM core: download engine, persistence, scheduling and the local extension API.
+//! Keepfetch core: download engine, persistence, scheduling and the local extension API.
 //! Everything except the user interface lives here so it can be tested headlessly.
 
 pub mod api;

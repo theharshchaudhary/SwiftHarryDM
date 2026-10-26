@@ -132,7 +132,7 @@ fn ie_config() -> Option<IeConfig> {
 fn winhttp_proxy_for(url: &str, pac_url: Option<&str>, detect: bool) -> Result<String, String> {
     use windows::core::{HSTRING, PCWSTR};
     use windows::Win32::Networking::WinHttp::*;
-    let session = unsafe { WinHttpOpen(&HSTRING::from("SwiftHarryDM"), WINHTTP_ACCESS_TYPE_NO_PROXY, PCWSTR::null(), PCWSTR::null(), 0) };
+    let session = unsafe { WinHttpOpen(&HSTRING::from("Keepfetch"), WINHTTP_ACCESS_TYPE_NO_PROXY, PCWSTR::null(), PCWSTR::null(), 0) };
     if session.is_null() {
         return Err("WinHTTP is not available".into());
     }

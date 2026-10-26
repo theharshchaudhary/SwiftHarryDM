@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8">
     <style>
-        :root { --accent: #2c5f8a; --accent-2: #3a7bb3; --text: #1c2733; --muted: #56657a; --border: #d5dde6; --bg: #f4f6f9; --ok: #2e8b57; --warn: #c77700; }
+        :root { --accent: #6d28d9; --accent-2: #7c3aed; --on-accent: #ffffff; --text: #1c2733; --muted: #56657a; --border: #d5dde6; --bg: #f4f6f9; --ok: #23794b; --warn: #9a5c00; }
         @media (prefers-color-scheme: dark) {
-            :root { --text: #e6ebf0; --muted: #9aa7b5; --border: #39414b; --bg: #1b1f24; --accent: #5b9bd5; --accent-2: #7ab3e6; --ok: #4caf7d; --warn: #f0a640; }
+            :root { --text: #e6ebf0; --muted: #9aa7b5; --border: #39414b; --bg: #1b1f24; --accent: #a78bfa; --accent-2: #c4b5fd; --on-accent: #170b33; --ok: #4caf7d; --warn: #f0a640; }
         }
         * { box-sizing: border-box; }
         body { width: 320px; margin: 0; font: 13px/1.4 "Segoe UI", system-ui, sans-serif; color: var(--text); background: var(--bg); }
-        header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--accent); color: #fff; }
+        header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--accent); color: var(--on-accent); }
         header img { width: 28px; height: 28px; }
         header b { font-size: 15px; }
         main { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -18,7 +18,7 @@
         .dot.ok { background: var(--ok); }
         .btn { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; text-align: left; }
         .btn:hover { border-color: var(--accent-2); }
-        .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); text-align: center; }
+        .btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); text-align: center; }
         .box { border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         .muted { color: var(--muted); font-size: 12px; }
         input[type=text] { width: 100%; padding: 8px; font-size: 18px; letter-spacing: 4px; text-align: center; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; }
@@ -30,12 +30,12 @@
     </style>
 </head>
 <body>
-    <header><img src="icons/icon48.png" alt=""><b>SwiftHarryDM</b></header>
+    <header><img src="icons/icon48.png" alt=""><b>Keepfetch</b></header>
     <main>
         <div class="status"><span id="dot" class="dot"></span><span id="status">Checking…</span></div>
 
         <div id="pairBox" class="box hidden">
-            <div>Connect this browser to SwiftHarryDM. The app shows a 6-digit code.</div>
+            <div>Connect this browser to Keepfetch. The app shows a 6-digit code.</div>
             <button id="pairStartBtn" class="btn primary">Connect with a code</button>
             <div id="pairStep2" class="hidden">
                 <input id="pairCode" type="text" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000">
@@ -49,7 +49,7 @@
         </div>
 
         <label><input id="captureToggle" type="checkbox"> Take over downloads from this browser</label>
-        <div class="muted">File types and exceptions are set in SwiftHarryDM › Options. Hold Alt while clicking a link to keep that download in the browser.</div>
+        <div class="muted">File types and exceptions are set in Keepfetch › Options. Hold Alt while clicking a link to keep that download in the browser.</div>
 
         <div id="recent" class="box hidden"><b>Recent downloads</b><div id="list"></div></div>
 

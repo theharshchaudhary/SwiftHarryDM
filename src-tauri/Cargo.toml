@@ -1,13 +1,13 @@
 [package]
-name = "swiftharrydm"
-description = "SwiftHarryDM download manager"
+name = "keepfetch"
+description = "Keepfetch download manager"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 
 [lib]
-name = "swiftharrydm_lib"
+name = "keepfetch_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

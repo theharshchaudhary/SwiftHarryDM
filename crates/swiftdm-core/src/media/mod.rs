@@ -87,7 +87,7 @@ impl MediaEngine {
         self.tools()
             .ytdlp
             .map(|p| p.to_string_lossy().into_owned())
-            .ok_or_else(|| SdmError::new(ErrorCode::ToolMissing, "yt-dlp was not found. Reinstall SwiftHarryDM to download videos."))
+            .ok_or_else(|| SdmError::new(ErrorCode::ToolMissing, "yt-dlp was not found. Reinstall Keepfetch to download videos."))
     }
 
     fn common(&self) -> Vec<String> {
@@ -306,7 +306,7 @@ impl Engine for MediaEngine {
             return Err(SdmError::new(ErrorCode::Unsupported, "This video is protected by DRM and can't be downloaded.").into());
         }
         if (chosen.len() > 1 || sel.audio_only) && self.tools().ffmpeg.is_none() {
-            return Err(SdmError::new(ErrorCode::ToolMissing, "FFmpeg is needed for this quality but was not found. Reinstall SwiftHarryDM.").into());
+            return Err(SdmError::new(ErrorCode::ToolMissing, "FFmpeg is needed for this quality but was not found. Reinstall Keepfetch.").into());
         }
         let heights: Vec<u32> = chosen.iter().filter(|f| nonempty_codec(&f["vcodec"]).is_some()).filter_map(|f| f["height"].as_u64().map(|h| h as u32)).collect();
         let has_audio = chosen.iter().any(|f| nonempty_codec(&f["acodec"]).is_some());

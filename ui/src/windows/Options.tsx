@@ -94,9 +94,9 @@ function General({ s, set }: P) {
       <fieldset>
         <legend>Startup</legend>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <Check checked={s.start_with_windows} onChange={(v) => set({ start_with_windows: v })}>Start SwiftHarryDM when Windows starts</Check>
+          <Check checked={s.start_with_windows} onChange={(v) => set({ start_with_windows: v })}>Start Keepfetch when Windows starts</Check>
           <Check checked={s.start_minimized} onChange={(v) => set({ start_minimized: v })}>Start minimized to the notification area</Check>
-          <Check checked={s.minimize_to_tray} onChange={(v) => set({ minimize_to_tray: v })}>Closing the main window keeps SwiftHarryDM running in the notification area</Check>
+          <Check checked={s.minimize_to_tray} onChange={(v) => set({ minimize_to_tray: v })}>Closing the main window keeps Keepfetch running in the notification area</Check>
         </div>
       </fieldset>
       <fieldset>
@@ -108,7 +108,7 @@ function General({ s, set }: P) {
       <fieldset>
         <legend>Resuming</legend>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <Check checked={s.auto_resume} onChange={(v) => set({ auto_resume: v })}>Resume interrupted downloads when SwiftHarryDM starts</Check>
+          <Check checked={s.auto_resume} onChange={(v) => set({ auto_resume: v })}>Resume interrupted downloads when Keepfetch starts</Check>
           <div className="row">
             <span>Retries for a failed download</span>
             <Num value={s.retries} min={0} max={20} onChange={(v) => set({ retries: v })} width={70} />
@@ -441,8 +441,8 @@ function Browser({ s, set }: P) {
         )}
       </fieldset>
       <div>
-        The SwiftHarryDM extension sends downloads, links and videos from Chrome and Edge to this app. To connect it, click its toolbar button, choose{" "}
-        <b>Connect to app</b>, and type the code that SwiftHarryDM shows.
+        The Keepfetch extension sends downloads, links and videos from Chrome and Edge to this app. To connect it, click its toolbar button, choose{" "}
+        <b>Connect to app</b>, and type the code that Keepfetch shows.
       </div>
       <div>
         <div>Connected extensions</div>
@@ -474,7 +474,7 @@ function Browser({ s, set }: P) {
         <div className="grid2">
           <span>Leave the download to the browser</span>
           <KeySelect value={s.prevent_key} onChange={(v) => set({ prevent_key: v })} />
-          <span>Download it with SwiftHarryDM, even if it is a web page</span>
+          <span>Download it with Keepfetch, even if it is a web page</span>
           <KeySelect value={s.force_key} onChange={(v) => set({ force_key: v })} />
         </div>
         {s.prevent_key !== "none" && s.prevent_key === s.force_key && <div className="err">Choose two different keys.</div>}
@@ -483,7 +483,7 @@ function Browser({ s, set }: P) {
       <fieldset>
         <legend>Browser context menu</legend>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <Check checked={s.menu_download_with} onChange={(v) => set({ menu_download_with: v })}>“Download with SwiftHarryDM” on links, videos and audio</Check>
+          <Check checked={s.menu_download_with} onChange={(v) => set({ menu_download_with: v })}>“Download with Keepfetch” on links, videos and audio</Check>
           <Check checked={s.menu_page_media} onChange={(v) => set({ menu_page_media: v })}>“Download all media from page”</Check>
           <Check checked={s.menu_all_links} onChange={(v) => set({ menu_all_links: v })}>“Download all links”</Check>
           <Check checked={s.menu_selected_links} onChange={(v) => set({ menu_selected_links: v })}>“Download selected links” on selected text</Check>
@@ -514,7 +514,7 @@ function Video() {
   const [busy, setBusy] = useState(false);
   return (
     <>
-      <div>Video and audio downloads use yt-dlp (finds the video; downloaded once) and FFmpeg (joins video and audio, converts audio; included with SwiftHarryDM).</div>
+      <div>Video and audio downloads use yt-dlp (finds the video; downloaded once) and FFmpeg (joins video and audio, converts audio; included with Keepfetch).</div>
       {!c && <div className="muted">Checking the components…</div>}
       <ComponentsBanner />
       {c?.ready && (

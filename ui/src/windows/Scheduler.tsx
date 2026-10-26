@@ -168,14 +168,14 @@ export default function Scheduler() {
                   <span>When the queue finishes</span>
                   <select value={draft.after} onChange={(e) => upd({ after: e.target.value as AfterAction })}>
                     <option value="none">Do nothing</option>
-                    <option value="exit">Exit SwiftHarryDM</option>
+                    <option value="exit">Exit Keepfetch</option>
                     <option value="sleep">Put the computer to sleep</option>
                     <option value="hibernate">Hibernate the computer</option>
                     <option value="shutdown">Shut down the computer</option>
                   </select>
                 </div>
                 <div className="hint">
-                  SwiftHarryDM must be running (it can sit in the notification area) for a queue to start on time. To start while the computer sleeps, allow wake timers in
+                  Keepfetch must be running (it can sit in the notification area) for a queue to start on time. To start while the computer sleeps, allow wake timers in
                   the Windows power options.
                 </div>
               </>

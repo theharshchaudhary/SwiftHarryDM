@@ -275,7 +275,7 @@ async fn health(State(st): State<Arc<Inner>>, h: HeaderMap) -> Response {
     if !st.lim_read.allow() {
         return err(StatusCode::TOO_MANY_REQUESTS, "rate limited");
     }
-    Json(json!({ "status": "running", "app": "SwiftHarryDM", "version": crate::VERSION, "api": API_VERSION, "paired": st.authed(&h).is_some() })).into_response()
+    Json(json!({ "status": "running", "app": "Keepfetch", "version": crate::VERSION, "api": API_VERSION, "paired": st.authed(&h).is_some() })).into_response()
 }
 
 async fn pair(State(st): State<Arc<Inner>>, h: HeaderMap) -> Response {
@@ -325,7 +325,7 @@ async fn download(State(st): State<Arc<Inner>>, h: HeaderMap, body: Bytes) -> Re
         return err(StatusCode::TOO_MANY_REQUESTS, "rate limited");
     }
     if st.authed(&h).is_none() {
-        return err(StatusCode::UNAUTHORIZED, "not paired: open the extension and pair it with SwiftHarryDM");
+        return err(StatusCode::UNAUTHORIZED, "not paired: open the extension and pair it with Keepfetch");
     }
     let req = match parse_json(&body).ok_or_else(|| "Request body must be JSON.".to_string()).and_then(|v| parse_download_request(&v)) {
         Ok(r) => r,

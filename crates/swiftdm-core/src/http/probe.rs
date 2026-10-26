@@ -132,7 +132,7 @@ impl RequestAuth {
 /// Some CDNs (Cloudflare, for one) refuse a request that claims to be a browser but does not
 /// behave like one, while they let a program that names itself through.
 pub fn plain_user_agent() -> String {
-    format!("SwiftHarryDM/{}", env!("CARGO_PKG_VERSION"))
+    format!("Keepfetch/{}", env!("CARGO_PKG_VERSION"))
 }
 
 /// GET with manual redirects. Returns (response, final_url). Stops early on cancellation.

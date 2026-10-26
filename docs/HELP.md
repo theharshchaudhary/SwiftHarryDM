@@ -1,9 +1,9 @@
-# SwiftHarryDM help
+# Keepfetch help
 
 ## Starting downloads
 
 - **From the browser.** With the extension connected, click a download link as usual:
-  SwiftHarryDM takes it over and shows **Download file info**. Hold **Alt** while clicking to
+  Keepfetch takes it over and shows **Download file info**. Hold **Alt** while clicking to
   let the browser download it instead. File types and the sites never to take over are set in
   **Options › File types**.
 - **Add URL** (Ctrl+N), or paste or drag a link onto the main window or the floating drop
@@ -12,7 +12,7 @@
   link to a file opens **Download file info**.
 - **Many links at once.** Right-click a web page and choose **Download all links**, or use
   **Tasks › Add batch download** for numbered files like `photo001.jpg … photo120.jpg`.
-- **Command line:** `swiftharrydm.exe /d <url> [/p <folder>] [/f <file name>] [/n] [/a]`
+- **Command line:** `keepfetch.exe /d <url> [/p <folder>] [/f <file name>] [/n] [/a]`
   (`/n` starts without asking, `/a` adds to the main queue).
 
 ## Download file info
@@ -45,7 +45,7 @@ Open **Downloads › Scheduler**. Each queue downloads a set number of files at 
 - **When the queue finishes:** exit, sleep, hibernate or shut down the computer.
 - **Files in the queue:** the order of the files, which you can change.
 
-SwiftHarryDM must be running (it can wait in the notification area) for a queue to start on
+Keepfetch must be running (it can wait in the notification area) for a queue to start on
 time. The Q column shows each download's queue; move downloads between queues from their
 right-click menu.
 

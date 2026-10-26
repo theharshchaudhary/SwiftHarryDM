@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="packaging/logo.svg" width="96" alt="SwiftHarryDM logo">
+<img src="packaging/logo.svg" width="96" alt="Keepfetch logo">
 
-# SwiftHarryDM
+# Keepfetch
 
 **A fast, lightweight download manager for Windows.**<br>
 Splits every download across many connections, survives crashes and restarts, saves video
@@ -20,7 +20,7 @@ and audio from web pages, and takes over downloads from your browser.
 [Browser extension](#browser-extension) ·
 [Build from source](#build-from-source)
 
-<img src="docs/images/main.png" width="860" alt="SwiftHarryDM main window with downloads in progress">
+<img src="docs/images/main.png" width="860" alt="Keepfetch main window with downloads in progress">
 
 </div>
 
@@ -136,9 +136,9 @@ and the app restarts with your downloads carrying on.
 
 ## Install
 
-1. Download `SwiftHarryDM_x.y.z_x64-setup.exe` from
+1. Download `Keepfetch_x.y.z_x64-setup.exe` from
    [Releases](https://github.com/theharshchaudhary/SwiftHarryDM/releases/latest) and run it.
-2. On first start, SwiftHarryDM offers to connect your browser. Follow the two steps; the
+2. On first start, Keepfetch offers to connect your browser. Follow the two steps; the
    extension then connects by itself.
 
 Requirements: Windows 10 or 11 (64-bit). The Microsoft Edge WebView2 runtime is part of
@@ -167,12 +167,12 @@ unpacked**, and choose the `extension` folder.
 ## Command line
 
 ```text
-swiftharrydm.exe <url>                  open the download window for <url>
-swiftharrydm.exe /d <url> [/p <folder>] [/f <file name>] [/n] [/a]
+keepfetch.exe <url>                  open the download window for <url>
+keepfetch.exe /d <url> [/p <folder>] [/f <file name>] [/n] [/a]
     /n  start without asking            /a  add to the main queue instead of starting
 ```
 
-If SwiftHarryDM is already running, the request goes to the open app. For scripts and servers,
+If Keepfetch is already running, the request goes to the open app. For scripts and servers,
 `swiftdm-cli get <url> --dir <folder> [--format 720]` downloads with the same engine and no
 window.
 
@@ -185,14 +185,14 @@ Docker is needed to build FFmpeg (once).
 npm ci --prefix ui
 node scripts/fetch-tools.mjs                          # yt-dlp for development builds
 docker run --rm -v "${PWD}/scripts/ffmpeg:/src:ro" -v "${PWD}/tools/ffmpeg-slim:/out" ubuntu:24.04 bash /src/build.sh
-ui\node_modules\.bin\tauri build --debug --no-bundle  # app at target\debug\swiftharrydm.exe
+ui\node_modules\.bin\tauri build --debug --no-bundle  # app at target\debug\keepfetch.exe
 ui\node_modules\.bin\tauri build                      # installer in target\release\bundle\nsis
 ```
 
 ### Tests
 
 ```powershell
-cargo test -p swiftdm-core -p swiftharrydm            # engine, manager, API, media
+cargo test -p swiftdm-core -p keepfetch            # engine, manager, API, media
 cargo build -p swiftdm-testkit --bin sdm-observe
 node tests/e2e/run.mjs                                # the built app, and the extension in Chrome
 cargo run -p swiftdm-cli --release -- kill-test       # hard-kill the downloader at random, check every file

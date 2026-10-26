@@ -1,4 +1,4 @@
-//! SwiftHarryDM desktop shell: hosts the core download manager, forwards its events to the
+//! Keepfetch desktop shell: hosts the core download manager, forwards its events to the
 //! windows, and adds what only a desktop app can do (tray, clipboard, notifications, power).
 mod bridge;
 mod browser;
@@ -226,8 +226,8 @@ async fn pump_status(app: AppHandle) {
             }
         }
         let tip = match active {
-            0 => "SwiftHarryDM".to_string(),
-            n => format!("SwiftHarryDM - {n} downloading, {}/s", human(speed as u64)),
+            0 => "Keepfetch".to_string(),
+            n => format!("Keepfetch - {n} downloading, {}/s", human(speed as u64)),
         };
         if tip != last_tip {
             if let Some(t) = app.tray_by_id("main") {
@@ -340,7 +340,7 @@ fn mgr_settings_tray(app: &AppHandle) -> bool {
 /// The notification-area menu: the main window, new downloads, the drop target,
 /// queue and speed limiter, and exit.
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
-    let open = MenuItem::with_id(app, "open", "Open SwiftHarryDM", true, None::<&str>)?;
+    let open = MenuItem::with_id(app, "open", "Open Keepfetch", true, None::<&str>)?;
     let add = MenuItem::with_id(app, "add", "Add download…", true, None::<&str>)?;
     let batch = MenuItem::with_id(app, "batch", "Add batch download…", true, None::<&str>)?;
     let drop = MenuItem::with_id(app, "drop", "Show drop target", true, None::<&str>)?;
@@ -356,7 +356,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let menu = Menu::with_items(app, &[&open, &add, &batch, &drop, &s1, &start_q, &stop, &limiter, &s2, &sched, &options, &s3, &exit])?;
     TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().cloned().expect("app icon"))
-        .tooltip("SwiftHarryDM")
+        .tooltip("Keepfetch")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, e| match e.id.as_ref() {
@@ -406,11 +406,11 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 }
 
 /// Command line, for scripts and other programs:
-///   swiftharrydm.exe <url>                     open the download window for <url>
-///   swiftharrydm.exe /d <url> [/p <folder>] [/f <file name>] [/n] [/a]
+///   keepfetch.exe <url>                     open the download window for <url>
+///   keepfetch.exe /d <url> [/p <folder>] [/f <file name>] [/n] [/a]
 ///     /n  start without asking (no window)      /a  add to the main queue instead of starting
-///     /q  exit SwiftHarryDM when that download finishes
-///   swiftharrydm.exe /s                        start the main queue
+///     /q  exit Keepfetch when that download finishes
+///   keepfetch.exe /s                        start the main queue
 fn handle_args(app: &AppHandle, args: &[String]) {
     let flag = |f: &str| args.iter().any(|a| a.eq_ignore_ascii_case(f) || a.eq_ignore_ascii_case(&f.replace('/', "-")));
     let value = |f: &str| {
@@ -448,6 +448,15 @@ fn handle_args(app: &AppHandle, args: &[String]) {
 
 pub fn run() {
     swiftdm_core::logging::init(&swiftdm_core::appdata::logs_dir());
+    // First start after the rename from SwiftHarryDM: copy the download list and settings
+    // over, and stop the old name from starting with Windows.
+    if std::env::var_os("SWIFTDM_HOME").is_none() {
+        let copied = swiftdm_core::appdata::migrate_previous(&swiftdm_core::appdata::app_dir());
+        if !copied.is_empty() {
+            tracing::info!("copied from the {} folder: {copied:?}", swiftdm_core::appdata::PREVIOUS_NAME);
+        }
+        browser::delete_reg_value(r"Software\Microsoft\Windows\CurrentVersion\Run", swiftdm_core::appdata::PREVIOUS_NAME);
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             windows::show_main(app);
@@ -461,7 +470,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         // The Run entry's name must match the uninstaller's cleanup (windows/hooks.nsh).
-        .plugin(tauri_plugin_autostart::Builder::new().arg("--minimized").app_name("SwiftHarryDM").build())
+        .plugin(tauri_plugin_autostart::Builder::new().arg("--minimized").app_name("Keepfetch").build())
         .setup(|app| {
             let tools = Tools::discover();
             tracing::info!("media tools: yt-dlp={:?} ffmpeg={:?} ffprobe={:?}", tools.ytdlp, tools.ffmpeg, tools.ffprobe);

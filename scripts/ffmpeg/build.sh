@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build SwiftHarryDM's small FFmpeg for Windows x64 (cross-compiled with mingw-w64).
+# Build Keepfetch's small FFmpeg for Windows x64 (cross-compiled with mingw-w64).
 #
 # Only what the app and yt-dlp use is enabled: reading MP4/WebM/MKV/MPEG-TS/audio files,
 # joining video and audio without re-encoding, cleaning up HLS/DASH downloads, writing
@@ -91,7 +91,7 @@ done
 cp COPYING.LGPLv2.1 "$OUT/FFMPEG-LICENSE.txt"
 cp "$WORK/lame-${LAME_VERSION}/COPYING" "$OUT/LAME-LICENSE.txt"
 {
-  echo "SwiftHarryDM FFmpeg build"
+  echo "Keepfetch FFmpeg build"
   echo "FFmpeg ${FFMPEG_VERSION} (https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz)"
   echo "LAME ${LAME_VERSION} (https://sourceforge.net/projects/lame/)"
   echo "Built with scripts/ffmpeg/build.sh. Configure options:"

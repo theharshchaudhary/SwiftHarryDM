@@ -1,4 +1,4 @@
-# Builds SwiftHarryDM's small FFmpeg (scripts/ffmpeg/build.sh) on Linux, cached by the build
+# Builds Keepfetch's small FFmpeg (scripts/ffmpeg/build.sh) on Linux, cached by the build
 # script's contents, and hands it to the Windows jobs as the "ffmpeg-slim" artifact.
 name: ffmpeg
 on:

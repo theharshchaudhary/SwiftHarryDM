@@ -52,8 +52,8 @@ export default function Browser() {
           <div style={{ fontSize: 16, fontWeight: 600 }}>{connected ? "Your browser is connected" : "Connect your browser"}</div>
           <div className="muted">
             {connected
-              ? "Downloads, links and videos from the browser now go to SwiftHarryDM."
-              : "Add the SwiftHarryDM extension so downloads, links and videos from your browser go to the app. It connects by itself, with nothing to type."}
+              ? "Downloads, links and videos from the browser now go to Keepfetch."
+              : "Add the Keepfetch extension so downloads, links and videos from your browser go to the app. It connects by itself, with nothing to type."}
           </div>
         </div>
       </div>
@@ -68,7 +68,7 @@ export default function Browser() {
         <ol style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
           <li>{setup.browser_found ? <>{name} opened its extensions page.</> : <>Open <span className="mono">{page}</span> in {name}.</>} Turn on <b>Developer mode</b> (top right).</li>
           <li>Click <b>Load unpacked</b> and choose this folder (it opened in Explorer):<div className="mono selectable" style={{ marginTop: 2 }}>{setup.folder}</div></li>
-          <li>That’s it: the extension connects to SwiftHarryDM by itself and this window turns green.</li>
+          <li>That’s it: the extension connects to Keepfetch by itself and this window turns green.</li>
         </ol>
       )}
       {err && <div className="err">{err}</div>}
