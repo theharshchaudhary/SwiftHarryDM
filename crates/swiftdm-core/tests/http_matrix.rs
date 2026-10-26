@@ -746,6 +746,7 @@ async fn explore(g: &Arc<swiftdm_core::grabber::crawl::Grabber>, p: swiftdm_core
     })
     .await
     .expect("exploring did not finish");
+    assert_eq!(reason, "finished");
     (p.id.clone(), g.items(&p.id))
 }
 
@@ -817,4 +818,26 @@ async fn site_grabber_explores_within_its_rules_and_downloads_the_files() {
     // Size limits.
     let (_, items) = explore(&g, Project { min_size: 100_000, ..base }).await;
     assert_eq!(file_paths(&items), ["/site/manual.zip", "/site/report.pdf"]);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn accented_emoji_and_overlong_names_are_saved() {
+    let e = env().await;
+    let b = Body::gen("names", 50_000);
+    let accented = "attachment; filename*=UTF-8''R%C3%A9sum%C3%A9%20%F0%9F%93%84%20%E6%97%A5%E6%9C%AC.pdf";
+    let s = e.run(&e.srv.add("/n/1", Resource::new(b.clone()).disposition(accented)), 30).await;
+    ok(&s, &b);
+    assert!(s.final_path.as_deref().unwrap().ends_with("Résumé 📄 日本.pdf"), "{:?}", s.final_path);
+    // 300 characters: Windows allows 255, and the name must keep its extension.
+    let long = format!("attachment; filename=\"{}.zip\"", "x".repeat(300));
+    let s = e.run(&e.srv.add("/n/2", Resource::new(b.clone()).disposition(&long)), 30).await;
+    ok(&s, &b);
+    let name = std::path::Path::new(s.final_path.as_deref().unwrap()).file_name().unwrap().to_string_lossy().into_owned();
+    assert!(name.ends_with(".zip") && name.encode_utf16().count() <= 255, "{} units: {name}", name.encode_utf16().count());
+    // Characters Windows forbids are replaced, and reserved device names avoided.
+    let s = e.run(&e.srv.add("/n/3", Resource::new(b.clone()).disposition("attachment; filename=\"a<b>c:d|e?.txt\"")), 30).await;
+    ok(&s, &b);
+    let s = e.run(&e.srv.add("/n/4", Resource::new(b.clone()).disposition("attachment; filename=\"CON.txt\"")), 30).await;
+    ok(&s, &b);
+    assert!(!s.final_path.as_deref().unwrap().ends_with(r"\CON.txt"), "{:?}", s.final_path);
 }
