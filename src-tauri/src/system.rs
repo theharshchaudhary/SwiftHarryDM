@@ -92,3 +92,33 @@ pub fn suspend(hibernate: bool) -> Result<(), String> {
         Err(if hibernate { "Windows refused to hibernate (it may be turned off)." } else { "Windows refused to sleep." }.into())
     }
 }
+
+/// The tray icon with a progress bar along its bottom edge (`rgba` is the plain icon).
+pub fn progress_icon(rgba: &[u8], w: u32, h: u32, pct: u8) -> Vec<u8> {
+    let mut out = rgba.to_vec();
+    let bar = (h / 6).max(2);
+    let filled = (w as u64 * pct.min(100) as u64 / 100) as u32;
+    for y in h - bar..h {
+        for x in 0..w {
+            let i = ((y * w + x) * 4) as usize;
+            let px: [u8; 4] = if x < filled { [255, 255, 255, 255] } else { [23, 11, 51, 235] };
+            out[i..i + 4].copy_from_slice(&px);
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn progress_bar_on_the_icon() {
+        let (w, h) = (32u32, 32u32);
+        let plain = vec![10u8; (w * h * 4) as usize];
+        let half = super::progress_icon(&plain, w, h, 50);
+        let at = |x: u32, y: u32| half[((y * w + x) * 4) as usize..((y * w + x) * 4 + 4) as usize].to_vec();
+        assert_eq!(at(0, 31), [255, 255, 255, 255], "filled part");
+        assert_eq!(at(31, 31), [23, 11, 51, 235], "track");
+        assert_eq!(at(16, 0), [10, 10, 10, 10], "the rest of the icon is untouched");
+        assert_eq!(super::progress_icon(&plain, w, h, 0)[((31 * w) * 4) as usize], 23);
+    }
+}

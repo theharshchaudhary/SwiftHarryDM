@@ -21,3 +21,5 @@
 | 2026-10-26 | clone screenshots | done | replica/clone-screens/ from an e2e run (no IDM reference shots in replica/screens yet) |
 | 2026-10-26 | fix #1 expired links | done | 'Open the page it came from'; same file sent again offers to continue the stopped download; e2e expired_link |
 | 2026-10-26 | fix #4 sounds | done | three events, Windows sounds or .wav, Play; not audible in tests |
+| 2026-10-26 | fix #2 memory | done | the main window is closed (not hidden) to the tray and not made when starting minimized: 11-14 MB in the tray, 184 MB open; e2e tray_and_back. Harness now tells windows apart by kind, not title |
+| 2026-10-26 | fix #3 tray progress | done | progress bar drawn on the tray icon |

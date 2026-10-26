@@ -102,14 +102,16 @@ process.on("exit", cleanup);
 /** Each scenario starts with only the main window open (a window a scenario left behind
  *  could be mistaken for one the next scenario waits for). */
 async function closeStrayWindows(app) {
+  // Ask each page which window it is (the shell injects the kind): titles are not set
+  // until a page has loaded, and the main window must never be closed here.
   for (const t of await app.targets().catch(() => [])) {
-    if (t.title === "Keepfetch") continue;
     const w = await app.window((x) => x.id === t.id, 2000).catch(() => null);
     if (!w) continue;
-    await w.invoke("close_self").catch(() => {});
+    const kind = await w.eval("new URLSearchParams(window.__SDM_PARAMS__ ?? location.search).get('w') ?? 'main'").catch(() => "main");
+    if (kind !== "main") await w.invoke("close_self").catch(() => {});
     w.close();
   }
-  await until(async () => (await app.targets()).every((t) => t.title === "Keepfetch"), 5000, 100, "stray windows to close").catch(() => {});
+  await sleep(300);
 }
 
 /** Keep evidence of a failure (a screenshot of every app window), then close all windows but
@@ -124,7 +126,8 @@ async function afterFailure(app, name) {
       const tag = `${name}-${++i}-${t.title.replace(/[^\w.-]+/g, "_").slice(0, 40)}`;
       await w.shot(join(SHOTS, `fail-${tag}.png`)).catch(() => {});
       console.log(`    open window: ${t.title}${process.env.CI ? "" : ` (fail-${tag}.png)`}`);
-      if (t.title !== "Keepfetch") await w.invoke("close_self").catch(() => {});
+      const kind = await w.eval("new URLSearchParams(window.__SDM_PARAMS__ ?? location.search).get('w') ?? 'main'").catch(() => "main");
+      if (kind !== "main") await w.invoke("close_self").catch(() => {});
       w.close();
     }
   } catch (e) {
@@ -655,6 +658,24 @@ const scenarios = {
     await main.invoke("open_window", { kind: "grabber", params: {} });
     const again = await app.window("Site grabber");
     await until(async () => (await again.text()).includes("Test downloads") && (await again.text()).includes("alt.pdf"), 10000, 200, "the saved project");
+  },
+
+
+  async tray_and_back(app) {
+    // Closing the main window to the notification area frees it; opening the app again
+    // makes it anew, with the list intact.
+    const main = await app.window("Keepfetch");
+    const jobs = (await main.invoke("get_state")).jobs.length;
+    await main.invoke("close_self").catch(() => {});
+    // With no window left, WebView2 closes its DevTools port as well: that counts as gone.
+    const gone = () => app.hasWindow("Keepfetch").then((has) => !has, () => true);
+    await until(gone, 10000, 200, "the main window to close");
+    await sleep(1000);
+    assert(await gone(), "the main window's page is gone, not hidden");
+    const again = spawn(APP_EXE, [], { env: { ...process.env, SWIFTDM_HOME: join(work, "home") } });
+    await new Promise((res) => again.on("exit", res));
+    const back = await app.window("Keepfetch", 20000);
+    await until(async () => (await back.eval("document.querySelectorAll('.list tbody tr').length")) === jobs, 10000, 200, "the list after reopening");
   },
 
 };

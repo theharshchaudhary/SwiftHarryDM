@@ -93,7 +93,7 @@ IE monitor and Opera/IE plugins,browser,skip,yes,skip,those browsers are gone
 MMS protocol,engine,skip,yes,skip,dead protocol
 Toolbar skins and IDM artwork,main window,skip,yes,skip,IDM's own assets; ODM draws its own
 Failed download opens the page it came from and takes the new link,fixes,should,yes,yes,row menu: Open the page it came from; the info window offers to continue a stopped download with the same name and size; e2e expired_link
-Small memory use while in the tray (under 30 MB),fixes,should,no,no,fixes.md #2: ~207 MB with the window open (debug build)
-Tray icon shows overall progress,fixes,could,no,no,fixes.md #3 (thin)
+Small memory use while in the tray (under 30 MB),fixes,should,no,yes,"measured 2026-10-26 (debug build): 11 MB started minimized, 14 MB after closing the window to the tray, 184 MB with it open; e2e tray_and_back"
+Tray icon shows overall progress,fixes,could,no,yes,bar along the icon's bottom edge in 5% steps; unit test
 Proxy path in the speed benchmark,fixes,could,no,no,fixes.md #5
 Linux build,fixes,could,no,no,"fixes.md #7: unsolved, 6 posts"

@@ -151,10 +151,31 @@ pub fn close(app: &AppHandle, label: &str) {
     }
 }
 
+/// Show the main window, making it first if it was closed to the notification area. It is
+/// described in tauri.conf.json but made here, so it gets the same browser arguments as every
+/// other window.
 pub fn show_main(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.unminimize();
-        let _ = w.show();
-        let _ = w.set_focus();
-    }
+    let w = match app.get_webview_window("main") {
+        Some(w) => w,
+        None => {
+            let Some(conf) = app.config().app.windows.iter().find(|w| w.label == "main").cloned() else { return };
+            let mut b = match tauri::WebviewWindowBuilder::from_config(app, &conf) {
+                Ok(b) => b,
+                Err(e) => return tracing::error!("could not make the main window: {e}"),
+            };
+            if let Some(args) = browser_args() {
+                b = b.additional_browser_args(&args);
+            }
+            match b.build() {
+                Ok(w) => {
+                    crate::restore_main_window(&w);
+                    w
+                }
+                Err(e) => return tracing::error!("could not make the main window: {e}"),
+            }
+        }
+    };
+    let _ = w.unminimize();
+    let _ = w.show();
+    let _ = w.set_focus();
 }

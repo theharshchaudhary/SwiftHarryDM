@@ -202,6 +202,9 @@ async fn pump_status(app: AppHandle) {
     let mut last_quota = None;
     let mut last_tip = String::new();
     let mut had_progress = false;
+    // The tray icon shows overall progress, redrawn in 5% steps.
+    let plain = app.default_window_icon().map(|i| (i.rgba().to_vec(), i.width(), i.height()));
+    let mut tray_step: Option<u8> = None;
     loop {
         tokio::time::sleep(Duration::from_secs(1)).await;
         let state = app.state::<AppState>();
@@ -219,6 +222,17 @@ async fn pump_status(app: AppHandle) {
                     done += p.downloaded;
                     total += t;
                 }
+            }
+        }
+        let step = (active > 0 && total > 0).then(|| ((done as f64 / total as f64 * 20.0).floor() as u8 * 5).min(100));
+        if step != tray_step {
+            tray_step = step;
+            if let (Some(t), Some((rgba, w, h))) = (app.tray_by_id("main"), plain.as_ref()) {
+                let img = match step {
+                    Some(p) => tauri::image::Image::new_owned(system::progress_icon(rgba, *w, *h, p), *w, *h),
+                    None => tauri::image::Image::new_owned(rgba.clone(), *w, *h),
+                };
+                let _ = t.set_icon(Some(img));
             }
         }
         if let Some(main) = app.get_webview_window("main") {
@@ -295,7 +309,7 @@ fn save_main_window(app: &AppHandle) {
 }
 
 /// Put the main window back where it was, if that place is still on a screen.
-fn restore_main_window(w: &tauri::WebviewWindow) {
+pub(crate) fn restore_main_window(w: &tauri::WebviewWindow) {
     let Some(p) = std::fs::read(placement_file()).ok().and_then(|b| serde_json::from_slice::<Placement>(&b).ok()) else { return };
     let on_screen = w.available_monitors().unwrap_or_default().iter().any(|m| {
         let (mp, ms) = (m.position(), m.size());
@@ -501,15 +515,6 @@ pub fn run() {
                 update: Mutex::new(None),
                 grabber,
             });
-            // The main window is described in tauri.conf.json but created here, so that it gets
-            // the same browser arguments as every other window.
-            if let Some(conf) = app.config().app.windows.iter().find(|w| w.label == "main") {
-                let mut b = tauri::WebviewWindowBuilder::from_config(app.handle(), conf)?;
-                if let Some(args) = windows::browser_args() {
-                    b = b.additional_browser_args(&args);
-                }
-                b.build()?;
-            }
             build_tray(app.handle())?;
             if !mgr_settings_tray(app.handle()) {
                 if let Some(t) = app.tray_by_id("main") {
@@ -527,11 +532,10 @@ pub fn run() {
             if !cfg!(debug_assertions) {
                 tauri::async_runtime::spawn(upkeep::update_loop(h.clone()));
             }
-            if let Some(main) = app.get_webview_window("main") {
-                restore_main_window(&main);
-                if !start_hidden {
-                    let _ = main.show();
-                }
+            // Started in the notification area: the main window is made when it is first opened,
+            // so its WebView (most of the app's memory) is not loaded until then.
+            if !start_hidden {
+                windows::show_main(&h);
             }
             handle_args(&h, &std::env::args().collect::<Vec<_>>());
             Ok(())
@@ -545,7 +549,9 @@ pub fn run() {
                 let app = window.app_handle();
                 save_main_window(app);
                 if app.state::<AppState>().mgr.settings().get().minimize_to_tray {
-                    let _ = window.hide();
+                    // Closed, not hidden: its WebView is freed while the app waits in the
+                    // notification area (the app keeps running: see ExitRequested below).
+                    let _ = window.destroy();
                 } else {
                     exit_gracefully(app);
                 }
