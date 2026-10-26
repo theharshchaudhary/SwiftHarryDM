@@ -60,8 +60,8 @@ Drop target,main window,could,yes,yes,
 Tray icon and tray menu,system,must,yes,yes,
 Start with Windows,system,must,yes,yes,
 Command line /d /p /f /n /a,system,should,yes,yes,
-Command line /s /q,system,could,yes,no,
-Warning when running as administrator,system,could,yes,no,
+Command line /s /q,system,could,yes,yes,/s starts the main queue (e2e); /q exits after that download (through the usual countdown)
+Warning when running as administrator,system,could,yes,yes,banner in the main window: drag and drop is blocked by Windows when elevated
 App update check,system,must,yes,yes,
 Options General tab,options,must,yes,yes,"startup, tray, clipboard, resume; browser list and Keys are separate rows"
 Options File types tab,options,must,yes,yes,"types, min size, site and address exceptions, twice-cancelled"

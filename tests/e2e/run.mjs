@@ -350,6 +350,14 @@ const scenarios = {
     assert(!(await app.hasWindow("Download file info")), "/n starts without asking");
     assert(job.file_name === "alt.pdf", `named from the server (${job.file_name})`);
     await assertSha("alt.pdf", "/p/alt.pdf");
+
+    // /s starts the main queue (with a download waiting in it, so it does not finish at once).
+    const waiting = await main.invoke("submit", { spec: { url: URL_("/s4/stall.bin"), dest_dir: DL, kind: "auto", filename: "queued.bin", source: "batch" }, mode: "later" });
+    const third = spawn(APP_EXE, ["/s"], { env: { ...process.env, SWIFTDM_HOME: join(work, "home") } });
+    await new Promise((res) => third.on("exit", res));
+    await until(async () => (await main.invoke("get_state")).queues.find((q) => q.id === "main").running, 10000, 200, "/s to start the main queue");
+    await main.invoke("stop_queue", { id: "main" });
+    await main.invoke("remove", { ids: [waiting], deleteFiles: true }).catch(() => {});
   },
 
   async find_bar(app) {

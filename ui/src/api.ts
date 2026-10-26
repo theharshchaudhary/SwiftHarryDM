@@ -323,6 +323,7 @@ export const api = {
   refreshUrl: (id: string, url: string) => invoke<void>("refresh_url", { id, url }),
   inspectUrl: (url: string) => invoke<UrlInfo>("inspect_url", { url }),
   isMediaUrl: (url: string) => invoke<boolean>("is_media_url", { url }),
+  isElevated: () => invoke<boolean>("is_elevated"),
   grabberProjects: () => invoke<GrabberProject[]>("grabber_projects"),
   grabberSave: (project: GrabberProject) => invoke<GrabberProject>("grabber_save", { project }),
   grabberDelete: (id: string) => invoke<void>("grabber_delete", { id }),

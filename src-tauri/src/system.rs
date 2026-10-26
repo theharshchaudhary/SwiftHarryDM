@@ -47,6 +47,11 @@ pub fn open_with(path: &str) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Running with administrator rights (Windows then blocks drag and drop from normal programs).
+pub fn is_elevated() -> bool {
+    unsafe { windows::Win32::UI::Shell::IsUserAnAdmin().as_bool() }
+}
+
 pub fn beep() {
     unsafe {
         let _ = MessageBeep(MB_ICONASTERISK);

@@ -469,6 +469,11 @@ pub struct ApiStatus {
 }
 
 #[tauri::command]
+pub fn is_elevated() -> bool {
+    crate::system::is_elevated()
+}
+
+#[tauri::command]
 pub fn api_status(st: State<AppState>) -> ApiStatus {
     match &*st.api.lock().unwrap() {
         Ok(h) => ApiStatus { port: Some(h.port()), paired: h.paired(), error: None },

@@ -155,6 +155,10 @@ function MainView({ live }: { live: Live }) {
   const [openCats, setOpenCats] = useState(() => pref("openCats", true));
   const [openQueues, setOpenQueues] = useState(() => pref("openQueues", true));
   const [ctx, setCtx] = useState<{ x: number; y: number; items: MenuEntry[] } | null>(null);
+  const [elevated, setElevated] = useState(false);
+  useEffect(() => {
+    api.isElevated().then(setElevated).catch(() => {});
+  }, []);
   const [find, setFind] = useState<{ open: boolean; text: string; msg: string; field: FindField; matchCase: boolean; whole: boolean }>({ open: false, text: "", msg: "", field: "any", matchCase: false, whole: false });
   const [modal, setModal] = useState<
     | null
@@ -724,6 +728,14 @@ function MainView({ live }: { live: Live }) {
         <div className="spacer" />
       </div>
 
+      {elevated && (
+        <div className="topbanner warn" role="status">
+          <Icon name="warning" size={16} />
+          <span>SwiftHarryDM is running as administrator, so Windows blocks dragging links and files into it from other programs. Start it normally to drag and drop.</span>
+          <span style={{ flex: 1 }} />
+          <button className="btn small" title="Hide" onClick={() => setElevated(false)}><Icon name="close" size={12} /></button>
+        </div>
+      )}
       {(update || updateErr) && (
         <div className="topbanner">
           <Icon name="all" size={16} />

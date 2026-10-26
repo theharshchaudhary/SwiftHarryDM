@@ -409,11 +409,16 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 ///   swiftharrydm.exe <url>                     open the download window for <url>
 ///   swiftharrydm.exe /d <url> [/p <folder>] [/f <file name>] [/n] [/a]
 ///     /n  start without asking (no window)      /a  add to the main queue instead of starting
+///     /q  exit SwiftHarryDM when that download finishes
+///   swiftharrydm.exe /s                        start the main queue
 fn handle_args(app: &AppHandle, args: &[String]) {
     let flag = |f: &str| args.iter().any(|a| a.eq_ignore_ascii_case(f) || a.eq_ignore_ascii_case(&f.replace('/', "-")));
     let value = |f: &str| {
         args.windows(2).find(|w| w[0].eq_ignore_ascii_case(f) || w[0].eq_ignore_ascii_case(&f.replace('/', "-"))).map(|w| w[1].clone())
     };
+    if flag("/s") {
+        app.state::<AppState>().mgr.start_queue(swiftdm_core::scheduler::MAIN_QUEUE);
+    }
     let url = value("/d").or_else(|| args.iter().skip(1).find(|a| swiftdm_core::manager::validate_url(a).is_ok()).cloned());
     let Some(url) = url.and_then(|u| swiftdm_core::manager::validate_url(&u).ok()) else { return };
     let quiet = flag("/n");
@@ -432,8 +437,12 @@ fn handle_args(app: &AppHandle, args: &[String]) {
     spec.source = "ui".into();
     let mode = if later { swiftdm_core::manager::StartMode::Later } else { swiftdm_core::manager::StartMode::Now };
     // /n asks nothing, so "ask" for a duplicate link means a numbered name.
-    if let Err(e) = state.mgr.submit_or_reuse(spec, mode, &s.duplicate_policy) {
-        notify(app, "Download not started", &e);
+    match state.mgr.submit_or_reuse(spec, mode, &s.duplicate_policy) {
+        Ok((id, _)) if flag("/q") => {
+            state.after.lock().unwrap().insert(id, AfterAction::Exit);
+        }
+        Ok(_) => {}
+        Err(e) => notify(app, "Download not started", &e),
     }
 }
 
@@ -585,6 +594,7 @@ pub fn run() {
             upkeep::install_update,
             upkeep::pending_update,
             commands::is_media_url,
+            commands::is_elevated,
             commands::grabber_projects,
             commands::grabber_save,
             commands::grabber_delete,
