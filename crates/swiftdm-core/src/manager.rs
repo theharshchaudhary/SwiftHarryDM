@@ -310,7 +310,7 @@ impl Manager {
     /// Higher priority starts first within its queue (used to reorder queue files).
     /// Save a download to another folder and/or under another name, also while it downloads
     /// (it is paused, its data moved, and resumed) or after it finished (the file is moved).
-    /// IDM starts downloading while "Download File Info" is open; this applies the choices
+    /// The download starts while "Download File Info" is open; this applies the choices
     /// made there afterwards.
     pub fn relocate(&self, id: &str, dir: &str, name: Option<String>) {
         let _ = self.tx.send(Cmd::Relocate(id.into(), dir.into(), name));
@@ -338,7 +338,7 @@ impl Manager {
         })
     }
 
-    /// IDM's "Zip preview": the files inside a ZIP archive on a server, read with range
+    /// Zip preview: the files inside a ZIP archive on a server, read with range
     /// requests (no download).
     pub async fn zip_preview(&self, url: &str, total: u64, cookies: Option<String>) -> Result<Vec<crate::http::zip_preview::ZipEntry>, String> {
         let url = validate_url(url)?;
@@ -349,7 +349,7 @@ impl Manager {
         let _ = self.tx.send(Cmd::ScheduleTick(minute, weekday));
     }
 
-    /// IDM "Refresh download address": point an unfinished download at a new link, keeping the
+    /// "Refresh download address": point an unfinished download at a new link, keeping the
     /// partial data only if the new link serves the same file (same size).
     pub async fn refresh_url(&self, id: &str, new_url: &str) -> Result<(), String> {
         let new_url = validate_url(new_url)?;
@@ -395,7 +395,7 @@ impl Manager {
         *self.shared.quota.read().unwrap()
     }
 
-    /// `submit`, following IDM's duplicate-link choices when the address is already in the
+    /// `submit`, following the duplicate-link choices when the address is already in the
     /// list: "number" (and "ask", when there is no one to ask) adds it under a numbered name,
     /// "overwrite" replaces the existing download and its file, "resume" uses the existing
     /// download (resumed if unfinished). Returns the download's id and whether it is the
@@ -740,7 +740,7 @@ impl Actor {
             let at = self.queues.iter().position(|q| q.id == MAIN_QUEUE).map_or(0, |i| i + 1);
             self.queues.insert(at, Queue::main_sync());
         }
-        // Queues stop on restart, like IDM; schedules start them again.
+        // Queues stop on restart; schedules start them again.
         for q in self.queues.iter_mut() {
             q.running = false;
         }
@@ -1111,7 +1111,7 @@ impl Actor {
     fn on_move_to_queue(&mut self, id: &str, q: Option<String>) {
         let to_download_queue = q.as_ref().is_some_and(|qid| self.queues.iter().any(|x| &x.id == qid && x.kind == QueueKind::Download));
         self.with_job(id, |me, j| {
-            // Like IDM: finished files can only be in synchronization queues.
+            // Finished files can only be in synchronization queues.
             if j.state == S::Completed && to_download_queue {
                 if j.spec.queue_id.is_some() {
                     j.spec.queue_id = None;
@@ -1128,7 +1128,7 @@ impl Actor {
         });
     }
 
-    /// IDM's periodic synchronization: every finished file in the queue is checked on the
+    /// Periodic synchronization: every finished file in the queue is checked on the
     /// server (size, ETag, Last-Modified); a changed one is downloaded again over it.
     fn start_sync_checks(&mut self, qid: &str) {
         let replacing: HashSet<String> = self.jobs.values().filter_map(|j| j.spec.replaces.clone()).collect();
@@ -1298,7 +1298,7 @@ impl Actor {
         j.attempts += 1;
         let queue = self.via_queue.get(&j.id).and_then(|qid| self.queues.iter().find(|q| &q.id == qid));
         let max_attempts = queue.and_then(|q| q.retries).unwrap_or_else(|| self.settings.get().retries).max(1);
-        // In a queue the file waits at most 30 s (like IDM), then goes to the end of the queue.
+        // In a queue the file waits at most 30 s, then goes to the end of the queue.
         let cap = if queue.is_some() { Duration::from_secs(30) } else { Duration::from_secs(120) };
         if err.retryable && j.attempts < max_attempts && self.stopping.is_none() {
             let delay = err

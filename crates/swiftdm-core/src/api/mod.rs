@@ -135,7 +135,7 @@ pub trait ApiHooks: Send + Sync {
     /// Ask the user about a download; answer with `ApiHandle::resolve` or `reject`.
     fn confirm(&self, request_id: &str, req: &DownloadRequest);
     /// Several links from a page: let the user choose.
-    /// `texts`: the links' visible texts (IDM: "use link texts as descriptions").
+    /// `texts`: the links' visible texts (used as descriptions).
     fn links(&self, urls: Vec<String>, page_url: Option<String>, texts: HashMap<String, String>);
     /// A download from the extension was added and starts now.
     fn started(&self, job_id: &str);

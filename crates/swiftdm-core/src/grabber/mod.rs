@@ -1,4 +1,4 @@
-//! Site grabber (IDM's "Grabber"): explore a web site from a start page, list the files it
+//! Site grabber: explore a web site from a start page, list the files it
 //! links to, and download the ones chosen. A project keeps its settings and what was found,
 //! so it can be explored again later.
 pub mod crawl;
@@ -6,7 +6,7 @@ pub mod html;
 
 use serde::{Deserialize, Serialize};
 
-/// What a project looks for (IDM's project templates).
+/// What a project looks for (project templates).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum Template {

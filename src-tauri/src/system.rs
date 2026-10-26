@@ -59,7 +59,7 @@ pub fn beep() {
 }
 
 /// Turn the computer off. `force` closes programs that would otherwise hold up the shutdown
-/// (IDM's "Force processes to terminate"); they may lose unsaved work.
+/// ("force processes to close"); they may lose unsaved work.
 pub fn shutdown(force: bool) -> Result<(), String> {
     let mut args = vec!["/s", "/t", "0"];
     if force {

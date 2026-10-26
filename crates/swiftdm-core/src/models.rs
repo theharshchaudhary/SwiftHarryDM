@@ -355,7 +355,7 @@ pub struct JobSnapshot {
     pub category: Option<String>,
     pub queue_id: Option<String>,
     pub description: Option<String>,
-    /// Where the download was started from (IDM: "parent web page" / referer).
+    /// Where the download was started from (the parent web page / referer).
     pub referer: Option<String>,
     /// URL after redirects.
     pub final_url: Option<String>,

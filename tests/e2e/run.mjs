@@ -246,7 +246,7 @@ const scenarios = {
     await z.click("Cancel");
     await until(async () => !(await app.hasWindow("Download file info")), 10000, 200, "the ZIP window to close");
 
-    // The same address again: IDM's duplicate choices.
+    // The same address again: the duplicate choices.
     const again = await addThroughUi(app, main, URL_("/s6/get"));
     await until(async () => (await again.text()).includes("already in your list"), 10000, 200, "the duplicate dialog");
     await again.eval(`[...document.querySelectorAll('label')].find(l => l.textContent.includes('Show the finished file')).querySelector('input').click()`);
@@ -255,7 +255,7 @@ const scenarios = {
   },
 
   async starts_while_info_is_open(app) {
-    // Like IDM: the file downloads while "Download file info" is open; the folder chosen
+    // The file downloads while "Download file info" is open; the folder chosen
     // there is applied when Start is pressed. Cancel removes the download and its data.
     const main = await app.window("SwiftHarryDM");
     const info = await addThroughUi(app, main, URL_("/s1/big64.bin"));
@@ -278,13 +278,13 @@ const scenarios = {
   },
 
   async login_when_asked(app) {
-    // IDM's "Connecting to the site": a server asks for a login; it is typed once and saved.
+    // A server asks for a login; it is typed once and saved.
     const main = await app.window("SwiftHarryDM");
     await main.click("Add URL");
     const add = await app.window("Add download");
     await add.fill("#u", URL_("/a/secret.bin"));
     await add.click("OK");
-    // Asked while the address is checked, as IDM does; then the file info is shown.
+    // Asked while the address is checked; then the file info is shown.
     const login = await app.window("Login required", 30000);
     await until(() => login.eval("!!document.querySelector('input[type=password]')"), 5000, 100, "the login form");
     await assertAccessible(login, "login");
@@ -386,7 +386,7 @@ const scenarios = {
   },
 
   async find_bar(app) {
-    // Downloads > Find: where to look, match case, whole text only (like IDM's Find dialog).
+    // Downloads > Find: where to look, match case, whole text only.
     const main = await app.window("SwiftHarryDM");
     await main.eval("window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true }))");
     await until(() => main.eval("!!document.querySelector('input[aria-label=Find]')"), 5000, 100, "the find bar");
@@ -453,7 +453,7 @@ const scenarios = {
     await done.click("Close");
     await assertSha("flaky.bin", "/s7/flaky.bin");
 
-    // Cancelled twice: IDM offers to stop taking over this address.
+    // Cancelled twice: offer to stop taking over this address.
     const twiceUrl = URL_("/s3/cut.bin"); // not used by any other step
     for (const round of [1, 2]) {
       await until(async () => !(await app.hasWindow("Download file info")), 10000, 200, "earlier windows to close");

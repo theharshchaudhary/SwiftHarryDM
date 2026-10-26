@@ -5,7 +5,7 @@ import { Dialog, Loading } from "../components/Dialog";
 import { Icon } from "../icons";
 import { useLive, useTheme } from "../store";
 
-/** IDM's "Connecting to the site": the server asked for a login. It is saved in the site
+/** The server asked for a login. It is saved in the site
  * logins (encrypted) and the download is tried again (or, opened from "Download file info"
  * with only an address, that window checks the address again). */
 export default function Login() {

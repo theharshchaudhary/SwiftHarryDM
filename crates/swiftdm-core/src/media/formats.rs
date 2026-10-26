@@ -34,7 +34,7 @@ pub struct Selection {
     pub sort: Option<String>,
 }
 
-/// Video comes out as MP4, like IDM: among formats of the wanted quality, H.264 video and AAC
+/// Video comes out as MP4: among formats of the wanted quality, H.264 video and AAC
 /// audio are preferred (they play everywhere); if a quality only exists as VP9 or AV1 (YouTube
 /// above 1080p), that is kept and put into an MP4 file without re-encoding.
 fn mp4_out() -> Vec<String> {

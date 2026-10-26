@@ -62,9 +62,9 @@ Documents, …). Change them in **Options › Save to**.
 
 ## Moving your list
 
-**Tasks › Export** writes an IDM export file (`.ef2`) or a text file of the download queue, the
-selected files or all files. **Tasks › Import** reads IDM export files, text files and web
-pages. IDM and SwiftHarryDM read each other's export files.
+**Tasks › Export** writes an `.ef2` export file or a text file of the download queue, the
+selected files or all files. **Tasks › Import** reads `.ef2` export files, text files and web
+pages. Other Windows download managers that use `.ef2` files can read the export too.
 
 ## Keyboard
 

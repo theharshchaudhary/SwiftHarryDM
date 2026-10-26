@@ -14,14 +14,14 @@ const TIPS = [
   "Copy a link to a file and SwiftHarryDM offers to download it, when “Offer to download links I copy” is on in Options.",
   "Tasks › Add batch download fetches numbered files like photo001.jpg to photo120.jpg in one go.",
   "Right-click a web page and choose “Download all links” to pick files from the page, filtered by type.",
-  "You can move your list between IDM and SwiftHarryDM with Tasks › Export and Import (IDM export files).",
+  "Tasks › Export and Import move your list to and from other download managers that use .ef2 files.",
   "The Q column shows which queue a download belongs to. Drag downloads onto a queue on the left to move them.",
   "View › Font changes the font and size of every window.",
   "Use “Preview the files in this ZIP” in the “Download file info” window to see what an archive contains before downloading it.",
   "SwiftHarryDM starts with Windows and waits in the notification area, ready to take over downloads from your browser.",
 ];
 
-/** Tip of the day, like IDM's. */
+/** Tip of the day. */
 export default function Tips() {
   const live = useLive();
   useTheme(live?.settings.theme);

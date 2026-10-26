@@ -179,7 +179,7 @@ pub fn relocate(st: State<AppState>, id: String, dir: String, name: Option<Strin
     st.mgr.relocate(&id, &dir, name);
 }
 
-/// The files inside a ZIP archive before downloading it (IDM's "Zip preview").
+/// The files inside a ZIP archive before downloading it (Zip preview).
 #[tauri::command]
 pub async fn zip_preview(st: State<'_, AppState>, url: String, total: u64) -> R<Vec<swiftdm_core::http::zip_preview::ZipEntry>> {
     st.mgr.zip_preview(&url, total, None).await
@@ -203,7 +203,7 @@ pub fn hold(st: State<AppState>, id: String) {
     st.held.lock().unwrap().insert(id);
 }
 
-/// The user decided in "Download File Info": show what IDM shows from here on (the complete
+/// The user decided in "Download File Info": show the usual windows from here on (the complete
 /// window if it already finished, otherwise the progress window). Async: windows must not be
 /// created on the main thread from a synchronous command (WebView2 deadlocks).
 #[tauri::command]
@@ -370,9 +370,9 @@ pub async fn export_list(app: AppHandle, st: State<'_, AppState>, ids: Option<Ve
         Some(ids) => ids.iter().filter_map(|id| jobs.iter().find(|j| &j.id == id)).collect(),
         None => jobs.iter().collect(),
     };
-    // IDM's export file keeps each download's web page; a text file is one address per line.
+    // An `.ef2` export file keeps each download's web page; a text file is one address per line.
     let ef2 = format.as_deref() == Some("ef2");
-    let (name, filter, exts): (&str, &str, &[&str]) = if ef2 { ("downloads.ef2", "IDM export file", &["ef2"]) } else { ("downloads.txt", "Text files", &["txt"]) };
+    let (name, filter, exts): (&str, &str, &[&str]) = if ef2 { ("downloads.ef2", ".ef2 export file", &["ef2"]) } else { ("downloads.txt", "Text files", &["txt"]) };
     let Some(path) = app
         .dialog()
         .file()
@@ -402,7 +402,7 @@ pub async fn import_list(app: AppHandle) -> R<Vec<swiftdm_core::ef2::Ef2Entry>> 
         .dialog()
         .file()
         .set_title("Import download list")
-        .add_filter("Address lists (text, web page, IDM export)", &["txt", "lst", "htm", "html", "csv", "ef2"])
+        .add_filter("Address lists (text, web page, .ef2 export)", &["txt", "lst", "htm", "html", "csv", "ef2"])
         .blocking_pick_file()
         .and_then(|p| p.into_path().ok())
     else {
@@ -413,7 +413,7 @@ pub async fn import_list(app: AppHandle) -> R<Vec<swiftdm_core::ef2::Ef2Entry>> 
         return Err("The file is too large to import.".into());
     }
     let text = String::from_utf8_lossy(&bytes);
-    // IDM export files keep each address's web page (referrer).
+    // `.ef2` export files keep each address's web page (referrer).
     let is_ef2 = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("ef2")) || text.trim_start().starts_with('<');
     let mut list = if is_ef2 { swiftdm_core::ef2::parse(&text) } else { vec![] };
     if list.is_empty() {

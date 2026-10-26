@@ -33,7 +33,7 @@ const PRESETS: [string, string][] = [
 const AUDIO = new Set(["mp3", "m4a"]);
 
 /** "Download File Info": confirm name, category and folder (or video quality), then start now or later. */
-/** IDM: "You have cancelled this download twice" — stop taking over this site or address. */
+/** A download cancelled twice: stop taking over this site or address. */
 function TwiceCancelled({ url, onClose }: { url: string; onClose: () => void }) {
   const live = useLive();
   const host = F.host(url);
@@ -76,7 +76,7 @@ function TwiceCancelled({ url, onClose }: { url: string; onClose: () => void }) 
   );
 }
 
-/** IDM's "Zip preview": the archive's files, read from the server without downloading it. */
+/** Zip preview: the archive's files, read from the server without downloading it. */
 function ZipList({ entries, onClose }: { entries: ZipEntry[] | string; onClose: () => void }) {
   return (
     <Modal title="Files in this ZIP" onClose={onClose} foot={<button className="btn primary" autoFocus onClick={onClose}>OK</button>}>
@@ -108,7 +108,7 @@ function ZipList({ entries, onClose }: { entries: ZipEntry[] | string; onClose: 
   );
 }
 
-/** IDM's "Duplicate download link" choices. */
+/** The duplicate-link choices. */
 function DuplicateDialog({ job, onChoose, onCancel }: { job: Job; onChoose: (p: "number" | "overwrite" | "resume", remember: boolean) => void; onCancel: () => void }) {
   const [pick, setPick] = useState<"number" | "overwrite" | "resume">("number");
   const [keep, setKeep] = useState(false);
@@ -179,11 +179,11 @@ export default function FileInfo() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [remember, setRemember] = useState(false);
-  // IDM's duplicate-link choice, made once per window (or taken from Options).
+  // The duplicate-link choice, made once per window (or taken from Options).
   const [dupDone, setDupDone] = useState(false);
   const [twice, setTwice] = useState(false);
   const [zip, setZip] = useState<ZipEntry[] | string | null>(null);
-  // Like IDM, the file starts downloading while this window is open; the choices made here
+  // The file starts downloading while this window is open; the choices made here
   // are applied when "Start download" or "Download later" is pressed.
   const [early, setEarly] = useState<Early | null>(null);
   const decided = useRef(false);
@@ -246,7 +246,7 @@ export default function FileInfo() {
         }
       } catch (e) {
         if (alive) setProbeErr(String(e));
-        // The server wants a login: ask now, like IDM, and check again once it is saved.
+        // The server wants a login: ask now, and check again once it is saved.
         if (alive && /\(401\)/.test(String(e))) api.openWindow("login", { url });
       } finally {
         if (alive) setProbing(false);
@@ -469,7 +469,7 @@ export default function FileInfo() {
               const e = await settled();
               if (rid && !e) await api.rejectRequest(rid);
               if (e) await api.remove([e.id], true).catch(() => {});
-              // A browser download cancelled a second time: offer IDM's exceptions.
+              // A browser download cancelled a second time: offer the exceptions.
               if (rid && settings.offer_exception_on_cancel && !twice && (await api.countCancel(url)) >= 2) {
                 setTwice(true);
                 return;

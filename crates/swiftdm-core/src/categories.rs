@@ -1,4 +1,4 @@
-//! IDM-style file categories: each has file extensions and its own download folder.
+//! File categories: each has file extensions and its own download folder.
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 

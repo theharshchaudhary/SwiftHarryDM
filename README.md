@@ -127,7 +127,7 @@ and the app restarts with your downloads carrying on.
   the same time, and an action when a queue finishes (exit, sleep, hibernate, shut down).
 - Batch downloads (`img*.jpg` with numbers or letters), a clipboard monitor, and drag and drop
   of links onto a floating drop target.
-- Import address lists from text files, web pages and IDM export files (`.ef2`), and export
+- Import address lists from text files, web pages and `.ef2` export files, and export
   your own.
 - Find (<kbd>Ctrl</kbd>+<kbd>F</kbd>), sortable and configurable columns, a tray icon with live
   speed, progress on the taskbar button, and the option to start with Windows.

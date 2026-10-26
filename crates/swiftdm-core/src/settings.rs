@@ -63,11 +63,11 @@ pub struct Settings {
     pub minimize_to_tray: bool,
     pub start_with_windows: bool,
     pub start_minimized: bool,
-    /// Like IDM: the download starts while "Download File Info" is shown.
+    /// The download starts while "Download File Info" is shown.
     pub start_while_info: bool,
     /// Shutting down after downloads closes programs that would hold it up.
     pub force_close_apps: bool,
-    /// Ask before removing downloads from the list (IDM's "Confirm deletion").
+    /// Ask before removing downloads from the list.
     pub confirm_delete: bool,
     /// After the same browser download is cancelled twice, offer to stop taking it over.
     pub offer_exception_on_cancel: bool,
@@ -88,9 +88,9 @@ pub struct Settings {
     pub menu_page_media: bool,
     pub menu_all_links: bool,
     pub menu_selected_links: bool,
-    /// Icon in the notification area (IDM: View > IDM tray icon).
+    /// Icon in the notification area (View > Notification area icon).
     pub tray_icon: bool,
-    /// Font of the windows; empty / 0 = the default (IDM: View > Font).
+    /// Font of the windows; empty / 0 = the default (View > Font).
     pub ui_font: String,
     pub ui_font_size: u32,
     /// "Tip of the day" when the main window opens.

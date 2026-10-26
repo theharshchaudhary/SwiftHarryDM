@@ -196,7 +196,7 @@ export interface Components { ytdlp: string | null; ffmpeg: boolean; ffprobe: bo
 export interface UpdateInfo { version: string; notes: string | null }
 export interface ExtensionSetup { mode: "store" | "manual"; folder: string | null; browser_found: boolean }
 
-/** One address of an IDM export file (or a text list: no referer). */
+/** One address of an `.ef2` export file (or a text list: no referer). */
 export interface Ef2Entry { url: string; referer: string | null; user_agent: string | null }
 
 export interface ZipEntry { name: string; size: number; packed: number; is_dir: boolean }

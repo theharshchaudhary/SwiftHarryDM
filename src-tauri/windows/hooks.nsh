@@ -1,4 +1,4 @@
-; Start with Windows, like IDM: the installer adds the startup entry (the app itself never
+; Start with Windows: the installer adds the startup entry (the app itself never
 ; adds it on its own; it only changes it when the option is switched in Options). An update
 ; keeps the user's choice, which the app remembers in Software\SwiftHarryDM.
 !macro NSIS_HOOK_POSTINSTALL

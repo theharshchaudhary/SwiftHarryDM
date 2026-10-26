@@ -115,7 +115,7 @@ function applyFont(s: { ui_font: string; ui_font_size: number }) {
   else root.removeProperty("--font-size");
 }
 
-/** IDM's View > Font: every window follows the font chosen in the main window. */
+/** View > Font: every window follows the font chosen in the main window. */
 function useFont() {
   useEffect(() => {
     let alive = true;

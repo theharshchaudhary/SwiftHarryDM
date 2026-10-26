@@ -31,7 +31,7 @@ pub fn tools_dir() -> PathBuf {
     d
 }
 
-/// The user's Downloads folder, like IDM (categories add Video, Music, ... below it).
+/// The user's Downloads folder (categories add Video, Music, ... below it).
 pub fn default_download_dir() -> PathBuf {
     dirs::download_dir()
         .or_else(|| dirs::home_dir().map(|h| h.join("Downloads")))

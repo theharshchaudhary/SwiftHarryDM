@@ -49,7 +49,7 @@ const lines = (v: string[]) => v.join("\n");
 const unlines = (t: string) => t.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean);
 const exts = (t: string) => t.split(/[\s,;]+/).map((x) => x.trim().replace(/^\*?\./, "").toLowerCase()).filter(Boolean);
 
-/** IDM's Grabber: explore a site from a start page and download the files it links to. */
+/** Site grabber: explore a site from a start page and download the files it links to. */
 export default function Grabber() {
   const live = useLive();
   useTheme(live?.settings.theme);

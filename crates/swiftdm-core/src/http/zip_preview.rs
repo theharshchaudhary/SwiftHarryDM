@@ -1,4 +1,4 @@
-//! IDM's "Zip preview": list the files in a ZIP archive on a server before downloading it.
+//! Zip preview: list the files in a ZIP archive on a server before downloading it.
 //! A ZIP keeps its table of contents (the central directory) at the end, so two range
 //! requests are enough: the last bytes (end-of-directory record), then the directory itself.
 use reqwest::header::{HeaderMap, HeaderValue, RANGE};

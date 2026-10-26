@@ -1,10 +1,10 @@
-//! Download queues and their schedules (IDM "Scheduler"): start time, days of the week,
+//! Download queues and their schedules (the Scheduler): start time, days of the week,
 //! optional stop time, simultaneous downloads, and an action when the queue finishes.
 use chrono::{Datelike, Local, NaiveTime, Timelike};
 use serde::{Deserialize, Serialize};
 
 pub const MAIN_QUEUE: &str = "main";
-/// The built-in synchronization queue (IDM's "Synchronization queue").
+/// The built-in synchronization queue.
 pub const SYNC_QUEUE: &str = "main_sync";
 
 /// A download queue removes files once they are done; a synchronization queue keeps finished

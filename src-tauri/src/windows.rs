@@ -112,7 +112,7 @@ pub fn open(app: &AppHandle, kind: &str, params: &[(String, String)]) -> Result<
         b.build().map_err(|e| e.to_string())?;
         return Ok(());
     }
-    // Windows that answer something done in the browser open in front of it, like IDM's.
+    // Windows that answer something done in the browser open in front of it.
     let to_front = matches!(kind, "info" | "links" | "pairing" | "complete" | "countdown" | "login");
     if let Some(main) = app.get_webview_window("main") {
         if main.is_visible().unwrap_or(false) && !to_front {

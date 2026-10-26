@@ -45,7 +45,7 @@ function categoryFolder(s: Settings, cat: string | null): string {
   return /^[a-zA-Z]:[\\/]|^\\\\/.test(c.folder) ? c.folder : `${s.download_dir.replace(/[\\/]+$/, "")}\\${c.folder}`;
 }
 
-/** IDM's "Download All Links": choose which of several addresses to download, with their types
+/** "Download all links": choose which of several addresses to download, with their types
  * and sizes, filters, and where to save them. Also used for the clipboard, imports and drops. */
 export default function Links() {
   const live = useLive();
@@ -78,7 +78,7 @@ export default function Links() {
       api.clipboardUrls().then((urls) => setRows(urls.map((url) => ({ url, name: F.nameFromUrl(url), ext: extOf(F.nameFromUrl(url)), text: "" }))));
   }, [source, rows.length]);
 
-  // Like IDM, check every address for its real name, type and size, a few at a time.
+  // Check every address for its real name, type and size, a few at a time.
   const urlsKey = rows.map((r) => r.url).join("\n");
   useEffect(() => {
     let alive = true;

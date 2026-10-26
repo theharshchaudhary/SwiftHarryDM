@@ -1,0 +1,6 @@
+{
+  "_about": "The original's identity, for sweep.py, listing.py and replica-deploy. The company name (Tonec) is left out: as a case-insensitive substring it matches ordinary identifiers such as setOneCat.",
+  "avoid": ["Internet Download Manager", "IDM", "IDMan"],
+  "domains": ["internetdownloadmanager.com"],
+  "colors": []
+}

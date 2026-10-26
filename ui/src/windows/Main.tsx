@@ -431,7 +431,7 @@ function MainView({ live }: { live: Live }) {
     {
       label: "Move to queue",
       disabled: !selected.length,
-      // Finished files can only go into synchronization queues (like IDM).
+      // Finished files can only go into synchronization queues.
       submenu: [
         ...queues.map((q) => ({
           label: q.name,
@@ -464,14 +464,14 @@ function MainView({ live }: { live: Live }) {
         {
           label: "Export",
           submenu: [
-            { label: "To IDM export file…", onClick: () => setModal({ kind: "export", format: "ef2" }) },
+            { label: "To an .ef2 export file…", onClick: () => setModal({ kind: "export", format: "ef2" }) },
             { label: "To text file…", onClick: () => setModal({ kind: "export", format: "txt" }) },
           ],
         },
         {
           label: "Import",
           submenu: [
-            { label: "From IDM export file…", onClick: act.importList },
+            { label: "From an .ef2 export file…", onClick: act.importList },
             { label: "From text file…", onClick: act.importList },
           ],
         },
@@ -972,7 +972,7 @@ function TB({ icon, label, onClick, disabled, title, cls, drop }: { icon: string
 }
 
 // ------------------------------------------------------------------ modals inside the main window
-/** Toolbar buttons, in IDM's order; "|" is a separator. */
+/** Toolbar buttons, in order; "|" is a separator. */
 const TOOLBAR_BUTTONS: [string, string][] = [
   ["add", "Add URL"],
   ["resume", "Resume"],
@@ -990,7 +990,7 @@ const TOOLBAR_BUTTONS: [string, string][] = [
 const DEFAULT_TOOLBAR = ["add", "resume", "stop", "stopAll", "|", "delete", "deleteDone", "|", "options", "scheduler", "startQueue", "stopQueue", "|", "batch"];
 const tbLabel = (id: string) => (id === "|" ? "— Separator —" : TOOLBAR_BUTTONS.find(([k]) => k === id)?.[1] ?? id);
 
-/** IDM's "Customize toolbar": which buttons, in what order. */
+/** "Customize toolbar": which buttons, in what order. */
 function ToolbarModal({ items, onSave, onClose }: { items: string[]; onSave: (v: string[]) => void; onClose: () => void }) {
   const [list, setList] = useState(items);
   const [cur, setCur] = useState<number | null>(null);
@@ -1040,7 +1040,7 @@ function ToolbarModal({ items, onSave, onClose }: { items: string[]; onSave: (v:
 
 const FONTS = ["Segoe UI Variable Text", "Segoe UI", "Arial", "Calibri", "Tahoma", "Verdana", "Microsoft Sans Serif", "Consolas"];
 
-/** IDM's View > Font: the font and size of the windows. */
+/** View > Font: the font and size of the windows. */
 function FontModal({ live, onClose }: { live: Live; onClose: () => void }) {
   const s = live.settings;
   const [font, setFont] = useState(s.ui_font || "Segoe UI Variable Text");
@@ -1071,13 +1071,13 @@ function FontModal({ live, onClose }: { live: Live; onClose: () => void }) {
   );
 }
 
-/** IDM's "Export download list": the download queue, the selected files, or all files. */
+/** "Export download list": the download queue, the selected files, or all files. */
 function ExportModal({ format, live, selected, onExport, onClose }: { format: "txt" | "ef2"; live: Live; selected: string[]; onExport: (ids: string[] | null) => void; onClose: () => void }) {
   const [what, setWhat] = useState<"queue" | "selected" | "all">(selected.length ? "selected" : "all");
   const queueIds = live.jobs.filter((j) => j.queue_id === "main").map((j) => j.id);
   return (
     <Modal
-      title={format === "ef2" ? "Export to an IDM export file" : "Export to a text file"}
+      title={format === "ef2" ? "Export to an .ef2 export file" : "Export to a text file"}
       onClose={onClose}
       foot={
         <>
@@ -1089,7 +1089,7 @@ function ExportModal({ format, live, selected, onExport, onClose }: { format: "t
       <label className="row"><input type="radio" checked={what === "queue"} disabled={!queueIds.length} onChange={() => setWhat("queue")} /> The download queue ({queueIds.length})</label>
       <label className="row"><input type="radio" checked={what === "selected"} disabled={!selected.length} onChange={() => setWhat("selected")} /> The selected files ({selected.length})</label>
       <label className="row"><input type="radio" checked={what === "all"} onChange={() => setWhat("all")} /> All files ({live.jobs.length})</label>
-      {format === "ef2" && <div className="hint">IDM and SwiftHarryDM can both import this file; it keeps each download’s web page.</div>}
+      {format === "ef2" && <div className="hint">Download managers that read .ef2 files can import it; it keeps each download’s web page.</div>}
     </Modal>
   );
 }

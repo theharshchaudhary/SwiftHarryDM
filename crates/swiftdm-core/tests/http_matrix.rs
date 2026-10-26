@@ -429,7 +429,7 @@ async fn duplicate_link_choices() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn relocate_while_downloading_and_after_completion() {
-    // IDM starts downloading while "Download File Info" is open; the folder and name chosen
+    // The download starts while "Download File Info" is open; the folder and name chosen
     // there are applied afterwards.
     let e = env().await;
     let b = Body::gen("reloc", 12 * MIB);

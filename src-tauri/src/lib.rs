@@ -142,7 +142,7 @@ async fn pump_events(app: AppHandle) {
                         open_logged(&app, "countdown", &[("action".into(), after.as_str().into()), ("what".into(), what)]);
                     }
                 }
-                // The server wants a login: ask for it, like IDM's "Connecting to the site".
+                // The server wants a login: ask for it.
                 if s.state == JobState::Failed && changed && s.error.as_ref().is_some_and(|e| e.http_status == Some(401)) {
                     let realm = s.error.as_ref().map(|e| e.detail.clone()).unwrap_or_default();
                     open_logged(&app, "login", &[("id".into(), s.id.clone()), ("realm".into(), realm)]);
@@ -337,7 +337,7 @@ fn mgr_settings_tray(app: &AppHandle) -> bool {
     app.state::<AppState>().mgr.settings().get().tray_icon
 }
 
-/// The notification-area menu, like IDM's: the main window, new downloads, the drop target,
+/// The notification-area menu: the main window, new downloads, the drop target,
 /// queue and speed limiter, and exit.
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open SwiftHarryDM", true, None::<&str>)?;
@@ -456,7 +456,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        // Drag a finished file out of the "Download complete" window, like IDM.
+        // Drag a finished file out of the "Download complete" window.
         .plugin(tauri_plugin_drag::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
