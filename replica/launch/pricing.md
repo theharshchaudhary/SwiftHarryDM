@@ -11,7 +11,7 @@ the angle (`fixes.md`, option A), so there are no products or prices to create.
 | Free Download Manager | free ("100% free forever") | proprietary freeware | Windows, macOS, Linux, Android | https://www.freedownloadmanager.org/ |
 | AB Download Manager | free | Apache-2.0 | Windows, macOS, Linux | https://github.com/amir1376/ab-download-manager |
 | Motrix | free | MIT (GitHub shows NOASSERTION) | Windows, macOS, Linux | https://github.com/agalwood/Motrix |
-| **Keepfetch** | **free** | **MIT** | Windows | https://github.com/theharshchaudhary/SwiftHarryDM |
+| **Keepfetch** | **free** | **MIT** | Windows | https://github.com/theharshchaudhary/keepfetch |
 
 ## What users said about price (`feedback.md`, read by hand)
 

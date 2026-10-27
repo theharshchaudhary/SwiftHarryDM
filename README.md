@@ -8,13 +8,13 @@
 Splits every download across many connections, survives crashes and restarts, saves video
 and audio from web pages, and takes over downloads from your browser.
 
-[![CI](https://github.com/theharshchaudhary/SwiftHarryDM/actions/workflows/ci.yml/badge.svg)](https://github.com/theharshchaudhary/SwiftHarryDM/actions/workflows/ci.yml)
+[![CI](https://github.com/theharshchaudhary/keepfetch/actions/workflows/ci.yml/badge.svg)](https://github.com/theharshchaudhary/keepfetch/actions/workflows/ci.yml)
 ![Windows 10 and 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)
 ![Installer about 7 MB](https://img.shields.io/badge/installer-~7%20MB-2ea44f)
 ![Rust and Tauri 2](https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri%202-orange?logo=rust)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE.txt)
 
-[**Download**](https://github.com/theharshchaudhary/SwiftHarryDM/releases/latest) ·
+[**Download**](https://github.com/theharshchaudhary/keepfetch/releases/latest) ·
 [Features](#features) ·
 [Screenshots](#screenshots) ·
 [Browser extension](#browser-extension) ·
@@ -137,7 +137,7 @@ and the app restarts with your downloads carrying on.
 ## Install
 
 1. Download `Keepfetch_x.y.z_x64-setup.exe` from
-   [Releases](https://github.com/theharshchaudhary/SwiftHarryDM/releases/latest) and run it.
+   [Releases](https://github.com/theharshchaudhary/keepfetch/releases/latest) and run it.
 2. On first start, Keepfetch offers to connect your browser. Follow the two steps; the
    extension then connects by itself.
 

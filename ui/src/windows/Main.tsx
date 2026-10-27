@@ -562,13 +562,13 @@ function MainView({ live }: { live: Live }) {
     {
       label: "Help",
       items: () => [
-        { label: "Help contents", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM/blob/main/docs/HELP.md") },
-        { label: "Scheduler and queues", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM/blob/main/docs/HELP.md#scheduler-and-queues") },
+        { label: "Help contents", onClick: () => api.openPath("https://github.com/theharshchaudhary/keepfetch/blob/main/docs/HELP.md") },
+        { label: "Scheduler and queues", onClick: () => api.openPath("https://github.com/theharshchaudhary/keepfetch/blob/main/docs/HELP.md#scheduler-and-queues") },
         { label: "Keyboard shortcuts", onClick: () => alert("Ctrl+N  Add download\nCtrl+F  Find\nF3  Find next\nDel  Delete\nEnter  Open / show progress\nCtrl+A  Select all") },
         { label: "Tip of the day…", onClick: () => api.openWindow("tips") },
         "sep",
-        { label: "Keepfetch home page", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM") },
-        { label: "Report a problem", onClick: () => api.openPath("https://github.com/theharshchaudhary/SwiftHarryDM/issues") },
+        { label: "Keepfetch home page", onClick: () => api.openPath("https://github.com/theharshchaudhary/keepfetch") },
+        { label: "Report a problem", onClick: () => api.openPath("https://github.com/theharshchaudhary/keepfetch/issues") },
         { label: "Connect your browser…", onClick: () => api.openWindow("browser") },
         "sep",
         { label: "Check for updates…", onClick: checkUpdates },

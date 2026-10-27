@@ -70,7 +70,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERFMUQ1RTE2NDgxQUVEMDIKUldRQzdScElGbDRkM3JpNFdTRWI5c1JHZlcxVHpxNnBIc1ZtUjRNRENpRFN5dGdYa1dUejNDYWcK",
       "endpoints": [
-        "https://github.com/theharshchaudhary/SwiftHarryDM/releases/latest/download/latest.json"
+        "https://github.com/theharshchaudhary/keepfetch/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

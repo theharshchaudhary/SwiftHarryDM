@@ -30,10 +30,9 @@ on a spare Windows account (`launch-plan.md` step 3).
 Source: branch `main`, folder `/docs` (`index.html`, `privacy.html`, `images/`). The
 Markdown files in `docs/` are served too, rendered as pages.
 
-- URL until the repository is renamed:
-  `https://theharshchaudhary.github.io/SwiftHarryDM/`
-- After the rename to `keepfetch`: `https://theharshchaudhary.github.io/keepfetch/`
-  (GitHub does not redirect Pages URLs after a rename).
+- URL: `https://theharshchaudhary.github.io/keepfetch/` (the repository was renamed to
+  `keepfetch` on 2026-10-27; all links in the code point there, and installed SwiftHarryDM
+  copies reach the new place through GitHub's redirect).
 - Enable: Settings › Pages › Deploy from a branch › `main` / `docs`, or
   `gh api -X POST repos/<owner>/<repo>/pages -f "source[branch]=main" -f "source[path]=/docs"`.
 
@@ -96,7 +95,7 @@ No telemetry, by design. Watch:
 | --- | --- |
 | preflight | done, all passing |
 | Pages enabled | waiting for your go |
-| repository renamed | yours to do (Settings › General) |
+| repository renamed | done (2026-10-27): `theharshchaudhary/keepfetch` |
 | domain | yours to buy (optional) |
 | signing secrets | yours to add |
 | v3.1.0 tagged and released | after the secrets |

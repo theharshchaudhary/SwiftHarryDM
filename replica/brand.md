@@ -51,7 +51,7 @@ Kept, because existing installs and browsers depend on them (nobody sees them):
 | --- | --- |
 | `np.com.harshchaudhary.swiftharrydm` (bundle id, native messaging host) | the extension finds the app by it; changing it breaks every connected browser |
 | `SwiftHarryDM/secrets/v1` (DPAPI entropy) | changing it makes saved cookies and passwords unreadable |
-| `github.com/theharshchaudhary/SwiftHarryDM` | the repository; the update check uses it. Renaming the repository is the owner's step (GitHub redirects the old address, so updates keep working) |
+| ~~`github.com/theharshchaudhary/SwiftHarryDM`~~ | renamed by the owner to `theharshchaudhary/keepfetch` on 2026-10-27; links updated. GitHub redirects the old address, so copies already installed still find updates |
 | crate names `swiftdm-*`, `SWIFTDM_HOME`, `.sdmpart`, `sdm-observe` | internal; the temp suffix is on disk in unfinished downloads |
 | the extension's key (its id) | the same extension keeps working |
 
