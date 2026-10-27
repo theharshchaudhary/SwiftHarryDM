@@ -27,7 +27,7 @@ Order matters: each step needs the one before.
 7. **Extension in the stores**: Chrome Web Store and Edge Add-ons, with
    `replica/launch/listing.json`, screenshots from `docs/images/`, the privacy page URL,
    and "single purpose: send downloads to the Keepfetch desktop app". Then put the store ids
-   in `browser.rs` (`STORE_ID`), so the app offers the store version.
+   in `browser.rs` (`CHROME_STORE_ID`, `EDGE_STORE_ID`), so the app offers the store version.
 
 ## Where the people are (from the research, `fixes.md`)
 
