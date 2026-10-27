@@ -94,7 +94,7 @@ No telemetry, by design. Watch:
 | step | state |
 | --- | --- |
 | preflight | done, all passing |
-| Pages enabled | waiting for your go |
+| Pages enabled | held (2026-10-27, owner's choice): publish together with v3.1.0 |
 | repository renamed | done (2026-10-27): `theharshchaudhary/keepfetch` |
 | domain | yours to buy (optional) |
 | signing secrets | yours to add |
