@@ -32,6 +32,8 @@ The user then picked **Keepfetch**: "keep" what you "fetch". It says what the ap
 | Microsoft Store, Chrome Web Store, Edge Add-ons | **to run** | to run | to run |
 | handles (GitHub org, X) | **to run** | to run | to run |
 
+**2026-10-27: trademark searches skipped by the owner's decision** — Keepfetch is shared privately (friends and family), not sold or listed publicly. Revisit them before any public launch or store listing.
+
 These are screening checks, not legal clearance. Register `keepfetch.com` / `.app` soon
 if you want them (unregistered names can be taken at any time), and have a trademark
 lawyer search before spending money on the name.
