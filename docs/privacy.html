@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keepfetch privacy</title>
+<link rel="icon" href="images/keepfetch-48.png">
+<style>
+  :root { --bg: #f4f6f9; --text: #1c2733; --muted: #56657a; --accent: #6d28d9; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1b1f24; --text: #e6ebf0; --muted: #9aa7b5; --accent: #a78bfa; } }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; }
+  a { color: var(--accent); }
+  h1 { font-size: 32px; } h2 { font-size: 21px; margin-top: 28px; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="index.html">← Keepfetch</a></p>
+  <h1>Privacy</h1>
+  <p class="muted">Last changed 27 October 2026. Applies to the Keepfetch app for Windows and the Keepfetch Downloader browser extension.</p>
+
+  <h2>The short version</h2>
+  <p>Keepfetch has no account, no analytics, no ads and no crash reporting. What you download, and from where, stays on your computer.</p>
+
+  <h2>What stays on your computer</h2>
+  <p>Your download list, settings, site logins and the browser extension's pairing are stored in <code>%LOCALAPPDATA%\Keepfetch</code>. Passwords and browser cookies are encrypted with Windows' own data protection, so only your Windows account can read them.</p>
+
+  <h2>Who Keepfetch talks to</h2>
+  <ul>
+    <li><b>The sites you download from</b>, and the proxy you set, if any. That is the download itself.</li>
+    <li><b>GitHub</b>, to check for updates of Keepfetch and of its video component (yt-dlp). These requests carry no information about you or your downloads.</li>
+    <li><b>The Chrome Web Store or Edge Add-ons</b>, only when you install the extension.</li>
+  </ul>
+
+  <h2>The browser extension</h2>
+  <p>The extension talks only to the Keepfetch app on your own computer (127.0.0.1). It hands over the downloads and videos you send it. If you allow it, it also passes the cookies of the site you are downloading from, so downloads that need you to be signed in work. It sends nothing to any other server.</p>
+
+  <h2>Changes</h2>
+  <p>If this changes, the new version is posted here with its date, and in the app's release notes.</p>
+
+  <h2>Questions</h2>
+  <p>Open an issue on <a href="https://github.com/theharshchaudhary/SwiftHarryDM/issues">GitHub</a>.</p>
+</main>
+</body>
+</html>
